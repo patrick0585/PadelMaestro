@@ -3,6 +3,20 @@ import { prisma } from "@/lib/db";
 export const MAX_JOKERS_PER_SEASON = 2;
 export const JOKER_GAMES_CREDITED = 10;
 
+export class JokerLockedError extends Error {
+  constructor(message = "Game day is locked; Joker can no longer be used") {
+    super(message);
+    this.name = "JokerLockedError";
+  }
+}
+
+export class JokerCapExceededError extends Error {
+  constructor(message = `Max ${MAX_JOKERS_PER_SEASON} Jokers per season already used`) {
+    super(message);
+    this.name = "JokerCapExceededError";
+  }
+}
+
 async function snapshotPpg(playerId: string, seasonId: string): Promise<number> {
   const rows = await prisma.$queryRaw<
     Array<{ games: bigint; points: number | null }>
@@ -34,14 +48,14 @@ export async function useJoker(args: { playerId: string; gameDayId: string }) {
     include: { season: true },
   });
   if (gameDay.status !== "planned") {
-    throw new Error("Game day is locked; Joker can no longer be used");
+    throw new JokerLockedError();
   }
 
   const existing = await prisma.jokerUse.count({
     where: { playerId: args.playerId, seasonId: gameDay.seasonId },
   });
   if (existing >= MAX_JOKERS_PER_SEASON) {
-    throw new Error(`Max ${MAX_JOKERS_PER_SEASON} Jokers per season already used`);
+    throw new JokerCapExceededError();
   }
 
   const ppg = await snapshotPpg(args.playerId, gameDay.seasonId);
