@@ -9,6 +9,9 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     globals: true,
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    // Integration tests share a single Postgres DB — run files serially
+    // to avoid beforeEach truncates in one file racing another's rows.
+    fileParallelism: false,
   },
   resolve: {
     alias: {
