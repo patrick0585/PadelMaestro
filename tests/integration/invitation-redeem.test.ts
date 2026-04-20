@@ -15,7 +15,7 @@ describe("POST /api/invitations/[token]", () => {
     const token = generateInvitationToken();
     await prisma.invitation.create({
       data: {
-        email: "new@x",
+        email: "new@example.com",
         token,
         invitedById: admin.id,
         expiresAt: invitationExpiryFromNow(),
@@ -30,7 +30,7 @@ describe("POST /api/invitations/[token]", () => {
     const res = await POST(req, { params: Promise.resolve({ token }) });
     expect(res.status).toBe(201);
 
-    const newbie = await prisma.player.findUniqueOrThrow({ where: { email: "new@x" } });
+    const newbie = await prisma.player.findUniqueOrThrow({ where: { email: "new@example.com" } });
     expect(newbie.name).toBe("Newbie");
     expect(await verifyPassword("hunter22extra", newbie.passwordHash!)).toBe(true);
 
@@ -45,7 +45,7 @@ describe("POST /api/invitations/[token]", () => {
     const token = generateInvitationToken();
     await prisma.invitation.create({
       data: {
-        email: "late@x",
+        email: "late@example.com",
         token,
         invitedById: admin.id,
         expiresAt: new Date(Date.now() - 1000),

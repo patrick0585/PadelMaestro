@@ -22,7 +22,7 @@ describe("POST /api/invitations", () => {
 
     const req = new Request("http://localhost/api/invitations", {
       method: "POST",
-      body: JSON.stringify({ email: "new@x" }),
+      body: JSON.stringify({ email: "new@example.com" }),
       headers: { "content-type": "application/json" },
     });
     const res = await POST(req);
@@ -42,7 +42,7 @@ describe("POST /api/invitations", () => {
 
     const req = new Request("http://localhost/api/invitations", {
       method: "POST",
-      body: JSON.stringify({ email: "new@x" }),
+      body: JSON.stringify({ email: "new@example.com" }),
       headers: { "content-type": "application/json" },
     });
     const res = await POST(req);

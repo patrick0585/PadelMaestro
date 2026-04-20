@@ -4,11 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { generateInvitationToken, invitationExpiryFromNow } from "@/lib/auth/token";
 
-// Permissive email check (contains "@" with non-empty local/domain parts);
-// full RFC validation is delegated to the email-delivery layer.
-const InviteSchema = z.object({
-  email: z.string().min(3).regex(/^[^@\s]+@[^@\s]+$/, "Invalid email"),
-});
+const InviteSchema = z.object({ email: z.string().email() });
 
 export async function POST(req: Request) {
   const session = await auth();
