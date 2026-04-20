@@ -1,7 +1,7 @@
-export default function HomePage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-semibold">Padel Tracker</h1>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+
+export default async function HomePage() {
+  const session = await auth();
+  redirect(session ? "/ranking" : "/login");
 }
