@@ -8,6 +8,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  if (!session.user.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await ctx.params;
   try {
