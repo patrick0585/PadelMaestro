@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -14,6 +14,14 @@ export function ScoreDialog({ matchId, format, expectedVersion, onClose }: Props
   const [team1, setTeam1] = useState(0);
   const [team2, setTeam2] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const presets =
     format === "first-to-3"
@@ -37,9 +45,20 @@ export function ScoreDialog({ matchId, format, expectedVersion, onClose }: Props
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-      <div className="w-80 space-y-4 rounded bg-white p-6">
-        <h3 className="text-lg font-semibold">Ergebnis eintragen</h3>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="score-dialog-title"
+      onClick={onClose}
+      className="fixed inset-0 flex items-center justify-center bg-black/50"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-80 space-y-4 rounded bg-white p-6"
+      >
+        <h3 id="score-dialog-title" className="text-lg font-semibold">
+          Ergebnis eintragen
+        </h3>
         {format === "first-to-3" ? (
           <div className="grid grid-cols-3 gap-2">
             {presets.map(([a, b]) => (
@@ -54,15 +73,21 @@ export function ScoreDialog({ matchId, format, expectedVersion, onClose }: Props
           </div>
         ) : (
           <div className="flex items-center justify-center gap-2">
+            <label className="sr-only" htmlFor="team1-score">Team 1 Punkte</label>
             <input
+              id="team1-score"
               type="number"
+              min={0}
               value={team1}
               onChange={(e) => setTeam1(Number(e.target.value))}
               className="w-16 rounded border px-2 py-1 text-center"
             />
-            <span>:</span>
+            <span aria-hidden="true">:</span>
+            <label className="sr-only" htmlFor="team2-score">Team 2 Punkte</label>
             <input
+              id="team2-score"
               type="number"
+              min={0}
               value={team2}
               onChange={(e) => setTeam2(Number(e.target.value))}
               className="w-16 rounded border px-2 py-1 text-center"
