@@ -1,16 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { computeRanking } from "@/lib/ranking/compute";
-
-async function resetDb() {
-  await prisma.auditLog.deleteMany();
-  await prisma.jokerUse.deleteMany();
-  await prisma.match.deleteMany();
-  await prisma.gameDayParticipant.deleteMany();
-  await prisma.gameDay.deleteMany();
-  await prisma.season.deleteMany();
-  await prisma.player.deleteMany();
-}
+import { resetDb } from "../helpers/reset-db";
 
 describe("computeRanking", () => {
   beforeEach(resetDb);

@@ -1,16 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { useJoker, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
-
-async function resetDb() {
-  await prisma.auditLog.deleteMany();
-  await prisma.jokerUse.deleteMany();
-  await prisma.match.deleteMany();
-  await prisma.gameDayParticipant.deleteMany();
-  await prisma.gameDay.deleteMany();
-  await prisma.season.deleteMany();
-  await prisma.player.deleteMany();
-}
+import { resetDb } from "../helpers/reset-db";
 
 async function setup() {
   const year = new Date().getFullYear();

@@ -4,15 +4,7 @@ import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { lockRoster } from "@/lib/game-day/lock";
 import { enterScore, ScoreConflictError } from "@/lib/match/enter-score";
-
-async function resetDb() {
-  await prisma.auditLog.deleteMany();
-  await prisma.match.deleteMany();
-  await prisma.gameDayParticipant.deleteMany();
-  await prisma.gameDay.deleteMany();
-  await prisma.season.deleteMany();
-  await prisma.player.deleteMany();
-}
+import { resetDb } from "../helpers/reset-db";
 
 async function setupFivePlayerGame() {
   const players = [];

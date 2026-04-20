@@ -3,15 +3,7 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { lockRoster } from "@/lib/game-day/lock";
-
-async function resetDb() {
-  await prisma.auditLog.deleteMany();
-  await prisma.match.deleteMany();
-  await prisma.gameDayParticipant.deleteMany();
-  await prisma.gameDay.deleteMany();
-  await prisma.season.deleteMany();
-  await prisma.player.deleteMany();
-}
+import { resetDb } from "../helpers/reset-db";
 
 async function seedSixPlayers() {
   const players = [];

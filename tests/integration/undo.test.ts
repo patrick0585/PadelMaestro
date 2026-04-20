@@ -5,15 +5,7 @@ import { setAttendance } from "@/lib/game-day/attendance";
 import { lockRoster } from "@/lib/game-day/lock";
 import { enterScore } from "@/lib/match/enter-score";
 import { undoScore } from "@/lib/match/undo";
-
-async function resetDb() {
-  await prisma.auditLog.deleteMany();
-  await prisma.match.deleteMany();
-  await prisma.gameDayParticipant.deleteMany();
-  await prisma.gameDay.deleteMany();
-  await prisma.season.deleteMany();
-  await prisma.player.deleteMany();
-}
+import { resetDb } from "../helpers/reset-db";
 
 async function setupAndEnter() {
   const players = [];
