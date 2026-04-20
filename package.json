@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts"
   },
   "keywords": [],
   "author": "",
