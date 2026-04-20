@@ -24,16 +24,18 @@ export function CreateGameDayForm() {
   }
 
   return (
-    <form onSubmit={submit} className="flex gap-2">
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        required
-        className="rounded border px-3 py-2"
-      />
-      <button className="rounded bg-black px-4 py-2 text-white">Spieltag anlegen</button>
-      {error && <span className="text-sm text-red-600">{error}</span>}
-    </form>
+    <div className="space-y-2">
+      <form onSubmit={submit} className="flex gap-2">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+          className="rounded border px-3 py-2"
+        />
+        <button className="rounded bg-black px-4 py-2 text-white">Spieltag anlegen</button>
+      </form>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
   );
 }
