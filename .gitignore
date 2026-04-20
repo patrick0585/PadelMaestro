@@ -45,3 +45,5 @@ postgres-data/
 # Temp
 tmp/
 *.tmp
+
+/generated/prisma
