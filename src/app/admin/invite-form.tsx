@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function InviteForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +24,7 @@ export function InviteForm() {
     }
     setUrl(body.url);
     setEmail("");
+    router.refresh();
   }
 
   return (
