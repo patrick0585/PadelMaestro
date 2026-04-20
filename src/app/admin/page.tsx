@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { InviteForm } from "./invite-form";
 import { CreateGameDayForm } from "./create-game-day-form";
@@ -27,8 +28,8 @@ export default async function AdminPage() {
       <header>
         <h1 className="text-2xl font-semibold">Admin</h1>
         <nav className="text-sm">
-          <a href="/ranking" className="mr-4">Rangliste</a>
-          <a href="/game-day">Spieltag</a>
+          <Link href="/ranking" className="mr-4">Rangliste</Link>
+          <Link href="/game-day">Spieltag</Link>
         </nav>
       </header>
 
