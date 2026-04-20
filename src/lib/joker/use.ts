@@ -42,7 +42,7 @@ async function snapshotPpg(playerId: string, seasonId: string): Promise<number> 
   return games === 0 ? 0 : points / games;
 }
 
-export async function useJoker(args: { playerId: string; gameDayId: string }) {
+export async function recordJokerUse(args: { playerId: string; gameDayId: string }) {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
     include: { season: true },

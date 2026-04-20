@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { useJoker, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { recordJokerUse, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 import { resetDb } from "../helpers/reset-db";
 
 async function setup() {
@@ -25,12 +25,12 @@ async function setup() {
   return { season, player, gameDay };
 }
 
-describe("useJoker", () => {
+describe("recordJokerUse", () => {
   beforeEach(resetDb);
 
   it("creates a JokerUse with a ppg snapshot and marks attendance=joker", async () => {
     const { player, gameDay } = await setup();
-    const use = await useJoker({ playerId: player.id, gameDayId: gameDay.id });
+    const use = await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
 
     expect(use.gamesCredited).toBe(JOKER_GAMES_CREDITED);
     expect(Number(use.ppgAtUse)).toBe(0);
@@ -69,7 +69,7 @@ describe("useJoker", () => {
       },
     });
 
-    const use = await useJoker({ playerId: player.id, gameDayId: gameDay.id });
+    const use = await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
     expect(Number(use.ppgAtUse)).toBeCloseTo(3);
     expect(Number(use.pointsCredited)).toBeCloseTo(3 * JOKER_GAMES_CREDITED);
   });
@@ -83,10 +83,10 @@ describe("useJoker", () => {
       await prisma.gameDayParticipant.create({
         data: { gameDayId: g.id, playerId: player.id },
       });
-      await useJoker({ playerId: player.id, gameDayId: g.id });
+      await recordJokerUse({ playerId: player.id, gameDayId: g.id });
     }
 
-    await expect(useJoker({ playerId: player.id, gameDayId: gameDay.id })).rejects.toThrow(
+    await expect(recordJokerUse({ playerId: player.id, gameDayId: gameDay.id })).rejects.toThrow(
       /max/i,
     );
   });
@@ -97,7 +97,7 @@ describe("useJoker", () => {
       where: { id: gameDay.id },
       data: { status: "roster_locked" },
     });
-    await expect(useJoker({ playerId: player.id, gameDayId: gameDay.id })).rejects.toThrow(
+    await expect(recordJokerUse({ playerId: player.id, gameDayId: gameDay.id })).rejects.toThrow(
       /locked/i,
     );
   });

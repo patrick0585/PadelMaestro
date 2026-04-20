@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-// `useJoker` has a hook-like name but is a plain server-side function; the
-// eslint-plugin-react-hooks rule is a false positive here.
-import { useJoker as recordJokerUse } from "@/lib/joker/use";
+import { recordJokerUse } from "@/lib/joker/use";
 
 const Schema = z.object({ gameDayId: z.string().uuid() });
 
