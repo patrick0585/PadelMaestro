@@ -26,14 +26,14 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
     <div
       data-testid="dialog-backdrop"
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl bg-surface p-5 shadow-sm sm:rounded-2xl"
+        className="w-full max-w-md rounded-2xl bg-surface-elevated border border-border-strong text-foreground p-5 sm:rounded-2xl"
       >
         <h2 id={titleId} className="mb-4 text-lg font-semibold text-foreground">
           {title}
