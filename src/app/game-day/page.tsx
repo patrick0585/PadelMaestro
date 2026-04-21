@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
-import { MatchList } from "./match-list";
+import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
@@ -44,7 +44,6 @@ export default async function GameDayPage() {
   }
 
   const me = day.participants.find((p) => p.playerId === session.user.id);
-  const format = day.playerCount === 4 ? "first-to-6" : "first-to-3";
   const steps = timelineForStatus(day.status as GameDayStatus);
   const dateText = new Date(day.date).toLocaleDateString("de-DE", {
     weekday: "short",
@@ -75,24 +74,31 @@ export default async function GameDayPage() {
         />
       )}
 
-      {day.matches.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-base font-semibold text-foreground">Spiele</h2>
-          <MatchList
-            format={format}
-            matches={day.matches.map((m) => ({
-              id: m.id,
-              matchNumber: m.matchNumber,
-              team1A: m.team1PlayerA.name,
-              team1B: m.team1PlayerB.name,
-              team2A: m.team2PlayerA.name,
-              team2B: m.team2PlayerB.name,
-              team1Score: m.team1Score,
-              team2Score: m.team2Score,
-              version: m.version,
-            }))}
-          />
-        </div>
+      {day.matches.length > 0 && (day.status === "in_progress" || day.status === "finished") && (
+        <section className="space-y-2">
+          <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Matches
+          </h2>
+          <div className="space-y-2">
+            {day.matches.map((m) => (
+              <MatchInlineCard
+                key={m.id}
+                maxScore={day.playerCount === 4 ? 6 : 3}
+                match={{
+                  id: m.id,
+                  matchNumber: m.matchNumber,
+                  team1A: m.team1PlayerA.name,
+                  team1B: m.team1PlayerB.name,
+                  team2A: m.team2PlayerA.name,
+                  team2B: m.team2PlayerB.name,
+                  team1Score: m.team1Score,
+                  team2Score: m.team2Score,
+                  version: m.version,
+                }}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
