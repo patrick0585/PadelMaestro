@@ -1,13 +1,11 @@
 "use client";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +16,12 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
     const res = await signIn("credentials", { email, password, redirect: false });
-    setLoading(false);
-    if (res?.error) setError("Falsche E-Mail oder Passwort");
-    else router.push("/ranking");
+    if (res?.error) {
+      setLoading(false);
+      setError("Falsche E-Mail oder Passwort");
+      return;
+    }
+    window.location.assign("/ranking");
   }
 
   return (

@@ -3,12 +3,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-type Attendance = "unknown" | "confirmed" | "declined";
+type Attendance = "pending" | "confirmed" | "declined";
 
 const OPTIONS: Array<{ value: Attendance; label: string }> = [
   { value: "confirmed", label: "Dabei" },
   { value: "declined", label: "Nicht dabei" },
-  { value: "unknown", label: "Weiß nicht" },
+  { value: "pending", label: "Weiß nicht" },
 ];
 
 export function AttendanceWidget({
@@ -29,7 +29,7 @@ export function AttendanceWidget({
     const res = await fetch(`/api/game-days/${gameDayId}/attendance`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ attendance: next }),
+      body: JSON.stringify({ status: next }),
     });
     setLoading(false);
     if (!res.ok) {

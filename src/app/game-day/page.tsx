@@ -77,7 +77,7 @@ export default async function GameDayPage() {
               current={
                 me.attendance === "confirmed" || me.attendance === "declined"
                   ? me.attendance
-                  : "unknown"
+                  : "pending"
               }
             />
           </CardBody>
