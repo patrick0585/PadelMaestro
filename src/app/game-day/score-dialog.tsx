@@ -1,110 +1,111 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/input";
+import type { MatchRow } from "./match-list";
 
-interface Props {
-  matchId: string;
+const PRESETS = {
+  "first-to-3": [
+    { team1: 3, team2: 0 },
+    { team1: 3, team2: 1 },
+    { team1: 3, team2: 2 },
+    { team1: 2, team2: 3 },
+    { team1: 1, team2: 3 },
+    { team1: 0, team2: 3 },
+  ],
+  "first-to-6": [
+    { team1: 6, team2: 0 },
+    { team1: 6, team2: 2 },
+    { team1: 6, team2: 4 },
+    { team1: 4, team2: 6 },
+    { team1: 2, team2: 6 },
+    { team1: 0, team2: 6 },
+  ],
+} as const;
+
+export function ScoreDialog({
+  match,
+  format,
+  onClose,
+  onSaved,
+}: {
+  match: MatchRow;
   format: "first-to-3" | "first-to-6";
-  expectedVersion: number;
   onClose: () => void;
-}
-
-export function ScoreDialog({ matchId, format, expectedVersion, onClose }: Props) {
-  const router = useRouter();
-  const [team1, setTeam1] = useState(0);
-  const [team2, setTeam2] = useState(0);
+  onSaved: () => void;
+}) {
+  const [selected, setSelected] = useState<{ team1: number; team2: number } | null>(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const presets =
-    format === "first-to-3"
-      ? ([[3, 0], [3, 1], [3, 2], [2, 3], [1, 3], [0, 3]] as const)
-      : ([] as const);
-
-  async function submit(t1: number, t2: number) {
+  async function save() {
+    if (!selected) return;
+    setSaving(true);
     setError(null);
-    const res = await fetch(`/api/matches/${matchId}`, {
+    const res = await fetch(`/api/matches/${match.id}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ team1Score: t1, team2Score: t2, expectedVersion }),
+      body: JSON.stringify({
+        team1Score: selected.team1,
+        team2Score: selected.team2,
+        version: match.version,
+      }),
     });
+    setSaving(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Fehler");
+      if (res.status === 409) setError("Das Spiel wurde zwischenzeitlich geändert");
+      else setError("Speichern fehlgeschlagen");
       return;
     }
-    router.refresh();
-    onClose();
+    onSaved();
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="score-dialog-title"
-      onClick={onClose}
-      className="fixed inset-0 flex items-center justify-center bg-black/50"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-80 space-y-4 rounded bg-white p-6"
-      >
-        <h3 id="score-dialog-title" className="text-lg font-semibold">
-          Ergebnis eintragen
-        </h3>
-        {format === "first-to-3" ? (
+    <Dialog open onClose={onClose} title={`Ergebnis — Spiel #${match.matchNumber}`}>
+      <div className="space-y-4">
+        <p className="text-sm text-foreground">
+          <span className="font-medium">{match.team1A} &amp; {match.team1B}</span>
+          <span className="text-muted-foreground"> vs </span>
+          <span className="font-medium">{match.team2A} &amp; {match.team2B}</span>
+        </p>
+
+        <div>
+          <Label>Ergebnis wählen</Label>
           <div className="grid grid-cols-3 gap-2">
-            {presets.map(([a, b]) => (
-              <button
-                key={`${a}-${b}`}
-                onClick={() => submit(a, b)}
-                className="rounded border px-2 py-2"
-              >
-                {a}:{b}
-              </button>
-            ))}
+            {PRESETS[format].map((p) => {
+              const active = selected?.team1 === p.team1 && selected?.team2 === p.team2;
+              return (
+                <button
+                  key={`${p.team1}-${p.team2}`}
+                  type="button"
+                  onClick={() => setSelected(p)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+                    active
+                      ? "bg-primary-soft border-primary-border text-primary"
+                      : "bg-surface border-border text-foreground hover:bg-surface-muted"
+                  }`}
+                >
+                  {p.team1}:{p.team2}
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2">
-            <label className="sr-only" htmlFor="team1-score">Team 1 Punkte</label>
-            <input
-              id="team1-score"
-              type="number"
-              min={0}
-              value={team1}
-              onChange={(e) => setTeam1(Number(e.target.value))}
-              className="w-16 rounded border px-2 py-1 text-center"
-            />
-            <span aria-hidden="true">:</span>
-            <label className="sr-only" htmlFor="team2-score">Team 2 Punkte</label>
-            <input
-              id="team2-score"
-              type="number"
-              min={0}
-              value={team2}
-              onChange={(e) => setTeam2(Number(e.target.value))}
-              className="w-16 rounded border px-2 py-1 text-center"
-            />
-            <button
-              onClick={() => submit(team1, team2)}
-              className="rounded bg-black px-3 py-1 text-white"
-            >
-              OK
-            </button>
-          </div>
+        </div>
+
+        {error && (
+          <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">{error}</p>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button onClick={onClose} className="text-sm underline">
-          Abbrechen
-        </button>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Abbrechen
+          </Button>
+          <Button onClick={save} disabled={!selected} loading={saving}>
+            Speichern
+          </Button>
+        </div>
       </div>
-    </div>
+    </Dialog>
   );
 }

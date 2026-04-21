@@ -72,7 +72,14 @@ export default async function GameDayPage() {
         <Card>
           <CardBody>
             <h2 className="mb-3 text-base font-semibold text-foreground">Bist du dabei?</h2>
-            <AttendanceWidget gameDayId={day.id} current={me.attendance} />
+            <AttendanceWidget
+              gameDayId={day.id}
+              current={
+                me.attendance === "confirmed" || me.attendance === "declined"
+                  ? me.attendance
+                  : "unknown"
+              }
+            />
           </CardBody>
         </Card>
       )}
