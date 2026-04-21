@@ -29,14 +29,14 @@ export function UserMenu({ name }: { name: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated text-sm font-semibold text-primary border border-border-strong"
       >
         {initials(name)}
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-44 rounded-xl border border-border bg-surface py-1 shadow-sm"
+          className="absolute right-0 mt-2 w-44 rounded-xl border border-border-strong bg-surface-elevated py-1 text-foreground"
         >
           <button
             role="menuitem"

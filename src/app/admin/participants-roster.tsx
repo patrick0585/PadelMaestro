@@ -50,7 +50,7 @@ function PlayerCard({
       {...listeners}
       {...attributes}
       aria-label={`${row.name}, aktuell ${zoneLabel}. Ziehen zum Verschieben.`}
-      className={`flex items-center justify-between rounded-xl border border-border bg-surface p-3 touch-none select-none cursor-grab active:cursor-grabbing ${
+      className={`flex items-center justify-between rounded-xl border border-border bg-surface-muted p-3 touch-none select-none cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-40" : ""
       } ${dimmed ? "opacity-60" : ""}`}
     >

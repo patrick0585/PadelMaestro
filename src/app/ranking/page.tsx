@@ -15,16 +15,11 @@ export default async function RankingPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Saison {season.year}
-          </p>
-          <h1 className="text-2xl font-bold text-foreground">Rangliste</h1>
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-xl">
-          🎾
-        </div>
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+          Saison {season.year}
+        </p>
+        <h1 className="text-2xl font-bold text-foreground">Rangliste</h1>
       </header>
       <RankingTable ranking={ranking} />
     </div>

@@ -2,19 +2,13 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AttendanceWidget } from "./attendance-widget";
-import { JoinButton } from "./join-button";
-import { MatchList } from "./match-list";
+import { MatchInlineCard } from "./match-inline-card";
+import { Timeline } from "@/components/ui/timeline";
+import { timelineForStatus, type GameDayStatus } from "./phase";
+import { PlannedSection } from "./planned-section";
+import { AvatarStack } from "@/components/ui/avatar-stack";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_LABEL: Record<string, string> = {
-  planned: "Geplant",
-  roster_locked: "Paarungen festgelegt",
-  in_progress: "Läuft",
-  finished: "Beendet",
-};
 
 export default async function GameDayPage() {
   const session = await auth();
@@ -51,83 +45,87 @@ export default async function GameDayPage() {
   }
 
   const me = day.participants.find((p) => p.playerId === session.user.id);
-  const format = day.playerCount === 4 ? "first-to-6" : "first-to-3";
+  const steps = timelineForStatus(day.status as GameDayStatus);
+  const dateText = new Date(day.date).toLocaleDateString("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+  });
+  const timeText = new Date(day.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardBody className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Spieltag
-            </p>
-            <h1 className="text-xl font-bold text-foreground">
-              {new Date(day.date).toLocaleDateString("de-DE")}
-            </h1>
-          </div>
-          <Badge>{STATUS_LABEL[day.status] ?? day.status}</Badge>
-        </CardBody>
-      </Card>
+    <div className="space-y-4">
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
+        <h1 className="text-2xl font-bold text-foreground">
+          {dateText} · {timeText}
+        </h1>
+      </header>
+      <Timeline steps={steps} />
 
-      {day.status === "planned" && me && (
-        <Card>
-          <CardBody>
-            <h2 className="mb-3 text-base font-semibold text-foreground">Bist du dabei?</h2>
-            <AttendanceWidget
-              gameDayId={day.id}
-              current={
-                me.attendance === "confirmed" || me.attendance === "declined"
-                  ? me.attendance
-                  : "pending"
-              }
+      {day.status === "roster_locked" && (
+        <div className="rounded-2xl border border-primary/50 bg-[image:var(--hero-gradient)] p-4">
+          <div className="text-sm font-semibold text-foreground">Warten auf Start</div>
+          <p className="mt-1 text-xs text-primary-strong">
+            Der Roster ist gesperrt. Der Admin startet den Spieltag gleich.
+          </p>
+          <div className="mt-3">
+            <AvatarStack
+              names={day.participants.filter((p) => p.attendance === "confirmed").map((p) => p.player.name)}
             />
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {day.status === "planned" && !me && (
-        <Card>
-          <CardBody>
-            <h2 className="mb-3 text-base font-semibold text-foreground">Du bist nicht dabei</h2>
-            <p className="mb-3 text-sm text-muted-foreground">
-              Du bist noch kein Teilnehmer dieses Spieltags.
-            </p>
-            <JoinButton gameDayId={day.id} />
-          </CardBody>
-        </Card>
+      {day.status === "planned" && (
+        <PlannedSection
+          gameDayId={day.id}
+          me={me ? { playerId: me.playerId, name: me.player.name, attendance: (me.attendance === "confirmed" || me.attendance === "declined") ? me.attendance : "pending" } : null}
+          participants={day.participants.map((p) => ({
+            playerId: p.playerId,
+            name: p.player.name,
+            attendance: (p.attendance === "confirmed" || p.attendance === "declined") ? p.attendance : "pending",
+          }))}
+        />
       )}
 
-      <Card>
-        <CardBody>
-          <h2 className="mb-3 text-base font-semibold text-foreground">Teilnehmer</h2>
-          <ul className="space-y-1 text-sm">
-            {day.participants.map((p) => (
-              <li key={p.id} className="flex justify-between text-foreground">
-                <span>{p.player.name}</span>
-                <span className="text-muted-foreground">{p.attendance}</span>
-              </li>
+      {day.matches.length > 0 && (day.status === "in_progress" || day.status === "finished") && (
+        <section className="space-y-2">
+          <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Matches
+          </h2>
+          <div className="space-y-2">
+            {day.matches.map((m) => (
+              <MatchInlineCard
+                key={m.id}
+                maxScore={day.playerCount === 4 ? 6 : 3}
+                match={{
+                  id: m.id,
+                  matchNumber: m.matchNumber,
+                  team1A: m.team1PlayerA.name,
+                  team1B: m.team1PlayerB.name,
+                  team2A: m.team2PlayerA.name,
+                  team2B: m.team2PlayerB.name,
+                  team1Score: m.team1Score,
+                  team2Score: m.team2Score,
+                  version: m.version,
+                }}
+              />
             ))}
-          </ul>
-        </CardBody>
-      </Card>
+          </div>
+        </section>
+      )}
 
-      {day.matches.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-base font-semibold text-foreground">Spiele</h2>
-          <MatchList
-            format={format}
-            matches={day.matches.map((m) => ({
-              id: m.id,
-              matchNumber: m.matchNumber,
-              team1A: m.team1PlayerA.name,
-              team1B: m.team1PlayerB.name,
-              team2A: m.team2PlayerA.name,
-              team2B: m.team2PlayerB.name,
-              team1Score: m.team1Score,
-              team2Score: m.team2Score,
-              version: m.version,
-            }))}
-          />
+      {day.status === "finished" && (
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Zusammenfassung
+          </div>
+          <div className="mt-2 text-sm text-foreground">
+            Spieltag beendet · {day.matches.filter((m) => m.team1Score !== null && m.team2Score !== null).length}
+            {" / "}
+            {day.matches.length} Matches gewertet
+          </div>
         </div>
       )}
     </div>
