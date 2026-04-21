@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { StartGameDayButton } from "./start-game-day-button";
 import { PlayersSection } from "./players-section";
+import { ParticipantsSection, type ParticipantAttendance } from "./participants-section";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,12 @@ export default async function AdminPage() {
   const plannedDay = await prisma.gameDay.findFirst({
     where: { status: "planned" },
     orderBy: { date: "desc" },
+    include: {
+      participants: {
+        include: { player: { select: { id: true, name: true } } },
+        orderBy: { player: { name: "asc" } },
+      },
+    },
   });
 
   const playersForUi = players.map((p) => ({
@@ -46,14 +53,27 @@ export default async function AdminPage() {
           <h2 className="text-base font-semibold text-foreground">Spieltage</h2>
           <CreateGameDayForm />
           {plannedDay && (
-            <div className="flex items-center justify-between rounded-xl border border-border p-3">
-              <div className="text-sm">
-                <div className="font-medium text-foreground">
-                  Offener Spieltag: {new Date(plannedDay.date).toLocaleDateString("de-DE")}
+            <div className="space-y-3 rounded-xl border border-border p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <div className="font-medium text-foreground">
+                    Offener Spieltag: {new Date(plannedDay.date).toLocaleDateString("de-DE")}
+                  </div>
+                  <Badge variant="neutral">planned</Badge>
                 </div>
-                <Badge variant="neutral">planned</Badge>
+                <StartGameDayButton gameDayId={plannedDay.id} />
               </div>
-              <StartGameDayButton gameDayId={plannedDay.id} />
+              <ParticipantsSection
+                gameDayId={plannedDay.id}
+                participants={plannedDay.participants.map((p) => ({
+                  playerId: p.playerId,
+                  name: p.player.name,
+                  attendance:
+                    p.attendance === "confirmed" || p.attendance === "declined"
+                      ? p.attendance
+                      : ("pending" as ParticipantAttendance),
+                }))}
+              />
             </div>
           )}
         </CardBody>
