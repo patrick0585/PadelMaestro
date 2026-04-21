@@ -6,7 +6,6 @@ import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
-import { AvatarStack } from "@/components/ui/avatar-stack";
 
 export const dynamic = "force-dynamic";
 
@@ -14,22 +13,37 @@ export default async function GameDayPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const day = await prisma.gameDay.findFirst({
-    where: { status: { in: ["planned", "roster_locked", "in_progress"] } },
-    orderBy: { date: "desc" },
-    include: {
-      participants: { include: { player: { select: { id: true, name: true } } } },
-      matches: {
-        orderBy: { matchNumber: "asc" },
-        include: {
-          team1PlayerA: { select: { name: true } },
-          team1PlayerB: { select: { name: true } },
-          team2PlayerA: { select: { name: true } },
-          team2PlayerB: { select: { name: true } },
-        },
+  const dayInclude = {
+    participants: { include: { player: { select: { id: true, name: true } } } },
+    matches: {
+      orderBy: { matchNumber: "asc" as const },
+      include: {
+        team1PlayerA: { select: { name: true } },
+        team1PlayerB: { select: { name: true } },
+        team2PlayerA: { select: { name: true } },
+        team2PlayerB: { select: { name: true } },
       },
     },
+  };
+
+  const activeDay = await prisma.gameDay.findFirst({
+    where: { status: { in: ["planned", "roster_locked", "in_progress"] } },
+    orderBy: { date: "desc" },
+    include: dayInclude,
   });
+
+  const recentFinishedDay = activeDay
+    ? null
+    : await prisma.gameDay.findFirst({
+        where: {
+          status: "finished",
+          date: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
+        orderBy: { date: "desc" },
+        include: dayInclude,
+      });
+
+  const day = activeDay ?? recentFinishedDay;
 
   if (!day) {
     return (
@@ -63,20 +77,6 @@ export default async function GameDayPage() {
       </header>
       <Timeline steps={steps} />
 
-      {day.status === "roster_locked" && (
-        <div className="rounded-2xl border border-primary/50 bg-[image:var(--hero-gradient)] p-4">
-          <div className="text-sm font-semibold text-foreground">Warten auf Start</div>
-          <p className="mt-1 text-xs text-primary-strong">
-            Der Roster ist gesperrt. Der Admin startet den Spieltag gleich.
-          </p>
-          <div className="mt-3">
-            <AvatarStack
-              names={day.participants.filter((p) => p.attendance === "confirmed").map((p) => p.player.name)}
-            />
-          </div>
-        </div>
-      )}
-
       {day.status === "planned" && (
         <PlannedSection
           gameDayId={day.id}
@@ -89,7 +89,7 @@ export default async function GameDayPage() {
         />
       )}
 
-      {day.matches.length > 0 && (day.status === "in_progress" || day.status === "finished") && (
+      {day.matches.length > 0 && (day.status === "roster_locked" || day.status === "in_progress" || day.status === "finished") && (
         <section className="space-y-2">
           <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
             Matches
