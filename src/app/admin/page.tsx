@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { StartGameDayButton } from "./start-game-day-button";
 import { PlayersSection } from "./players-section";
-import { ParticipantsSection, type ParticipantAttendance } from "./participants-section";
+import { ParticipantsRoster, type ParticipantAttendance } from "./participants-roster";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +63,7 @@ export default async function AdminPage() {
                 </div>
                 <StartGameDayButton gameDayId={plannedDay.id} />
               </div>
-              <ParticipantsSection
+              <ParticipantsRoster
                 gameDayId={plannedDay.id}
                 participants={plannedDay.participants.map((p) => ({
                   playerId: p.playerId,
