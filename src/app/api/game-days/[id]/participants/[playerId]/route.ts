@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import {
   setAttendanceAsAdmin,
   GameDayNotFoundError,
-  ParticipantNotFoundError,
+  PlayerNotFoundError,
   GameDayLockedError,
 } from "@/lib/game-day/attendance";
 
@@ -40,8 +40,8 @@ export async function PATCH(
     if (e instanceof GameDayNotFoundError) {
       return NextResponse.json({ error: "game_day_not_found" }, { status: 404 });
     }
-    if (e instanceof ParticipantNotFoundError) {
-      return NextResponse.json({ error: "participant_not_found" }, { status: 404 });
+    if (e instanceof PlayerNotFoundError) {
+      return NextResponse.json({ error: "player_not_found" }, { status: 404 });
     }
     if (e instanceof GameDayLockedError) {
       return NextResponse.json({ error: "locked" }, { status: 409 });

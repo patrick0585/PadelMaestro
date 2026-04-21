@@ -82,7 +82,7 @@ describe("PATCH /api/game-days/[id]/participants/[playerId]", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 404 when the player is not a participant", async () => {
+  it("creates a participant row when the player has none yet", async () => {
     const { admin, day } = await setup();
     const outsider = await prisma.player.create({
       data: { name: "O", email: "o@x", passwordHash: "x" },
@@ -92,6 +92,25 @@ describe("PATCH /api/game-days/[id]/participants/[playerId]", () => {
     });
     const res = await PATCH(req(day.id, outsider.id, { status: "confirmed" }), {
       params: Promise.resolve({ id: day.id, playerId: outsider.id }),
+    });
+    expect(res.status).toBe(200);
+    const p = await prisma.gameDayParticipant.findUniqueOrThrow({
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: outsider.id } },
+    });
+    expect(p.attendance).toBe("confirmed");
+  });
+
+  it("returns 404 when the player does not exist or is soft-deleted", async () => {
+    const { admin, other, day } = await setup();
+    await prisma.player.update({
+      where: { id: other.id },
+      data: { deletedAt: new Date() },
+    });
+    authMock.mockResolvedValue({
+      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
+    });
+    const res = await PATCH(req(day.id, other.id, { status: "confirmed" }), {
+      params: Promise.resolve({ id: day.id, playerId: other.id }),
     });
     expect(res.status).toBe(404);
   });
