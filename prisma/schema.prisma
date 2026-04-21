@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  passwordHash   String?
+  telegramId     BigInt?   @unique
+  isAdmin        Boolean   @default(false)
+  invitedAt      DateTime  @default(now())
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  participations  GameDayParticipant[]
+  matchesScored   Match[]      @relation("ScoredBy")
+  jokersUsed      JokerUse[]
+  auditLogs       AuditLog[]
+
+  // All four player slots of a Match can reference a Player
+  matchT1A Match[] @relation("MatchT1A")
+  matchT1B Match[] @relation("MatchT1B")
+  matchT2A Match[] @relation("MatchT2A")
+  matchT2B Match[] @relation("MatchT2B")
+
+  @@index([email])
+  @@index([deletedAt])
+}
+
+model Season {
+  id        String   @id @default(uuid())
+  year      Int      @unique
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gameDays   GameDay[]
+  jokerUses  JokerUse[]
+}
+
+enum GameDayStatus {
+  planned
+  roster_locked
+  in_progress
+  finished
+}
+
+model GameDay {
+  id           String        @id @default(uuid())
+  seasonId     String
+  date         DateTime      @db.Date
+  playerCount  Int?
+  status       GameDayStatus @default(planned)
+  seed         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  season       Season        @relation(fields: [seasonId], references: [id])
+  participants GameDayParticipant[]
+  matches      Match[]
+  jokers       JokerUse[]
+
+  @@index([seasonId, date])
+}
+
+enum AttendanceStatus {
+  pending
+  confirmed
+  declined
+  joker
+}
+
+model GameDayParticipant {
+  id          String            @id @default(uuid())
+  gameDayId   String
+  playerId    String
+  attendance  AttendanceStatus  @default(pending)
+  respondedAt DateTime?
+  createdAt   DateTime          @default(now())
+
+  gameDay GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
+  player  Player  @relation(fields: [playerId], references: [id])
+
+  @@unique([gameDayId, playerId])
+  @@index([playerId])
+}
+
+model Match {
+  id            String    @id @default(uuid())
+  gameDayId     String
+  matchNumber   Int
+  team1PlayerAId String
+  team1PlayerBId String
+  team2PlayerAId String
+  team2PlayerBId String
+  team1Score    Int?
+  team2Score    Int?
+  scoredById    String?
+  scoredAt      DateTime?
+  version       Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  gameDay      GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
+  team1PlayerA Player  @relation("MatchT1A", fields: [team1PlayerAId], references: [id])
+  team1PlayerB Player  @relation("MatchT1B", fields: [team1PlayerBId], references: [id])
+  team2PlayerA Player  @relation("MatchT2A", fields: [team2PlayerAId], references: [id])
+  team2PlayerB Player  @relation("MatchT2B", fields: [team2PlayerBId], references: [id])
+  scoredBy     Player? @relation("ScoredBy", fields: [scoredById], references: [id])
+
+  @@unique([gameDayId, matchNumber])
+  @@index([gameDayId])
+}
+
+model JokerUse {
+  id             String   @id @default(uuid())
+  playerId       String
+  seasonId       String
+  gameDayId      String
+  ppgAtUse       Decimal  @db.Decimal(5, 3)
+  gamesCredited  Int      @default(10)
+  pointsCredited Decimal  @db.Decimal(6, 2)
+  createdAt      DateTime @default(now())
+
+  player  Player  @relation(fields: [playerId], references: [id])
+  season  Season  @relation(fields: [seasonId], references: [id])
+  gameDay GameDay @relation(fields: [gameDayId], references: [id])
+
+  @@unique([playerId, seasonId, gameDayId])
+  @@index([seasonId, playerId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  actor Player @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+}

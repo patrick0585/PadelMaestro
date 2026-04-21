@@ -1,0 +1,10 @@
+{
+  "playerCount": 4,
+  "format": "first-to-6",
+  "totalMatches": 3,
+  "matches": [
+    { "matchNumber": 1, "team1": [1, 2], "team2": [3, 4], "sitting": [] },
+    { "matchNumber": 2, "team1": [1, 3], "team2": [2, 4], "sitting": [] },
+    { "matchNumber": 3, "team1": [1, 4], "team2": [2, 3], "sitting": [] }
+  ]
+}
