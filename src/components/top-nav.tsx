@@ -6,6 +6,7 @@ import { UserMenu } from "./user-menu";
 type Item = { href: string; label: string };
 
 const USER_ITEMS: Item[] = [
+  { href: "/", label: "Home" },
   { href: "/ranking", label: "Rangliste" },
   { href: "/game-day", label: "Spieltag" },
 ];
@@ -17,21 +18,21 @@ export function TopNav({ isAdmin, name }: { isAdmin: boolean; name: string }) {
   const items = isAdmin ? [...USER_ITEMS, ADMIN_ITEM] : USER_ITEMS;
 
   return (
-    <header className="hidden md:block sticky top-0 z-40 border-b border-border bg-surface">
+    <header className="hidden md:block sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-6">
-        <Link href="/ranking" className="text-lg font-bold text-foreground">
+        <Link href="/" className="text-lg font-extrabold tracking-tight text-foreground">
           Padel Tracker
         </Link>
-        <nav aria-label="Hauptnavigation" className="flex items-center gap-4">
+        <nav aria-label="Hauptnavigation" className="flex items-center gap-5">
           {items.map((i) => {
-            const active = pathname === i.href;
+            const active = i.href === "/" ? pathname === "/" : pathname.startsWith(i.href);
             return (
               <Link
                 key={i.href}
                 href={i.href}
                 aria-current={active ? "page" : undefined}
-                className={`text-sm ${
-                  active ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+                className={`text-sm font-semibold transition-colors ${
+                  active ? "text-primary" : "text-foreground-muted hover:text-foreground"
                 }`}
               >
                 {i.label}
