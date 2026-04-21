@@ -2,19 +2,13 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { AttendanceWidget } from "./attendance-widget";
 import { JoinButton } from "./join-button";
 import { MatchList } from "./match-list";
+import { Timeline } from "@/components/ui/timeline";
+import { timelineForStatus, type GameDayStatus } from "./phase";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_LABEL: Record<string, string> = {
-  planned: "Geplant",
-  roster_locked: "Paarungen festgelegt",
-  in_progress: "Läuft",
-  finished: "Beendet",
-};
 
 export default async function GameDayPage() {
   const session = await auth();
@@ -52,22 +46,23 @@ export default async function GameDayPage() {
 
   const me = day.participants.find((p) => p.playerId === session.user.id);
   const format = day.playerCount === 4 ? "first-to-6" : "first-to-3";
+  const steps = timelineForStatus(day.status as GameDayStatus);
+  const dateText = new Date(day.date).toLocaleDateString("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+  });
+  const timeText = new Date(day.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardBody className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Spieltag
-            </p>
-            <h1 className="text-xl font-bold text-foreground">
-              {new Date(day.date).toLocaleDateString("de-DE")}
-            </h1>
-          </div>
-          <Badge>{STATUS_LABEL[day.status] ?? day.status}</Badge>
-        </CardBody>
-      </Card>
+    <div className="space-y-4">
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
+        <h1 className="text-2xl font-bold text-foreground">
+          {dateText} · {timeText}
+        </h1>
+      </header>
+      <Timeline steps={steps} />
 
       {day.status === "planned" && me && (
         <Card>
