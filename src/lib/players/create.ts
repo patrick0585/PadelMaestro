@@ -47,6 +47,16 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           payload: { email: player.email, name: player.name, isAdmin: player.isAdmin },
         },
       });
+      const plannedDays = await tx.gameDay.findMany({
+        where: { status: "planned" },
+        select: { id: true },
+      });
+      if (plannedDays.length > 0) {
+        await tx.gameDayParticipant.createMany({
+          data: plannedDays.map((d) => ({ gameDayId: d.id, playerId: player.id })),
+          skipDuplicates: true,
+        });
+      }
       return player;
     });
   } catch (e) {

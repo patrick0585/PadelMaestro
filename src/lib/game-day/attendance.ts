@@ -22,6 +22,13 @@ export class GameDayLockedError extends Error {
   }
 }
 
+export class PlayerNotFoundError extends Error {
+  constructor(playerId: string) {
+    super(`player not found or inactive: ${playerId}`);
+    this.name = "PlayerNotFoundError";
+  }
+}
+
 export async function setAttendance(
   gameDayId: string,
   playerId: string,
@@ -35,6 +42,44 @@ export async function setAttendance(
   return prisma.gameDayParticipant.update({
     where: { gameDayId_playerId: { gameDayId, playerId } },
     data: { attendance, respondedAt: new Date() },
+  });
+}
+
+export async function joinGameDay(gameDayId: string, playerId: string) {
+  return prisma.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "GameDay" WHERE id = ${gameDayId} FOR UPDATE
+    `;
+    if (locked.length === 0) throw new GameDayNotFoundError(gameDayId);
+
+    const day = await tx.gameDay.findUnique({ where: { id: gameDayId } });
+    if (!day) throw new GameDayNotFoundError(gameDayId);
+    if (day.status !== "planned") throw new GameDayLockedError(gameDayId);
+
+    const player = await tx.player.findUnique({
+      where: { id: playerId },
+      select: { id: true, deletedAt: true },
+    });
+    if (!player || player.deletedAt) throw new PlayerNotFoundError(playerId);
+
+    const existing = await tx.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId, playerId } },
+    });
+    if (existing) return existing;
+
+    const created = await tx.gameDayParticipant.create({
+      data: { gameDayId, playerId },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: playerId,
+        action: "game_day.self_join",
+        entityType: "GameDayParticipant",
+        entityId: created.id,
+        payload: { gameDayId, playerId },
+      },
+    });
+    return created;
   });
 }
 

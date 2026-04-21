@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AttendanceWidget } from "./attendance-widget";
+import { JoinButton } from "./join-button";
 import { MatchList } from "./match-list";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +81,18 @@ export default async function GameDayPage() {
                   : "pending"
               }
             />
+          </CardBody>
+        </Card>
+      )}
+
+      {day.status === "planned" && !me && (
+        <Card>
+          <CardBody>
+            <h2 className="mb-3 text-base font-semibold text-foreground">Du bist nicht dabei</h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Du bist noch kein Teilnehmer dieses Spieltags.
+            </p>
+            <JoinButton gameDayId={day.id} />
           </CardBody>
         </Card>
       )}

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { POST, GET } from "@/app/api/players/route";
+import { createGameDay } from "@/lib/game-day/create";
 import { resetDb } from "../helpers/reset-db";
 
 vi.mock("@/auth", () => ({
@@ -74,6 +75,47 @@ describe("POST /api/players", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
+  });
+
+  it("attaches the new player to every planned game day as pending", async () => {
+    const admin = await makeAdmin();
+    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    asAdmin(admin.id);
+    const req = new Request("http://localhost/api/players", {
+      method: "POST",
+      body: JSON.stringify({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    const p = await prisma.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: body.id } },
+    });
+    expect(p).not.toBeNull();
+    expect(p?.attendance).toBe("pending");
+  });
+
+  it("does not attach to locked or finished game days", async () => {
+    const admin = await makeAdmin();
+    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    await prisma.gameDay.update({
+      where: { id: day.id },
+      data: { status: "roster_locked" },
+    });
+    asAdmin(admin.id);
+    const req = new Request("http://localhost/api/players", {
+      method: "POST",
+      body: JSON.stringify({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    const p = await prisma.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: body.id } },
+    });
+    expect(p).toBeNull();
   });
 
   it("returns 409 for duplicate email", async () => {
