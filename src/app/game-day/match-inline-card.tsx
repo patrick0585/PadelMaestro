@@ -24,7 +24,7 @@ export function MatchInlineCard({
 }) {
   const router = useRouter();
   const hasScore = match.team1Score !== null && match.team2Score !== null;
-  const [editing, setEditing] = useState(!hasScore ? false : false);
+  const [editing, setEditing] = useState(false);
   const [t1, setT1] = useState(match.team1Score ?? 0);
   const [t2, setT2] = useState(match.team2Score ?? 0);
   const [busy, setBusy] = useState(false);
