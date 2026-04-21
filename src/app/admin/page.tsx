@@ -1,10 +1,11 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { InviteForm } from "./invite-form";
+import { Card, CardBody } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { StartGameDayButton } from "./start-game-day-button";
+import { PlayersSection } from "./players-section";
 
 export const dynamic = "force-dynamic";
 
@@ -13,67 +14,63 @@ export default async function AdminPage() {
   if (!session) redirect("/login");
   if (!session.user.isAdmin) redirect("/ranking");
 
-  const players = await prisma.player.findMany({ orderBy: { name: "asc" } });
-  const openInvites = await prisma.invitation.findMany({
-    where: { usedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" },
+  const players = await prisma.player.findMany({
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true, isAdmin: true, passwordHash: true },
   });
   const plannedDay = await prisma.gameDay.findFirst({
     where: { status: "planned" },
     orderBy: { date: "desc" },
   });
 
+  const playersForUi = players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    isAdmin: p.isAdmin,
+    hasPassword: p.passwordHash !== null,
+  }));
+
   return (
-    <main className="mx-auto max-w-3xl p-6 space-y-8">
+    <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold">Admin</h1>
-        <nav className="text-sm">
-          <Link href="/ranking" className="mr-4">Rangliste</Link>
-          <Link href="/game-day">Spieltag</Link>
-        </nav>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Admin</p>
+        <h1 className="text-2xl font-bold text-foreground">Verwaltung</h1>
       </header>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Spieltag</h2>
-        <CreateGameDayForm />
-        {plannedDay && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm">
-              Offener Spieltag: {new Date(plannedDay.date).toLocaleDateString("de-DE")}
-            </span>
-            <StartGameDayButton gameDayId={plannedDay.id} />
-          </div>
-        )}
-      </section>
+      <PlayersSection players={playersForUi} />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Spieler einladen</h2>
-        <InviteForm />
-        {openInvites.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium">Offene Einladungen</h3>
-            <ul className="text-sm">
-              {openInvites.map((i) => (
-                <li key={i.id}>
-                  {i.email} — läuft ab am {new Date(i.expiresAt).toLocaleDateString("de-DE")}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
+      <Card>
+        <CardBody className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">Spieltage</h2>
+          <CreateGameDayForm />
+          {plannedDay && (
+            <div className="flex items-center justify-between rounded-xl border border-border p-3">
+              <div className="text-sm">
+                <div className="font-medium text-foreground">
+                  Offener Spieltag: {new Date(plannedDay.date).toLocaleDateString("de-DE")}
+                </div>
+                <Badge variant="neutral">planned</Badge>
+              </div>
+              <StartGameDayButton gameDayId={plannedDay.id} />
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
-      <section>
-        <h2 className="text-lg font-medium">Spielerliste</h2>
-        <ul className="mt-2 text-sm">
-          {players.map((p) => (
-            <li key={p.id}>
-              {p.name} ({p.email}) {p.isAdmin && <span className="text-xs">· Admin</span>}
-              {p.deletedAt && <span className="text-xs"> · entfernt</span>}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+      <Card>
+        <CardBody>
+          <h2 className="mb-2 text-base font-semibold text-foreground">Historische Daten</h2>
+          <p className="text-sm text-muted-foreground">
+            Import über die CLI:
+            <code className="mx-1 rounded-md bg-surface-muted px-1.5 py-0.5">
+              pnpm import:historical &lt;file&gt;
+            </code>
+            — Details in <code className="rounded-md bg-surface-muted px-1.5 py-0.5">docs/import-historical.md</code>.
+          </p>
+        </CardBody>
+      </Card>
+    </div>
   );
 }

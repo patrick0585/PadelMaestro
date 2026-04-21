@@ -19,7 +19,6 @@ model Player {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  invitationsSent Invitation[] @relation("InvitedBy")
   participations  GameDayParticipant[]
   matchesScored   Match[]      @relation("ScoredBy")
   jokersUsed      JokerUse[]
@@ -138,21 +137,6 @@ model JokerUse {
 
   @@unique([playerId, seasonId, gameDayId])
   @@index([seasonId, playerId])
-}
-
-model Invitation {
-  id          String    @id @default(uuid())
-  email       String
-  token       String    @unique
-  invitedById String
-  expiresAt   DateTime
-  usedAt      DateTime?
-  createdAt   DateTime  @default(now())
-
-  invitedBy Player @relation("InvitedBy", fields: [invitedById], references: [id])
-
-  @@index([email])
-  @@index([expiresAt])
 }
 
 model AuditLog {

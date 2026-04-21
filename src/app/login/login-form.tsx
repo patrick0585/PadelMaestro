@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Card, CardBody } from "@/components/ui/card";
+import { Input, Label } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
   const router = useRouter();
@@ -21,38 +24,46 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-sm space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Login</h1>
-      <label className="block">
-        <span className="text-sm">E-Mail</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
-      </label>
-      <label className="block">
-        <span className="text-sm">Passwort</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="current-password"
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
-      </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-      >
-        {loading ? "..." : "Anmelden"}
-      </button>
-    </form>
+    <Card className="w-full max-w-sm">
+      <CardBody>
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-2xl text-white">
+            🎾
+          </div>
+          <h1 className="text-xl font-bold text-foreground">Padel Tracker</h1>
+          <p className="text-sm text-muted-foreground">Melde dich an, um weiterzumachen</p>
+        </div>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">E-Mail</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </div>
+          <div>
+            <Label htmlFor="password">Passwort</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </div>
+          {error && (
+            <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">{error}</p>
+          )}
+          <Button type="submit" loading={loading} className="w-full">
+            Anmelden
+          </Button>
+        </form>
+      </CardBody>
+    </Card>
   );
 }

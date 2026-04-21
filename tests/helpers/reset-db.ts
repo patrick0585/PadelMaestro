@@ -7,6 +7,5 @@ export async function resetDb(): Promise<void> {
   await prisma.gameDayParticipant.deleteMany();
   await prisma.gameDay.deleteMany();
   await prisma.season.deleteMany();
-  await prisma.invitation.deleteMany();
   await prisma.player.deleteMany();
 }
