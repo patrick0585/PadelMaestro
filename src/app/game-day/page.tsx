@@ -6,6 +6,7 @@ import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
+import { AvatarStack } from "@/components/ui/avatar-stack";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,20 @@ export default async function GameDayPage() {
       </header>
       <Timeline steps={steps} />
 
+      {day.status === "roster_locked" && (
+        <div className="rounded-2xl border border-primary/50 bg-[image:var(--hero-gradient)] p-4">
+          <div className="text-sm font-semibold text-foreground">Warten auf Start</div>
+          <p className="mt-1 text-xs text-primary-strong">
+            Der Roster ist gesperrt. Der Admin startet den Spieltag gleich.
+          </p>
+          <div className="mt-3">
+            <AvatarStack
+              names={day.participants.filter((p) => p.attendance === "confirmed").map((p) => p.player.name)}
+            />
+          </div>
+        </div>
+      )}
+
       {day.status === "planned" && (
         <PlannedSection
           gameDayId={day.id}
@@ -99,6 +114,19 @@ export default async function GameDayPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {day.status === "finished" && (
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Zusammenfassung
+          </div>
+          <div className="mt-2 text-sm text-foreground">
+            Spieltag beendet · {day.matches.filter((m) => m.team1Score !== null && m.team2Score !== null).length}
+            {" / "}
+            {day.matches.length} Matches gewertet
+          </div>
+        </div>
       )}
     </div>
   );
