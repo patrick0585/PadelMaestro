@@ -1,54 +1,64 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+type Attendance = "unknown" | "confirmed" | "declined";
+
+const OPTIONS: Array<{ value: Attendance; label: string }> = [
+  { value: "confirmed", label: "Dabei" },
+  { value: "declined", label: "Nicht dabei" },
+  { value: "unknown", label: "Weiß nicht" },
+];
 
 export function AttendanceWidget({
   gameDayId,
   current,
 }: {
   gameDayId: string;
-  current: "pending" | "confirmed" | "declined" | "joker";
+  current: Attendance;
 }) {
   const router = useRouter();
+  const [value, setValue] = useState<Attendance>(current);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function set(status: "confirmed" | "declined") {
+  async function set(next: Attendance) {
     setLoading(true);
     setError(null);
     const res = await fetch(`/api/game-days/${gameDayId}/attendance`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ attendance: next }),
     });
     setLoading(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Fehler");
+      setError("Konnte Status nicht speichern");
       return;
     }
+    setValue(next);
     router.refresh();
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <button
-          onClick={() => set("confirmed")}
-          disabled={loading || current === "confirmed"}
-          className={`rounded border px-3 py-1 ${current === "confirmed" ? "bg-green-100" : ""}`}
-        >
-          Ich komme
-        </button>
-        <button
-          onClick={() => set("declined")}
-          disabled={loading || current === "declined"}
-          className={`rounded border px-3 py-1 ${current === "declined" ? "bg-red-100" : ""}`}
-        >
-          Nein
-        </button>
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {OPTIONS.map((o) => (
+          <Button
+            key={o.value}
+            type="button"
+            variant={value === o.value ? "primary" : "secondary"}
+            size="sm"
+            disabled={loading}
+            onClick={() => set(o.value)}
+          >
+            {o.label}
+          </Button>
+        ))}
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">{error}</p>
+      )}
     </div>
   );
 }
