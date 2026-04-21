@@ -76,10 +76,12 @@ sudo ufw --force enable
 ### 3.1 Generate `<DB_PASSWORD>`
 
 ```bash
-openssl rand -base64 24
+openssl rand -hex 24
 ```
 
 Copy the output. You will paste it twice: once into psql, once into `.env`.
+
+> **Use `-hex`, not `-base64`.** Base64 output can contain `+`, `/`, and `@`, which break the `DATABASE_URL` connection string without URL-encoding. Hex is URL-safe.
 
 ### 3.2 Create the role and database
 
@@ -113,15 +115,21 @@ Copy the output.
 
 ### 4.3 Create `.env`
 
+> **Replace all three placeholders below before running the block.** The heredoc does not do substitution for you — if you paste it verbatim, `.env` will literally contain the strings `<DB_PASSWORD>`, `<AUTH_SECRET>`, and `<DOMAIN>`, and every database/auth call will fail.
+
 ```bash
-sudo -u padel -H tee /srv/padel/app/.env > /dev/null <<ENV
+sudo tee /srv/padel/app/.env > /dev/null <<ENV
 DATABASE_URL="postgresql://padel:<DB_PASSWORD>@localhost:5432/padel_tracker?schema=public"
 AUTH_SECRET="<AUTH_SECRET>"
 AUTH_URL="https://<DOMAIN>"
 AUTH_TRUST_HOST="true"
 NODE_ENV="production"
 ENV
+sudo chown padel:padel /srv/padel/app/.env
 sudo chmod 600 /srv/padel/app/.env
+
+# Verify no placeholders remain:
+sudo grep -E '<[A-Z_]+>' /srv/padel/app/.env && echo "❌ placeholders still present" || echo "✅ .env clean"
 ```
 
 `AUTH_TRUST_HOST=true` is required because next-auth sits behind Caddy.
@@ -340,3 +348,19 @@ Wait 60 seconds — Let's Encrypt retries. If it keeps failing, DNS is likely no
 
 **Migrations fail with `P1001` (cannot reach database):**
 Postgres is not running, or `DATABASE_URL` has the wrong password. `sudo systemctl status postgresql` and re-paste from step 3.
+
+**"Authentication failed against database server" during migrate or bootstrap-admin:**
+Either the `<DB_PASSWORD>` placeholder in `.env` was never replaced, or the password contains URL-unsafe characters. Check first:
+
+```bash
+sudo grep -E '<[A-Z_]+>' /srv/padel/app/.env   # should print nothing
+sudo -u padel -H bash -c 'set -a; source /srv/padel/app/.env; set +a; psql "$DATABASE_URL" -c "\\dt"'
+```
+
+To reset cleanly with a URL-safe hex password:
+
+```bash
+NEW_PW=$(openssl rand -hex 24)
+sudo -u postgres psql -c "ALTER USER padel WITH PASSWORD '$NEW_PW';"
+sudo sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql://padel:${NEW_PW}@localhost:5432/padel_tracker?schema=public\"|" /srv/padel/app/.env
+```
