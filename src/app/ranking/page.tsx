@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { RankingTable } from "@/components/ranking-table";
@@ -15,15 +14,19 @@ export default async function RankingPage() {
   const ranking = await computeRanking(season.id);
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Rangliste {season.year}</h1>
-        <nav className="space-x-4 text-sm">
-          <Link href="/game-day">Spieltag</Link>
-          {session.user.isAdmin && <Link href="/admin">Admin</Link>}
-        </nav>
-      </div>
+    <div className="space-y-5">
+      <header className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+            Saison {season.year}
+          </p>
+          <h1 className="text-2xl font-bold text-foreground">Rangliste</h1>
+        </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-xl">
+          🎾
+        </div>
+      </header>
       <RankingTable ranking={ranking} />
-    </main>
+    </div>
   );
 }
