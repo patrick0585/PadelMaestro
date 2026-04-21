@@ -8,13 +8,6 @@ export class GameDayNotFoundError extends Error {
   }
 }
 
-export class ParticipantNotFoundError extends Error {
-  constructor(msg: string) {
-    super(msg);
-    this.name = "ParticipantNotFoundError";
-  }
-}
-
 export class GameDayLockedError extends Error {
   constructor(gameDayId: string) {
     super(`game day ${gameDayId} is locked; attendance can no longer be changed`);
@@ -94,33 +87,40 @@ export async function setAttendanceAsAdmin(
     if (!day) throw new GameDayNotFoundError(gameDayId);
     if (day.status !== "planned") throw new GameDayLockedError(gameDayId);
 
+    const player = await tx.player.findUnique({
+      where: { id: playerId },
+      select: { id: true, deletedAt: true },
+    });
+    if (!player || player.deletedAt) throw new PlayerNotFoundError(playerId);
+
     const existing = await tx.gameDayParticipant.findUnique({
       where: { gameDayId_playerId: { gameDayId, playerId } },
     });
-    if (!existing) {
-      throw new ParticipantNotFoundError(
-        `player ${playerId} is not a participant of game day ${gameDayId}`,
-      );
-    }
 
-    const updated = await tx.gameDayParticipant.update({
-      where: { gameDayId_playerId: { gameDayId, playerId } },
-      data: { attendance, respondedAt: new Date() },
-    });
+    const upserted = existing
+      ? await tx.gameDayParticipant.update({
+          where: { gameDayId_playerId: { gameDayId, playerId } },
+          data: { attendance, respondedAt: new Date() },
+        })
+      : await tx.gameDayParticipant.create({
+          data: { gameDayId, playerId, attendance, respondedAt: new Date() },
+        });
+
     await tx.auditLog.create({
       data: {
         actorId,
         action: "game_day.admin_set_attendance",
         entityType: "GameDayParticipant",
-        entityId: updated.id,
+        entityId: upserted.id,
         payload: {
           gameDayId,
           playerId,
           attendance,
-          previousAttendance: existing.attendance,
+          previousAttendance: existing?.attendance ?? null,
+          created: existing === null,
         },
       },
     });
-    return updated;
+    return upserted;
   });
 }

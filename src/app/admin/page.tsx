@@ -6,9 +6,36 @@ import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { StartGameDayButton } from "./start-game-day-button";
 import { PlayersSection } from "./players-section";
-import { ParticipantsRoster, type ParticipantAttendance } from "./participants-roster";
+import {
+  ParticipantsRoster,
+  type ParticipantAttendance,
+  type RosterRow,
+} from "./participants-roster";
 
 export const dynamic = "force-dynamic";
+
+type ParticipantWithPlayer = {
+  playerId: string;
+  attendance: ParticipantAttendance | "joker";
+  player: { id: string; name: string };
+};
+
+function buildRosterRows(
+  participants: ParticipantWithPlayer[],
+  activePlayers: { id: string; name: string }[],
+): RosterRow[] {
+  const byId = new Map(participants.map((p) => [p.playerId, p]));
+  return activePlayers
+    .map((player) => {
+      const participant = byId.get(player.id);
+      const attendance: ParticipantAttendance =
+        participant?.attendance === "confirmed" || participant?.attendance === "declined"
+          ? participant.attendance
+          : "pending";
+      return { playerId: player.id, name: player.name, attendance };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
 
 export default async function AdminPage() {
   const session = await auth();
@@ -65,14 +92,7 @@ export default async function AdminPage() {
               </div>
               <ParticipantsRoster
                 gameDayId={plannedDay.id}
-                participants={plannedDay.participants.map((p) => ({
-                  playerId: p.playerId,
-                  name: p.player.name,
-                  attendance:
-                    p.attendance === "confirmed" || p.attendance === "declined"
-                      ? p.attendance
-                      : ("pending" as ParticipantAttendance),
-                }))}
+                participants={buildRosterRows(plannedDay.participants, players)}
               />
             </div>
           )}

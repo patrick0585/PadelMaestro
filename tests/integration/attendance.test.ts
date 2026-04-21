@@ -5,7 +5,7 @@ import {
   setAttendance,
   setAttendanceAsAdmin,
   GameDayNotFoundError,
-  ParticipantNotFoundError,
+  PlayerNotFoundError,
   GameDayLockedError,
 } from "@/lib/game-day/attendance";
 import { resetDb } from "../helpers/reset-db";
@@ -82,15 +82,27 @@ describe("setAttendanceAsAdmin", () => {
     ).rejects.toBeInstanceOf(GameDayNotFoundError);
   });
 
-  it("throws ParticipantNotFoundError when the player is not a participant", async () => {
+  it("creates a participant row for a player added after the game day", async () => {
     const { admin, day } = await setup();
     const outsider = await prisma.player.create({
       data: { name: "Outsider", email: "o@x", passwordHash: "x" },
     });
-    // outsider was created AFTER the game day, so they aren't a participant
+    // outsider was created AFTER the game day, so they aren't a participant yet
+    const result = await setAttendanceAsAdmin(day.id, outsider.id, "confirmed", admin.id);
+    expect(result.attendance).toBe("confirmed");
+    expect(result.gameDayId).toBe(day.id);
+    expect(result.playerId).toBe(outsider.id);
+  });
+
+  it("throws PlayerNotFoundError when the player is soft-deleted", async () => {
+    const { admin, other, day } = await setup();
+    await prisma.player.update({
+      where: { id: other.id },
+      data: { deletedAt: new Date() },
+    });
     await expect(
-      setAttendanceAsAdmin(day.id, outsider.id, "confirmed", admin.id),
-    ).rejects.toBeInstanceOf(ParticipantNotFoundError);
+      setAttendanceAsAdmin(day.id, other.id, "confirmed", admin.id),
+    ).rejects.toBeInstanceOf(PlayerNotFoundError);
   });
 
   it("throws GameDayLockedError when the roster is already locked", async () => {
