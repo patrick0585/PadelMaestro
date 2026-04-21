@@ -34,7 +34,7 @@ export async function enterScore(input: EnterScoreInput) {
     throw new GameDayFinishedError(match.gameDayId);
   }
 
-  const format: MatchFormat = match.gameDay.playerCount === 4 ? "first-to-6" : "first-to-3";
+  const format: MatchFormat = match.gameDay.playerCount === 4 ? "tennis-set" : "sum-to-3";
   const v = validateScore(input.team1Score, input.team2Score, format);
   if (!v.ok) throw new Error(v.reason);
 

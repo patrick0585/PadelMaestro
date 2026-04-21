@@ -98,7 +98,7 @@ export default async function GameDayPage() {
             {day.matches.map((m) => (
               <MatchInlineCard
                 key={m.id}
-                maxScore={day.playerCount === 4 ? 6 : 3}
+                maxScore={day.playerCount === 4 ? 12 : 3}
                 match={{
                   id: m.id,
                   matchNumber: m.matchNumber,
