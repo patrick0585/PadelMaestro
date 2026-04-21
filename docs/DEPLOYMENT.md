@@ -1,6 +1,36 @@
 # VPS Deployment Runbook
 
-Deploy Padel Tracker to a single Debian 12 / Ubuntu 24.04 VPS with system Postgres, systemd, and Caddy for auto-TLS. Follow sections in order. Every command block is copy-paste ready — only the values in `<angle brackets>` need substitution.
+Deploy Padel Tracker to a single Debian 12 / Ubuntu 24.04 VPS with system Postgres, systemd, and Caddy for auto-TLS.
+
+## Fast path: one-shot provisioning script
+
+If you just want it running, skip the manual steps and use `scripts/provision-vps.sh`. It handles everything in sections 1-7 below, plus the admin bootstrap and firewall. Supports both a domain (Caddy + Let's Encrypt) and a plain IP:port mode (HTTP only, for preview/testing).
+
+```bash
+# Fetch the repo first
+sudo git clone https://github.com/patrick0585/padel-tracker.git /tmp/padel-bootstrap
+sudo bash /tmp/padel-bootstrap/scripts/provision-vps.sh
+```
+
+The script prompts for admin email, display name, and either a domain or an IP + port. It is idempotent — safe to re-run if the first attempt fails partway. Set `FORCE=1` to rotate secrets on a re-run.
+
+Non-interactive example (IP mode):
+
+```bash
+sudo ADMIN_EMAIL=you@example.com ADMIN_NAME="Your Name" \
+     DEPLOY_MODE=ip VPS_IP=203.0.113.5 APP_PORT=8080 \
+     bash /tmp/padel-bootstrap/scripts/provision-vps.sh
+```
+
+When the script finishes, it prints the URL to log in at and the admin bootstrap password. Save the password — it is only shown once.
+
+The manual steps below are the same work, broken out for the case where you want fine control or the script fails at a specific stage.
+
+---
+
+## Manual path
+
+Follow sections in order. Every command block is copy-paste ready — only the values in `<angle brackets>` need substitution.
 
 **Substitutions you will need throughout:**
 
