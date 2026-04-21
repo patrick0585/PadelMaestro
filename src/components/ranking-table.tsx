@@ -1,33 +1,57 @@
 import type { RankingRow } from "@/lib/ranking/compute";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
 export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
   if (ranking.length === 0) {
-    return <p className="py-8 text-center text-muted-foreground">Noch keine Spiele in dieser Saison.</p>;
+    return (
+      <Card>
+        <p className="p-8 text-center text-sm text-muted-foreground">
+          Noch keine gewerteten Spiele in dieser Saison.
+        </p>
+      </Card>
+    );
   }
+
   return (
-    <table className="w-full text-sm">
-      <thead className="border-b text-left">
-        <tr>
-          <th className="py-2">#</th>
-          <th>Spieler</th>
-          <th className="text-right">Spiele</th>
-          <th className="text-right">Punkte</th>
-          <th className="text-right">ppS</th>
-          <th className="text-right">Joker</th>
-        </tr>
-      </thead>
-      <tbody>
-        {ranking.map((r) => (
-          <tr key={r.playerId} className="border-b last:border-b-0">
-            <td className="py-2">{r.rank}</td>
-            <td>{r.playerName}</td>
-            <td className="text-right">{r.games}</td>
-            <td className="text-right">{r.points.toFixed(0)}</td>
-            <td className="text-right font-medium">{r.pointsPerGame.toFixed(2)}</td>
-            <td className="text-right">{r.jokersUsed}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ul className="space-y-2">
+      {ranking.map((r) => {
+        const medal = r.rank <= 3 ? MEDALS[r.rank - 1] : null;
+        const highlight = r.rank <= 3;
+        return (
+          <li
+            key={r.playerId}
+            className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+              highlight
+                ? "bg-primary-soft border-primary-border"
+                : "bg-surface border-border"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {medal ? (
+                <span className="text-2xl" aria-label={`Platz ${r.rank}`}>
+                  {medal}
+                </span>
+              ) : (
+                <Badge variant="neutral" aria-label={`Platz ${r.rank}`}>
+                  {r.rank}
+                </Badge>
+              )}
+              <span className="font-medium text-foreground">{r.playerName}</span>
+            </div>
+            <div className="text-right">
+              <div className="font-semibold text-foreground">
+                {r.pointsPerGame.toFixed(2)} ppS
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {r.games} Spiele · {r.points.toFixed(0)} Pkt · {r.jokersUsed} Joker
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
