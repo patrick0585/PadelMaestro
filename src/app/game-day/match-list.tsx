@@ -1,8 +1,12 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardBody } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScoreDialog } from "./score-dialog";
 
-interface MatchView {
+export interface MatchRow {
   id: string;
   matchNumber: number;
   team1A: string;
@@ -14,43 +18,72 @@ interface MatchView {
   version: number;
 }
 
-export function MatchList({ format, matches }: { format: "first-to-3" | "first-to-6"; matches: MatchView[] }) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const open = matches.find((m) => m.id === openId);
+export function MatchList({
+  format,
+  matches,
+}: {
+  format: "first-to-3" | "first-to-6";
+  matches: MatchRow[];
+}) {
+  const router = useRouter();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = matches.find((m) => m.id === editingId) ?? null;
+
+  async function undo(id: string) {
+    const res = await fetch(`/api/matches/${id}/undo`, { method: "POST" });
+    if (res.ok) router.refresh();
+  }
 
   return (
-    <ul className="divide-y">
+    <ul className="space-y-2">
       {matches.map((m) => {
-        const hasScore = m.team1Score !== null;
+        const hasScore = m.team1Score !== null && m.team2Score !== null;
         return (
-          <li key={m.id} className="flex items-center justify-between py-3">
-            <div>
-              <span className="font-mono text-sm text-muted-foreground">#{m.matchNumber}</span>
-              <span className="ml-3">
-                {m.team1A} + {m.team1B} <span className="mx-2">vs</span> {m.team2A} + {m.team2B}
-              </span>
-            </div>
-            {hasScore ? (
-              <span className="font-semibold">
-                {m.team1Score}:{m.team2Score}
-              </span>
-            ) : (
-              <button
-                onClick={() => setOpenId(m.id)}
-                className="rounded border px-3 py-1 text-sm"
-              >
-                Eintragen
-              </button>
-            )}
+          <li key={m.id}>
+            <Card>
+              <CardBody className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Badge variant="neutral">#{m.matchNumber}</Badge>
+                  <div className="text-sm">
+                    <div className="font-medium text-foreground">
+                      {m.team1A} &amp; {m.team1B}
+                    </div>
+                    <div className="text-xs text-muted-foreground">vs</div>
+                    <div className="font-medium text-foreground">
+                      {m.team2A} &amp; {m.team2B}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasScore ? (
+                    <>
+                      <div className="text-lg font-bold text-foreground">
+                        {m.team1Score}:{m.team2Score}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => undo(m.id)}>
+                        Zurück
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" onClick={() => setEditingId(m.id)}>
+                      Ergebnis
+                    </Button>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
           </li>
         );
       })}
-      {open && (
+      {editing && (
         <ScoreDialog
-          matchId={open.id}
+          match={editing}
           format={format}
-          expectedVersion={open.version}
-          onClose={() => setOpenId(null)}
+          onClose={() => setEditingId(null)}
+          onSaved={() => {
+            setEditingId(null);
+            router.refresh();
+          }}
         />
       )}
     </ul>
