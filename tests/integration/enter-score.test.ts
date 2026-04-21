@@ -34,12 +34,12 @@ describe("enterScore", () => {
 
     const updated = await enterScore({
       matchId: match.id,
-      team1Score: 3,
+      team1Score: 2,
       team2Score: 1,
       scoredBy: players[0].id,
       expectedVersion: 0,
     });
-    expect(updated.team1Score).toBe(3);
+    expect(updated.team1Score).toBe(2);
     expect(updated.team2Score).toBe(1);
     expect(updated.version).toBe(1);
   });
@@ -49,12 +49,12 @@ describe("enterScore", () => {
     await expect(
       enterScore({
         matchId: matches[0].id,
-        team1Score: 4,
-        team2Score: 0,
+        team1Score: 3,
+        team2Score: 1,
         scoredBy: players[0].id,
         expectedVersion: 0,
       }),
-    ).rejects.toThrow(/winning score/i);
+    ).rejects.toThrow(/sum to 3/i);
   });
 
   it("rejects a concurrent write with stale version", async () => {
@@ -106,7 +106,7 @@ describe("enterScore", () => {
     });
     await enterScore({
       matchId: matches[1].id,
-      team1Score: 3,
+      team1Score: 2,
       team2Score: 1,
       scoredBy: players[0].id,
       expectedVersion: 0,
@@ -147,8 +147,8 @@ describe("enterScore", () => {
     await expect(
       enterScore({
         matchId: matches[0].id,
-        team1Score: 3,
-        team2Score: 2,
+        team1Score: 2,
+        team2Score: 1,
         scoredBy: players[0].id,
         expectedVersion: 1,
       }),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MatchFormatSchema = z.enum(["first-to-3", "first-to-6"]);
+export const MatchFormatSchema = z.enum(["sum-to-3", "tennis-set"]);
 export type MatchFormat = z.infer<typeof MatchFormatSchema>;
 
 export const MatchSlotSchema = z.object({

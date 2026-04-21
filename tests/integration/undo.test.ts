@@ -25,7 +25,7 @@ async function setupAndEnter() {
   });
   await enterScore({
     matchId: matches[0].id,
-    team1Score: 3,
+    team1Score: 2,
     team2Score: 1,
     scoredBy: players[0].id,
     expectedVersion: 0,
