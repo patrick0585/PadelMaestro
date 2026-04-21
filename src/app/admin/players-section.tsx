@@ -1,6 +1,10 @@
 "use client";
+import { useState } from "react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CreatePlayerDialog } from "./create-player-dialog";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 export interface PlayerRow {
   id: string;
@@ -11,10 +15,18 @@ export interface PlayerRow {
 }
 
 export function PlayersSection({ players }: { players: PlayerRow[] }) {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [resetFor, setResetFor] = useState<PlayerRow | null>(null);
+
   return (
     <Card>
       <CardBody className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Spieler</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">Spieler</h2>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            Spieler hinzufügen
+          </Button>
+        </div>
         <ul className="space-y-2">
           {players.map((p) => (
             <li
@@ -28,11 +40,23 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
               <div className="flex items-center gap-2">
                 {p.isAdmin && <Badge variant="primary">Admin</Badge>}
                 {!p.hasPassword && <Badge variant="neutral">Nur Stats</Badge>}
+                {p.hasPassword && (
+                  <Button variant="ghost" size="sm" onClick={() => setResetFor(p)}>
+                    Passwort
+                  </Button>
+                )}
               </div>
             </li>
           ))}
         </ul>
       </CardBody>
+      <CreatePlayerDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <ResetPasswordDialog
+        open={resetFor !== null}
+        onClose={() => setResetFor(null)}
+        playerId={resetFor?.id ?? null}
+        playerName={resetFor?.name ?? null}
+      />
     </Card>
   );
 }
