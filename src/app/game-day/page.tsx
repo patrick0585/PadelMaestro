@@ -2,11 +2,10 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
-import { AttendanceWidget } from "./attendance-widget";
-import { JoinButton } from "./join-button";
 import { MatchList } from "./match-list";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
+import { PlannedSection } from "./planned-section";
 
 export const dynamic = "force-dynamic";
 
@@ -64,47 +63,17 @@ export default async function GameDayPage() {
       </header>
       <Timeline steps={steps} />
 
-      {day.status === "planned" && me && (
-        <Card>
-          <CardBody>
-            <h2 className="mb-3 text-base font-semibold text-foreground">Bist du dabei?</h2>
-            <AttendanceWidget
-              gameDayId={day.id}
-              current={
-                me.attendance === "confirmed" || me.attendance === "declined"
-                  ? me.attendance
-                  : "pending"
-              }
-            />
-          </CardBody>
-        </Card>
+      {day.status === "planned" && (
+        <PlannedSection
+          gameDayId={day.id}
+          me={me ? { playerId: me.playerId, name: me.player.name, attendance: (me.attendance === "confirmed" || me.attendance === "declined") ? me.attendance : "pending" } : null}
+          participants={day.participants.map((p) => ({
+            playerId: p.playerId,
+            name: p.player.name,
+            attendance: (p.attendance === "confirmed" || p.attendance === "declined") ? p.attendance : "pending",
+          }))}
+        />
       )}
-
-      {day.status === "planned" && !me && (
-        <Card>
-          <CardBody>
-            <h2 className="mb-3 text-base font-semibold text-foreground">Du bist nicht dabei</h2>
-            <p className="mb-3 text-sm text-muted-foreground">
-              Du bist noch kein Teilnehmer dieses Spieltags.
-            </p>
-            <JoinButton gameDayId={day.id} />
-          </CardBody>
-        </Card>
-      )}
-
-      <Card>
-        <CardBody>
-          <h2 className="mb-3 text-base font-semibold text-foreground">Teilnehmer</h2>
-          <ul className="space-y-1 text-sm">
-            {day.participants.map((p) => (
-              <li key={p.id} className="flex justify-between text-foreground">
-                <span>{p.player.name}</span>
-                <span className="text-muted-foreground">{p.attendance}</span>
-              </li>
-            ))}
-          </ul>
-        </CardBody>
-      </Card>
 
       {day.matches.length > 0 && (
         <div>
