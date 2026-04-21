@@ -9,6 +9,13 @@ export class ScoreConflictError extends Error {
   }
 }
 
+export class GameDayFinishedError extends Error {
+  constructor(gameDayId: string) {
+    super(`game day ${gameDayId} is finished; scores can no longer be changed`);
+    this.name = "GameDayFinishedError";
+  }
+}
+
 export interface EnterScoreInput {
   matchId: string;
   team1Score: number;
@@ -22,6 +29,10 @@ export async function enterScore(input: EnterScoreInput) {
     where: { id: input.matchId },
     include: { gameDay: true },
   });
+
+  if (match.gameDay.status === "finished") {
+    throw new GameDayFinishedError(match.gameDayId);
+  }
 
   const format: MatchFormat = match.gameDay.playerCount === 4 ? "first-to-6" : "first-to-3";
   const v = validateScore(input.team1Score, input.team2Score, format);
@@ -46,6 +57,19 @@ export async function enterScore(input: EnterScoreInput) {
     where: { id: match.gameDayId, status: "roster_locked" },
     data: { status: "in_progress" },
   });
+
+  const unscored = await prisma.match.count({
+    where: {
+      gameDayId: match.gameDayId,
+      OR: [{ team1Score: null }, { team2Score: null }],
+    },
+  });
+  if (unscored === 0) {
+    await prisma.gameDay.updateMany({
+      where: { id: match.gameDayId, status: "in_progress" },
+      data: { status: "finished" },
+    });
+  }
 
   return prisma.match.findUniqueOrThrow({ where: { id: input.matchId } });
 }

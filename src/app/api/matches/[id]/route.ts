@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { enterScore, ScoreConflictError } from "@/lib/match/enter-score";
+import { enterScore, ScoreConflictError, GameDayFinishedError } from "@/lib/match/enter-score";
 
 const Schema = z.object({
   team1Score: z.number().int().min(0),
@@ -31,6 +31,9 @@ export async function PUT(
     return NextResponse.json({ match });
   } catch (err) {
     if (err instanceof ScoreConflictError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    if (err instanceof GameDayFinishedError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
     return NextResponse.json(

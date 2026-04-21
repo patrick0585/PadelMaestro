@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { lockRoster } from "@/lib/game-day/lock";
-import { enterScore, ScoreConflictError } from "@/lib/match/enter-score";
+import { enterScore, ScoreConflictError, GameDayFinishedError } from "@/lib/match/enter-score";
 import { resetDb } from "../helpers/reset-db";
 
 async function setupFivePlayerGame() {
@@ -75,5 +75,83 @@ describe("enterScore", () => {
         expectedVersion: 0,
       }),
     ).rejects.toThrow(ScoreConflictError);
+  });
+
+  it("advances status from roster_locked to in_progress on first score", async () => {
+    const { players, day, matches } = await setupFivePlayerGame();
+    expect((await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } })).status).toBe(
+      "roster_locked",
+    );
+
+    await enterScore({
+      matchId: matches[0].id,
+      team1Score: 3,
+      team2Score: 0,
+      scoredBy: players[0].id,
+      expectedVersion: 0,
+    });
+
+    const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
+    expect(after.status).toBe("in_progress");
+  });
+
+  it("keeps status in_progress while matches remain unscored", async () => {
+    const { players, day, matches } = await setupFivePlayerGame();
+    await enterScore({
+      matchId: matches[0].id,
+      team1Score: 3,
+      team2Score: 0,
+      scoredBy: players[0].id,
+      expectedVersion: 0,
+    });
+    await enterScore({
+      matchId: matches[1].id,
+      team1Score: 3,
+      team2Score: 1,
+      scoredBy: players[0].id,
+      expectedVersion: 0,
+    });
+
+    const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
+    expect(after.status).toBe("in_progress");
+  });
+
+  it("advances status to finished when the last match is scored", async () => {
+    const { players, day, matches } = await setupFivePlayerGame();
+    for (const m of matches) {
+      await enterScore({
+        matchId: m.id,
+        team1Score: 3,
+        team2Score: 0,
+        scoredBy: players[0].id,
+        expectedVersion: 0,
+      });
+    }
+
+    const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
+    expect(after.status).toBe("finished");
+  });
+
+  it("rejects score edits on a finished game day", async () => {
+    const { players, matches } = await setupFivePlayerGame();
+    for (const m of matches) {
+      await enterScore({
+        matchId: m.id,
+        team1Score: 3,
+        team2Score: 0,
+        scoredBy: players[0].id,
+        expectedVersion: 0,
+      });
+    }
+
+    await expect(
+      enterScore({
+        matchId: matches[0].id,
+        team1Score: 3,
+        team2Score: 2,
+        scoredBy: players[0].id,
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(GameDayFinishedError);
   });
 });
