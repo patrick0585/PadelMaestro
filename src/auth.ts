@@ -33,3 +33,14 @@ declare module "next-auth" {
     };
   }
 }
+
+// JWT augmentation: In NextAuth v5 beta, JWT interface augmentation via module declaration
+// doesn't work due to module resolution, so we cast token types inline in auth.config.ts
+// @ts-expect-error - module 'next-auth/jwt' cannot be found in this NextAuth version
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    isAdmin?: boolean;
+    username?: string | null;
+  }
+}

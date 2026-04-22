@@ -7,18 +7,18 @@ export const authConfig = {
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        token.id = user.id as string;
-        token.isAdmin = (user as { isAdmin: boolean }).isAdmin;
-        token.username = (user as { username: string | null }).username ?? null;
+        token.id = user.id;
+        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
+        token.username = (user as { username?: string | null }).username ?? null;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
-        (session.user as { id: string }).id = token.id as string;
-        (session.user as { isAdmin: boolean }).isAdmin = token.isAdmin as boolean;
-        (session.user as { username: string | null }).username =
-          (token.username as string | null) ?? null;
+        const typedToken = token as { id?: string; isAdmin?: boolean; username?: string | null };
+        (session.user as { id: string }).id = typedToken.id ?? "";
+        (session.user as { isAdmin: boolean }).isAdmin = typedToken.isAdmin ?? false;
+        (session.user as { username: string | null }).username = typedToken.username ?? null;
       }
       return session;
     },
