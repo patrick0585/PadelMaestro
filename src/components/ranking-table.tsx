@@ -1,6 +1,7 @@
 import type { RankingRow } from "@/lib/ranking/compute";
 
 const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+const GRID = "grid grid-cols-[2rem_1fr_3rem_3rem_2.25rem_2.25rem] items-center gap-2";
 
 export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
   if (ranking.length === 0) {
@@ -12,23 +13,22 @@ export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
   }
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="grid grid-cols-[2rem_1fr_3rem_3rem_2.25rem_2.25rem] items-center gap-2 border-b border-border bg-surface-muted px-3 py-2 text-[0.6rem] font-semibold uppercase tracking-wider text-foreground-muted">
+      <div
+        className={`${GRID} border-b border-border bg-surface-muted px-3 py-2 text-[0.6rem] font-semibold uppercase tracking-wider text-foreground-muted`}
+      >
         <span className="text-center">Pos</span>
         <span>Name</span>
         <span className="text-right">Pt</span>
         <span className="text-right">Ø</span>
         <span className="text-right">Sp</span>
-        <span className="text-right">Joker</span>
+        <span className="text-right">Jkr</span>
       </div>
       <ul className="divide-y divide-border">
         {ranking.map((r) => (
-          <li
-            key={r.playerId}
-            className="grid grid-cols-[2rem_1fr_3rem_3rem_2.25rem_2.25rem] items-center gap-2 px-3 py-3"
-          >
-            <span className="text-center text-lg tabular-nums">
+          <li key={r.playerId} className={`${GRID} px-3 py-3`}>
+            <span className="text-center tabular-nums">
               {MEDALS[r.rank] ? (
-                <span aria-label={`Platz ${r.rank}`} role="img">
+                <span aria-label={`Platz ${r.rank}`} className="text-lg" role="img">
                   {MEDALS[r.rank]}
                 </span>
               ) : (
