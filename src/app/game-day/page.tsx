@@ -6,6 +6,7 @@ import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
+import { AddExtraMatchButton } from "./add-extra-match-button";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +114,10 @@ export default async function GameDayPage() {
               />
             ))}
           </div>
+          {session.user.isAdmin &&
+            (day.status === "roster_locked" || day.status === "in_progress") && (
+              <AddExtraMatchButton gameDayId={day.id} />
+            )}
         </section>
       )}
 
