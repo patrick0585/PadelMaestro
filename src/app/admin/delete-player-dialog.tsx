@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -20,16 +20,36 @@ export function DeletePlayerDialog({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!open) setError(null);
+    if (!open) {
+      setError(null);
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setLoading(false);
+    }
   }, [open]);
 
   async function onConfirm() {
     if (!playerId) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/players/${playerId}`, { method: "DELETE" });
+    let res: Response;
+    try {
+      res = await fetch(`/api/players/${playerId}`, {
+        method: "DELETE",
+        signal: controller.signal,
+      });
+    } catch {
+      if (controller.signal.aborted) return;
+      setLoading(false);
+      setError("Löschen fehlgeschlagen");
+      return;
+    }
+    if (controller.signal.aborted) return;
     setLoading(false);
     if (res.status === 204) {
       onClose();
@@ -38,6 +58,7 @@ export function DeletePlayerDialog({
     }
     if (res.status === 409 || res.status === 404) {
       const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      if (controller.signal.aborted) return;
       setError(body?.message ?? "Löschen nicht möglich");
       return;
     }
