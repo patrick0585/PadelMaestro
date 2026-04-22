@@ -9,6 +9,7 @@ const USER_ITEMS: Item[] = [
   { href: "/", label: "Home" },
   { href: "/ranking", label: "Rangliste" },
   { href: "/game-day", label: "Spieltag" },
+  { href: "/archive", label: "Archiv" },
 ];
 
 const ADMIN_ITEM: Item = { href: "/admin", label: "Admin" };
