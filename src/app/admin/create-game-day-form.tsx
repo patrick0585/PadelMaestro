@@ -20,6 +20,15 @@ export function CreateGameDayForm() {
       body: JSON.stringify({ date }),
     });
     setLoading(false);
+    if (res.status === 409) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (body.error === "date_exists") {
+        setError("Für diesen Tag existiert bereits ein Spieltag");
+      } else {
+        setError("Anlegen fehlgeschlagen");
+      }
+      return;
+    }
     if (!res.ok) {
       setError("Anlegen fehlgeschlagen");
       return;

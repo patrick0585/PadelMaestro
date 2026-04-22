@@ -12,7 +12,7 @@ describe("<Button>", () => {
   it("applies the primary variant by default", () => {
     render(<Button>Los</Button>);
     const btn = screen.getByRole("button");
-    expect(btn.className).toMatch(/bg-primary/);
+    expect(btn.className).toMatch(/cta-gradient/);
   });
 
   it("applies the ghost variant when asked", () => {

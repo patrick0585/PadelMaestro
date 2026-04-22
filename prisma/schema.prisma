@@ -70,7 +70,7 @@ model GameDay {
   matches      Match[]
   jokers       JokerUse[]
 
-  @@index([seasonId, date])
+  @@unique([seasonId, date])
 }
 
 enum AttendanceStatus {
