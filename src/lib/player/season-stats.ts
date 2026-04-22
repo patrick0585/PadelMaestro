@@ -4,6 +4,8 @@ import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 
 export type MatchOutcome = "W" | "L" | "D";
 
+const RECENT_FORM_MATCH_COUNT = 5;
+
 export interface PartnerStat {
   name: string;
   pointsTogether: number;
@@ -32,26 +34,34 @@ interface MatchRow {
   team2Score: number;
 }
 
+function playerTeam(row: MatchRow, playerId: string): 1 | 2 | null {
+  if (row.team1PlayerAId === playerId || row.team1PlayerBId === playerId) return 1;
+  if (row.team2PlayerAId === playerId || row.team2PlayerBId === playerId) return 2;
+  return null;
+}
+
 function outcomeFor(row: MatchRow, playerId: string): MatchOutcome {
-  const onTeam1 = row.team1PlayerAId === playerId || row.team1PlayerBId === playerId;
-  const my = onTeam1 ? row.team1Score : row.team2Score;
-  const their = onTeam1 ? row.team2Score : row.team1Score;
+  const team = playerTeam(row, playerId);
+  const my = team === 1 ? row.team1Score : row.team2Score;
+  const their = team === 1 ? row.team2Score : row.team1Score;
   if (my > their) return "W";
   if (my < their) return "L";
   return "D";
 }
 
 function partnerOf(row: MatchRow, playerId: string): string | null {
-  if (row.team1PlayerAId === playerId) return row.team1PlayerBId;
-  if (row.team1PlayerBId === playerId) return row.team1PlayerAId;
-  if (row.team2PlayerAId === playerId) return row.team2PlayerBId;
-  if (row.team2PlayerBId === playerId) return row.team2PlayerAId;
+  const team = playerTeam(row, playerId);
+  if (team === 1) {
+    return row.team1PlayerAId === playerId ? row.team1PlayerBId : row.team1PlayerAId;
+  }
+  if (team === 2) {
+    return row.team2PlayerAId === playerId ? row.team2PlayerBId : row.team2PlayerAId;
+  }
   return null;
 }
 
 function myPoints(row: MatchRow, playerId: string): number {
-  const onTeam1 = row.team1PlayerAId === playerId || row.team1PlayerBId === playerId;
-  return onTeam1 ? row.team1Score : row.team2Score;
+  return playerTeam(row, playerId) === 1 ? row.team1Score : row.team2Score;
 }
 
 export async function computePlayerSeasonStats(
@@ -124,7 +134,9 @@ export async function computePlayerSeasonStats(
     else winRate.draws += 1;
   }
 
-  const recentForm: MatchOutcome[] = rows.slice(0, 5).map((r) => outcomeFor(r, playerId));
+  const recentForm: MatchOutcome[] = rows
+    .slice(0, RECENT_FORM_MATCH_COUNT)
+    .map((r) => outcomeFor(r, playerId));
 
   const partnerTotals = new Map<string, { pointsTogether: number; matches: number }>();
   for (const r of rows) {
@@ -138,16 +150,18 @@ export async function computePlayerSeasonStats(
   const partnerIds = [...partnerTotals.keys()];
   const partnerNames = partnerIds.length
     ? await prisma.player.findMany({
-        where: { id: { in: partnerIds } },
+        where: { id: { in: partnerIds }, deletedAt: null },
         select: { id: true, name: true },
       })
     : [];
   const nameById = new Map(partnerNames.map((p) => [p.id, p.name]));
-  const partners: PartnerStat[] = partnerIds.map((pid) => ({
-    name: nameById.get(pid) ?? "Unbekannt",
-    pointsTogether: partnerTotals.get(pid)!.pointsTogether,
-    matches: partnerTotals.get(pid)!.matches,
-  }));
+  interface PartnerWithId extends PartnerStat {
+    id: string;
+  }
+  const partners: PartnerWithId[] = partnerIds.map((pid) => {
+    const stat = partnerTotals.get(pid)!;
+    return { id: pid, name: nameById.get(pid) ?? "Unbekannt", ...stat };
+  });
   const bestSorted = [...partners].sort((a, b) => {
     if (b.pointsTogether !== a.pointsTogether) return b.pointsTogether - a.pointsTogether;
     if (b.matches !== a.matches) return b.matches - a.matches;
@@ -158,8 +172,13 @@ export async function computePlayerSeasonStats(
     if (a.matches !== b.matches) return a.matches - b.matches;
     return a.name.localeCompare(b.name, "de");
   });
-  const bestPartner = bestSorted[0] ?? null;
-  const worstPartner = partners.length >= 2 ? worstSorted[0] ?? null : null;
+  const stripId = ({ id: _id, ...rest }: PartnerWithId): PartnerStat => rest;
+  const best = bestSorted[0] ?? null;
+  // Guard against best and worst resolving to the same partner when ties cascade into the
+  // name tiebreaker (same points, same matches, sorts identically in both directions).
+  const worstCandidate = worstSorted.find((p) => p.id !== best?.id) ?? null;
+  const bestPartner = best ? stripId(best) : null;
+  const worstPartner = partners.length >= 2 && worstCandidate ? stripId(worstCandidate) : null;
 
   return {
     medals,
