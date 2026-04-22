@@ -1,10 +1,12 @@
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 
 const PODIUM_STYLES = [
-  { label: "1.", className: "text-warning", badge: "bg-warning/15" },
-  { label: "2.", className: "text-foreground-muted", badge: "bg-foreground-muted/15" },
-  { label: "3.", className: "text-primary", badge: "bg-primary/15" },
+  { medal: "🥇", rankLabel: "Platz 1", badge: "bg-warning/15" },
+  { medal: "🥈", rankLabel: "Platz 2", badge: "bg-foreground-muted/15" },
+  { medal: "🥉", rankLabel: "Platz 3", badge: "bg-primary/15" },
 ] as const;
+
+const RANK_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 export async function FinishedSummary({
   gameDayId,
@@ -49,8 +51,8 @@ export async function FinishedSummary({
               key={row.playerId}
               className={`flex items-center gap-3 rounded-xl border border-border p-3 ${style.badge}`}
             >
-              <span className={`text-xl font-extrabold tabular-nums ${style.className}`}>
-                {style.label}
+              <span className="text-2xl" role="img" aria-label={style.rankLabel}>
+                {style.medal}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-foreground">{row.playerName}</div>
@@ -74,9 +76,20 @@ export async function FinishedSummary({
           </tr>
         </thead>
         <tbody>
-          {summary.rows.map((row, i) => (
+          {summary.rows.map((row, i) => {
+            const rank = i + 1;
+            const medal = RANK_MEDALS[rank];
+            return (
             <tr key={row.playerId} className="border-t border-border">
-              <td className="py-1.5 pr-2 tabular-nums text-foreground-muted">{i + 1}</td>
+              <td className="py-1.5 pr-2 tabular-nums text-foreground-muted">
+                {medal ? (
+                  <span aria-label={`Platz ${rank}`} role="img" className="text-base">
+                    {medal}
+                  </span>
+                ) : (
+                  rank
+                )}
+              </td>
               <td className="py-1.5 pr-2 text-foreground">
                 <span className="block truncate">{row.playerName}</span>
               </td>
@@ -85,7 +98,8 @@ export async function FinishedSummary({
               </td>
               <td className="py-1.5 text-right tabular-nums text-foreground-muted">{row.matches}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </section>

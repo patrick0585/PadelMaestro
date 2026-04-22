@@ -68,7 +68,6 @@ export default async function GameDayPage() {
     day: "2-digit",
     month: "long",
   });
-  const timeText = new Date(day.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   const showFinishBanner =
     session.user.isAdmin &&
     day.status === "in_progress" &&
@@ -79,9 +78,7 @@ export default async function GameDayPage() {
     <div className="space-y-4">
       <header>
         <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
-        <h1 className="text-2xl font-bold text-foreground">
-          {dateText} · {timeText}
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">{dateText}</h1>
       </header>
       <Timeline steps={steps} />
 
