@@ -41,8 +41,12 @@ export async function createGameDay(date: Date, actorId: string) {
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      const target = (e.meta?.target ?? []) as string[];
-      if (target.includes("date") || target.includes("seasonId")) {
+      const fields = (e.meta?.target ?? []) as string[];
+      if (
+        fields.length === 2 &&
+        fields.includes("seasonId") &&
+        fields.includes("date")
+      ) {
         throw new GameDayDateExistsError(date);
       }
       throw e;
