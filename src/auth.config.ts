@@ -9,6 +9,7 @@ export const authConfig = {
       if (user) {
         token.id = user.id as string;
         token.isAdmin = (user as { isAdmin: boolean }).isAdmin;
+        token.username = (user as { username: string | null }).username ?? null;
       }
       return token;
     },
@@ -16,6 +17,8 @@ export const authConfig = {
       if (session.user) {
         (session.user as { id: string }).id = token.id as string;
         (session.user as { isAdmin: boolean }).isAdmin = token.isAdmin as boolean;
+        (session.user as { username: string | null }).username =
+          (token.username as string | null) ?? null;
       }
       return session;
     },
