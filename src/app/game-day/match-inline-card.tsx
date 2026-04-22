@@ -52,7 +52,7 @@ export function MatchInlineCard({
     const res = await fetch(`/api/matches/${match.id}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ team1Score: t1, team2Score: t2, version: match.version }),
+      body: JSON.stringify({ team1Score: t1, team2Score: t2, expectedVersion: match.version }),
     });
     setBusy(false);
     if (!res.ok) {
