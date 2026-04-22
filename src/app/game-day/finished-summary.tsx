@@ -41,7 +41,7 @@ export async function FinishedSummary({
         </div>
       </div>
 
-      <ol className="grid gap-2 sm:grid-cols-3">
+      <ol aria-label="Podium" className="grid gap-2 sm:grid-cols-3">
         {summary.podium.map((row, i) => {
           const style = PODIUM_STYLES[i];
           return (
@@ -67,17 +67,19 @@ export async function FinishedSummary({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            <th className="py-1.5 pr-2">#</th>
-            <th className="py-1.5 pr-2">Name</th>
-            <th className="py-1.5 pr-2 text-right">Punkte</th>
-            <th className="py-1.5 text-right">Matches</th>
+            <th scope="col" className="py-1.5 pr-2">#</th>
+            <th scope="col" className="py-1.5 pr-2">Name</th>
+            <th scope="col" className="py-1.5 pr-2 text-right">Punkte</th>
+            <th scope="col" className="py-1.5 text-right">Matches</th>
           </tr>
         </thead>
         <tbody>
           {summary.rows.map((row, i) => (
             <tr key={row.playerId} className="border-t border-border">
               <td className="py-1.5 pr-2 tabular-nums text-foreground-muted">{i + 1}</td>
-              <td className="py-1.5 pr-2 text-foreground">{row.playerName}</td>
+              <td className="py-1.5 pr-2 text-foreground">
+                <span className="block truncate">{row.playerName}</span>
+              </td>
               <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-foreground">
                 {row.points}
               </td>
