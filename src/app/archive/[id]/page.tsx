@@ -44,7 +44,7 @@ export default async function ArchiveDetailPage({
     <div className="space-y-4">
       <Link
         href="/archive"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        className="inline-flex items-center gap-1 rounded text-xs font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <ChevronLeft className="h-3 w-3" aria-hidden="true" />
         Zurück zum Archiv
