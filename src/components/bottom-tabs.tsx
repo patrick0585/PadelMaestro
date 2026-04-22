@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Trophy, CircleDot, Settings } from "lucide-react";
+import { Home, Trophy, CircleDot, Archive, Settings } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
 type Tab = { href: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> };
@@ -10,6 +10,7 @@ const USER_TABS: Tab[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/ranking", label: "Rangliste", icon: Trophy },
   { href: "/game-day", label: "Spieltag", icon: CircleDot },
+  { href: "/archive", label: "Archiv", icon: Archive },
 ];
 
 const ADMIN_TAB: Tab = { href: "/admin", label: "Admin", icon: Settings };
