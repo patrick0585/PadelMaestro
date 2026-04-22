@@ -5,7 +5,7 @@ import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,10 +14,10 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await signIn("credentials", { email, password, redirect: false });
+    const res = await signIn("credentials", { identifier, password, redirect: false });
     if (res?.error) {
       setLoading(false);
-      setError("Falsche E-Mail oder Passwort");
+      setError("Falsche Anmeldedaten");
       return;
     }
     window.location.assign("/");
@@ -26,14 +26,14 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-border bg-surface p-5 space-y-3">
       <div>
-        <Label htmlFor="email">E-Mail</Label>
+        <Label htmlFor="identifier">E-Mail oder Benutzername</Label>
         <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          id="identifier"
+          type="text"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
           required
-          autoComplete="email"
+          autoComplete="username"
         />
       </div>
       <div>
