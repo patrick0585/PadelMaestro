@@ -6,6 +6,7 @@ describe("timelineForStatus", () => {
     const steps = timelineForStatus("planned");
     expect(steps).toHaveLength(3);
     expect(steps.map((s) => s.label)).toEqual(["Geplant", "Matches", "Fertig"]);
+    expect(steps.map((s) => s.id)).toEqual(["planned", "matches", "finished"]);
   });
 
   it("marks Geplant as current when status=planned", () => {
