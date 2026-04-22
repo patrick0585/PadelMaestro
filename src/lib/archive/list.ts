@@ -53,7 +53,7 @@ export async function listArchivedGameDays(
     rows.push({
       id: day.id,
       date: day.date,
-      seasonYear: day.date.getFullYear(),
+      seasonYear: day.date.getUTCFullYear(),
       matchCount: day._count.matches,
       playerCount: rowsFromSummary.length,
       podium,
