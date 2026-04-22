@@ -93,7 +93,7 @@ describe("updatePlayer", () => {
 
   it("throws DuplicateUsernameError on P2002 username collision", async () => {
     const admin = await makeAdmin();
-    const a = await prisma.player.create({
+    await prisma.player.create({
       data: { name: "A", email: "aa@x", passwordHash: "x", username: "alice" },
     });
     const b = await makeUser(2);
@@ -102,19 +102,17 @@ describe("updatePlayer", () => {
     ).rejects.toBeInstanceOf(DuplicateUsernameError);
     const fresh = await prisma.player.findUniqueOrThrow({ where: { id: b.id } });
     expect(fresh.username).toBeNull();
-    void a;
   });
 
   it("throws DuplicateEmailError on P2002 email collision", async () => {
     const admin = await makeAdmin();
-    const a = await prisma.player.create({
+    await prisma.player.create({
       data: { name: "A", email: "taken@x", passwordHash: "x" },
     });
     const b = await makeUser(2);
     await expect(
       updatePlayer({ playerId: b.id, actorId: admin.id, fields: { email: "taken@x" } }),
     ).rejects.toBeInstanceOf(DuplicateEmailError);
-    void a;
   });
 
   it("throws LastAdminError when demoting the only remaining admin", async () => {
@@ -166,5 +164,21 @@ describe("updatePlayer", () => {
     expect((entry.payload as { changedFields: string[] }).changedFields).toEqual([
       "username",
     ]);
+  });
+
+  it("writes no audit log when all provided fields equal current values", async () => {
+    const admin = await makeAdmin();
+    const target = await prisma.player.create({
+      data: { name: "Same", email: "same@x", passwordHash: "x" },
+    });
+    await updatePlayer({
+      playerId: target.id,
+      actorId: admin.id,
+      fields: { name: "Same" },
+    });
+    const entries = await prisma.auditLog.findMany({
+      where: { entityId: target.id, action: "player.update" },
+    });
+    expect(entries).toHaveLength(0);
   });
 });

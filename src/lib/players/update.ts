@@ -57,7 +57,10 @@ const TRACKED_FIELDS = ["username", "name", "email", "isAdmin"] as const;
 type TrackedField = (typeof TRACKED_FIELDS)[number];
 
 export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPlayer> {
-  if (Object.keys(input.fields).length === 0) throw new NoFieldsError();
+  const definedFields = Object.fromEntries(
+    Object.entries(input.fields).filter(([, v]) => v !== undefined),
+  ) as UpdatablePlayerFields;
+  if (Object.keys(definedFields).length === 0) throw new NoFieldsError();
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -76,7 +79,7 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new PlayerNotFoundError(input.playerId);
       }
 
-      if (input.fields.isAdmin === false && existing.isAdmin === true) {
+      if (definedFields.isAdmin === false && existing.isAdmin === true) {
         const remaining = await tx.player.count({
           where: { isAdmin: true, deletedAt: null, id: { not: existing.id } },
         });
@@ -85,7 +88,7 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
 
       const updated = await tx.player.update({
         where: { id: existing.id },
-        data: input.fields,
+        data: definedFields,
         select: {
           id: true,
           email: true,
@@ -96,13 +99,13 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       });
 
       const changedFields: TrackedField[] = [];
-      const before: Record<TrackedField, unknown> = {
+      const before: Record<TrackedField, string | boolean | null> = {
         username: existing.username,
         name: existing.name,
         email: existing.email,
         isAdmin: existing.isAdmin,
       };
-      const after: Record<TrackedField, unknown> = {
+      const after: Record<TrackedField, string | boolean | null> = {
         username: updated.username,
         name: updated.name,
         email: updated.email,
@@ -112,15 +115,17 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         if (before[f] !== after[f]) changedFields.push(f);
       }
 
-      await tx.auditLog.create({
-        data: {
-          actorId: input.actorId,
-          action: "player.update",
-          entityType: "Player",
-          entityId: existing.id,
-          payload: { before, after, changedFields },
-        },
-      });
+      if (changedFields.length > 0) {
+        await tx.auditLog.create({
+          data: {
+            actorId: input.actorId,
+            action: "player.update",
+            entityType: "Player",
+            entityId: existing.id,
+            payload: { before, after, changedFields },
+          },
+        });
+      }
 
       return updated;
     });
@@ -128,10 +133,10 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       const target = (e.meta?.target ?? []) as string[];
       if (target.includes("username")) {
-        throw new DuplicateUsernameError(input.fields.username ?? "");
+        throw new DuplicateUsernameError(definedFields.username ?? "");
       }
       if (target.includes("email")) {
-        throw new DuplicateEmailError(input.fields.email ?? "");
+        throw new DuplicateEmailError(definedFields.email ?? "");
       }
       throw e;
     }
