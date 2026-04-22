@@ -22,6 +22,7 @@ export interface PlayerSeasonStats {
 
 interface MatchRow {
   matchNumber: number;
+  gameDayId: string;
   gameDayDate: Date;
   team1PlayerAId: string;
   team1PlayerBId: string;
@@ -57,12 +58,7 @@ export async function computePlayerSeasonStats(
   playerId: string,
   seasonId: string,
 ): Promise<PlayerSeasonStats> {
-  const [finishedDays, myMatches, jokerCount] = await Promise.all([
-    prisma.gameDay.findMany({
-      where: { seasonId, status: "finished" },
-      select: { id: true },
-      orderBy: { date: "desc" },
-    }),
+  const [myMatches, jokerCount, finishedDayCount] = await Promise.all([
     prisma.match.findMany({
       where: {
         team1Score: { not: null },
@@ -77,6 +73,7 @@ export async function computePlayerSeasonStats(
       },
       select: {
         matchNumber: true,
+        gameDayId: true,
         team1PlayerAId: true,
         team1PlayerBId: true,
         team2PlayerAId: true,
@@ -85,13 +82,16 @@ export async function computePlayerSeasonStats(
         team2Score: true,
         gameDay: { select: { date: true } },
       },
+      // within a day, higher matchNumber = played later, so matchNumber DESC is newest-first
       orderBy: [{ gameDay: { date: "desc" } }, { matchNumber: "desc" }],
     }),
     prisma.jokerUse.count({ where: { playerId, seasonId } }),
+    prisma.gameDay.count({ where: { seasonId, status: "finished" } }),
   ]);
 
   const rows: MatchRow[] = myMatches.map((m) => ({
     matchNumber: m.matchNumber,
+    gameDayId: m.gameDayId,
     gameDayDate: m.gameDay.date,
     team1PlayerAId: m.team1PlayerAId,
     team1PlayerBId: m.team1PlayerBId,
@@ -101,7 +101,12 @@ export async function computePlayerSeasonStats(
     team2Score: m.team2Score as number,
   }));
 
-  const summaries = await Promise.all(finishedDays.map((d) => computeGameDaySummary(d.id)));
+  const attendedDays = new Set<string>();
+  for (const r of rows) attendedDays.add(r.gameDayId);
+
+  const summaries = await Promise.all(
+    [...attendedDays].map((id) => computeGameDaySummary(id)),
+  );
   const medals = { gold: 0, silver: 0, bronze: 0 };
   for (const s of summaries) {
     if (!s) continue;
@@ -110,23 +115,6 @@ export async function computePlayerSeasonStats(
     if (podium[1]?.playerId === playerId) medals.silver += 1;
     if (podium[2]?.playerId === playerId) medals.bronze += 1;
   }
-
-  const attendedRows = await prisma.match.findMany({
-    where: {
-      team1Score: { not: null },
-      team2Score: { not: null },
-      gameDay: { seasonId, status: "finished" },
-      OR: [
-        { team1PlayerAId: playerId },
-        { team1PlayerBId: playerId },
-        { team2PlayerAId: playerId },
-        { team2PlayerBId: playerId },
-      ],
-    },
-    select: { gameDayId: true },
-  });
-  const attendedDays = new Set<string>();
-  for (const r of attendedRows) attendedDays.add(r.gameDayId);
 
   const winRate = { wins: 0, losses: 0, draws: 0, matches: rows.length };
   for (const r of rows) {
@@ -175,7 +163,7 @@ export async function computePlayerSeasonStats(
 
   return {
     medals,
-    attendance: { attended: attendedDays.size, total: finishedDays.length },
+    attendance: { attended: attendedDays.size, total: finishedDayCount },
     winRate,
     recentForm,
     bestPartner,

@@ -246,6 +246,61 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.worstPartner).toBeNull();
   });
 
+  it("uses match count as tiebreaker when partners tie on points", async () => {
+    const season = await makeSeason();
+    const [me, alex, bob, x, y] = await Promise.all(
+      ["Me", "Alex", "Bob", "X", "Y"].map(makePlayer),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    // Alex: 3 matches, 5 points together → best must be Alex (more matches beats Bob on tie)
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: alex.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 2,
+        team1PlayerAId: me.id, team1PlayerBId: alex.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 1, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 3,
+        team1PlayerAId: me.id, team1PlayerBId: alex.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 1, team2Score: 0,
+      },
+    });
+    // Bob: 2 matches, 5 points together → worst must be Bob (fewer matches wins on tie)
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 4,
+        team1PlayerAId: me.id, team1PlayerBId: bob.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 2, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 5,
+        team1PlayerAId: me.id, team1PlayerBId: bob.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.bestPartner).toEqual({ name: "Alex", pointsTogether: 5, matches: 3 });
+    expect(stats.worstPartner).toEqual({ name: "Bob", pointsTogether: 5, matches: 2 });
+  });
+
   it("computes joker balance from JokerUse rows for the season", async () => {
     const season = await makeSeason();
     const me = await makePlayer("Me");
