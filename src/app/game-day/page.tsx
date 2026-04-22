@@ -8,6 +8,7 @@ import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
 import { AddExtraMatchButton } from "./add-extra-match-button";
 import { FinishBanner } from "./finish-banner";
+import { FinishedSummary } from "./finished-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -130,16 +131,11 @@ export default async function GameDayPage() {
       {showFinishBanner && <FinishBanner gameDayId={day.id} />}
 
       {day.status === "finished" && (
-        <div className="rounded-2xl border border-border bg-surface p-4">
-          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Zusammenfassung
-          </div>
-          <div className="mt-2 text-sm text-foreground">
-            Spieltag beendet · {day.matches.filter((m) => m.team1Score !== null && m.team2Score !== null).length}
-            {" / "}
-            {day.matches.length} Matches gewertet
-          </div>
-        </div>
+        <FinishedSummary
+          gameDayId={day.id}
+          scoredMatchCount={day.matches.filter((m) => m.team1Score !== null && m.team2Score !== null).length}
+          totalMatchCount={day.matches.length}
+        />
       )}
     </div>
   );
