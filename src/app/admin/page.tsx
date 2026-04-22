@@ -90,8 +90,8 @@ export default async function AdminPage() {
           <CreateGameDayForm />
           {manageableDay && (
             <div className="space-y-3 rounded-xl border border-border p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0 flex-1 text-sm">
                   <div className="font-medium text-foreground">
                     {manageableDay.status === "planned" ? "Offener Spieltag" : "Spieltag läuft"}
                     : {new Date(manageableDay.date).toLocaleDateString("de-DE")}
@@ -100,7 +100,7 @@ export default async function AdminPage() {
                     {manageableDay.status === "planned" ? "Geplant" : "Aufstellung steht"}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   {manageableDay.status === "planned" && (
                     <StartGameDayButton gameDayId={manageableDay.id} />
                   )}
@@ -125,7 +125,7 @@ export default async function AdminPage() {
       <Card>
         <CardBody>
           <h2 className="mb-2 text-base font-semibold text-foreground">Historische Daten</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="break-words text-sm text-muted-foreground">
             Import über die CLI:
             <code className="mx-1 rounded-md bg-surface-muted px-1.5 py-0.5">
               pnpm import:historical &lt;file&gt;

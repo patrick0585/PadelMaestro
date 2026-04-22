@@ -37,16 +37,16 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
           {players.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between rounded-xl border border-border p-3"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-3"
             >
-              <div className="text-sm">
-                <div className="font-medium text-foreground">{p.name}</div>
-                <div className="text-xs text-muted-foreground">
+              <div className="min-w-0 flex-1 text-sm">
+                <div className="truncate font-medium text-foreground">{p.name}</div>
+                <div className="truncate text-xs text-muted-foreground">
                   {p.email}
                   {p.username && <span className="ml-2">· @{p.username}</span>}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 {p.isAdmin && <Badge variant="primary">Admin</Badge>}
                 {!p.hasPassword && <Badge variant="neutral">Nur Stats</Badge>}
                 <Button
