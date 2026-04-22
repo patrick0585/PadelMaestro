@@ -37,7 +37,7 @@ export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
             </span>
             <span className="truncate text-sm font-semibold text-foreground">{r.playerName}</span>
             <span className="text-right text-sm font-semibold tabular-nums text-foreground">
-              {r.points.toFixed(1)}
+              {r.points.toFixed(0)}
             </span>
             <span className="text-right text-sm font-semibold tabular-nums text-foreground-muted">
               {r.pointsPerGame.toFixed(2)}

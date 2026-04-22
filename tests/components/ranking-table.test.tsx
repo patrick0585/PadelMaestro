@@ -77,7 +77,7 @@ describe("<RankingTable>", () => {
       />,
     );
     const scoped = scopeTo("Paul");
-    expect(scoped.getByText("45.0")).toBeInTheDocument();
+    expect(scoped.getByText("45")).toBeInTheDocument();
     expect(scoped.getByText("3.75")).toBeInTheDocument();
     expect(scoped.getByText("12")).toBeInTheDocument();
     expect(scoped.getByText("2")).toBeInTheDocument();
@@ -100,9 +100,8 @@ describe("<RankingTable>", () => {
       />,
     );
     const scoped = scopeTo("Paul");
-    expect(scoped.getByText("0.0")).toBeInTheDocument();
     expect(scoped.getByText("0.00")).toBeInTheDocument();
-    expect(scoped.getAllByText("0")).toHaveLength(2);
+    expect(scoped.getAllByText("0")).toHaveLength(3);
   });
 
   it("renders the Joker column header", () => {
