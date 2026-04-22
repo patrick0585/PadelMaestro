@@ -11,7 +11,7 @@ async function makeAdmin(i = 1) {
   return prisma.player.create({
     data: {
       name: `Admin${i}`,
-      email: `a${i}@x`,
+      email: `admin${i}@example.com`,
       passwordHash: "x",
       isAdmin: true,
     },
@@ -19,7 +19,7 @@ async function makeAdmin(i = 1) {
 }
 async function makeUser(i = 1) {
   return prisma.player.create({
-    data: { name: `U${i}`, email: `u${i}@x`, passwordHash: "x" },
+    data: { name: `U${i}`, email: `user${i}@example.com`, passwordHash: "x" },
   });
 }
 
@@ -113,7 +113,12 @@ describe("PATCH /api/players/[id]", () => {
   it("returns 409 username_taken on collision", async () => {
     const admin = await makeAdmin();
     await prisma.player.create({
-      data: { name: "Taken", email: "tt@x", passwordHash: "x", username: "alice" },
+      data: {
+        name: "Taken",
+        email: "taken-user@example.com",
+        passwordHash: "x",
+        username: "alice",
+      },
     });
     const target = await makeUser(2);
     authMock.mockResolvedValue({
@@ -128,13 +133,13 @@ describe("PATCH /api/players/[id]", () => {
   it("returns 409 email_taken on collision", async () => {
     const admin = await makeAdmin();
     await prisma.player.create({
-      data: { name: "Taken", email: "taken@x", passwordHash: "x" },
+      data: { name: "Taken", email: "taken@example.com", passwordHash: "x" },
     });
     const target = await makeUser(2);
     authMock.mockResolvedValue({
       user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
     });
-    const res = await call(target.id, { email: "taken@x" });
+    const res = await call(target.id, { email: "taken@example.com" });
     expect(res.status).toBe(409);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("email_taken");

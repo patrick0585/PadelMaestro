@@ -19,7 +19,7 @@ const PatchSchema = z
       .refine(isValidUsername, { message: "invalid username" })
       .optional(),
     name: z.string().min(1).max(64).optional(),
-    email: z.string().regex(/.+@.+/, { message: "invalid email" }).optional(),
+    email: z.string().email().optional(),
     isAdmin: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "no_fields" });
