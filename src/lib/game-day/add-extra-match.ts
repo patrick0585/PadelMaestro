@@ -33,7 +33,8 @@ export async function addExtraMatch(gameDayId: string, actorId: string) {
 
     const template = loadTemplate(Math.min(confirmed.length, 6));
     const slot = template.matches[Math.floor(Math.random() * template.matches.length)];
-    const shuffled = seededShuffle(confirmed, generateSeed());
+    const seed = generateSeed();
+    const shuffled = seededShuffle(confirmed, seed);
     const nextMatchNumber = Math.max(0, ...day.matches.map((m) => m.matchNumber)) + 1;
 
     const match = await tx.match.create({
@@ -57,6 +58,7 @@ export async function addExtraMatch(gameDayId: string, actorId: string) {
           gameDayId,
           matchNumber: nextMatchNumber,
           templateSlot: slot.matchNumber,
+          seed,
         },
       },
     });

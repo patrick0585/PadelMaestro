@@ -11,13 +11,16 @@ export function AddExtraMatchButton({ gameDayId, label }: { gameDayId: string; l
   async function onClick() {
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/game-days/${gameDayId}/matches`, { method: "POST" });
-    setLoading(false);
-    if (!res.ok) {
-      setError("Hinzufügen fehlgeschlagen");
-      return;
+    try {
+      const res = await fetch(`/api/game-days/${gameDayId}/matches`, { method: "POST" });
+      if (!res.ok) {
+        setError("Hinzufügen fehlgeschlagen");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setLoading(false);
     }
-    router.refresh();
   }
 
   return (
