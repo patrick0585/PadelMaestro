@@ -16,6 +16,8 @@ export async function deleteGameDay(gameDayId: string, actorId: string) {
       throw new GameDayNotDeletableError(day.status);
     }
 
+    await tx.gameDay.delete({ where: { id: gameDayId } });
+
     await tx.auditLog.create({
       data: {
         actorId,
@@ -29,7 +31,5 @@ export async function deleteGameDay(gameDayId: string, actorId: string) {
         },
       },
     });
-
-    await tx.gameDay.delete({ where: { id: gameDayId } });
   });
 }

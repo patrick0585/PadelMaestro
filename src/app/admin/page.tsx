@@ -96,7 +96,9 @@ export default async function AdminPage() {
                     {manageableDay.status === "planned" ? "Offener Spieltag" : "Spieltag läuft"}
                     : {new Date(manageableDay.date).toLocaleDateString("de-DE")}
                   </div>
-                  <Badge variant="neutral">{manageableDay.status}</Badge>
+                  <Badge variant="neutral">
+                    {manageableDay.status === "planned" ? "Geplant" : "Aufstellung steht"}
+                  </Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   {manageableDay.status === "planned" && (
