@@ -41,21 +41,17 @@ export async function computeGameDaySummary(
   if (!day) return null;
 
   const totals = new Map<string, { points: number; matches: number }>();
+  const credit = (pids: string[], score: number) => {
+    for (const pid of pids) {
+      const cur = totals.get(pid) ?? { points: 0, matches: 0 };
+      cur.points += score;
+      cur.matches += 1;
+      totals.set(pid, cur);
+    }
+  };
   for (const m of day.matches) {
-    const t1 = m.team1Score ?? 0;
-    const t2 = m.team2Score ?? 0;
-    for (const pid of [m.team1PlayerAId, m.team1PlayerBId]) {
-      const cur = totals.get(pid) ?? { points: 0, matches: 0 };
-      cur.points += t1;
-      cur.matches += 1;
-      totals.set(pid, cur);
-    }
-    for (const pid of [m.team2PlayerAId, m.team2PlayerBId]) {
-      const cur = totals.get(pid) ?? { points: 0, matches: 0 };
-      cur.points += t2;
-      cur.matches += 1;
-      totals.set(pid, cur);
-    }
+    credit([m.team1PlayerAId, m.team1PlayerBId], m.team1Score ?? 0);
+    credit([m.team2PlayerAId, m.team2PlayerBId], m.team2Score ?? 0);
   }
 
   const playerIds = [...totals.keys()];
