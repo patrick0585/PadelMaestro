@@ -107,4 +107,145 @@ describe("listArchivedGameDays", () => {
     expect(result[0].matchCount).toBe(2);
     expect(result[0].playerCount).toBe(8);
   });
+
+  it("populates self block for participating player", async () => {
+    const season = await makeSeason(2026);
+    const [paul, patrick, michi, thomas] = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-17"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: paul.id,
+        team1PlayerBId: patrick.id,
+        team2PlayerAId: michi.id,
+        team2PlayerBId: thomas.id,
+        team1Score: 2,
+        team2Score: 1,
+      },
+    });
+
+    const resultForPatrick = await listArchivedGameDays(patrick.id);
+    expect(resultForPatrick[0].self).toEqual({ points: 2, matches: 1 });
+  });
+
+  it("returns null self block for non-participating player", async () => {
+    const season = await makeSeason(2026);
+    const [paul, patrick, michi, thomas, outsider] = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas", "Outsider"].map(makeUser),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-17"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: paul.id,
+        team1PlayerBId: patrick.id,
+        team2PlayerAId: michi.id,
+        team2PlayerBId: thomas.id,
+        team1Score: 2,
+        team2Score: 1,
+      },
+    });
+
+    const result = await listArchivedGameDays(outsider.id);
+    expect(result[0].self).toBeNull();
+  });
+
+  it("sorts by date DESC then id DESC", async () => {
+    // Use two seasons because GameDay has @@unique([seasonId, date]);
+    // we still exercise date-DESC sort across seasons and id-DESC tiebreak on same date.
+    const seasonA = await prisma.season.create({
+      data: { year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
+    });
+    const seasonB = await prisma.season.create({
+      data: { year: 2026, startDate: new Date(2026, 0, 1), endDate: new Date(2026, 11, 31), isActive: true },
+    });
+    const [paul, patrick, michi, thomas] = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    const dayOlder = await prisma.gameDay.create({
+      data: { seasonId: seasonB.id, date: new Date("2026-03-10"), playerCount: 4, status: "finished" },
+    });
+    const dayNewerA = await prisma.gameDay.create({
+      data: { seasonId: seasonA.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    const dayNewerB = await prisma.gameDay.create({
+      data: { seasonId: seasonB.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    for (const d of [dayOlder, dayNewerA, dayNewerB]) {
+      await prisma.match.create({
+        data: {
+          gameDayId: d.id,
+          matchNumber: 1,
+          team1PlayerAId: paul.id,
+          team1PlayerBId: patrick.id,
+          team2PlayerAId: michi.id,
+          team2PlayerBId: thomas.id,
+          team1Score: 2,
+          team2Score: 1,
+        },
+      });
+    }
+
+    const result = await listArchivedGameDays(null);
+    expect(result.map((r) => r.id)).toEqual(
+      [dayNewerA.id, dayNewerB.id].sort().reverse().concat(dayOlder.id),
+    );
+  });
+
+  it("excludes game days whose status is not finished", async () => {
+    const season = await makeSeason(2026);
+    const [paul, patrick, michi, thomas] = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    const plannedDay = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-18"), playerCount: 4, status: "planned" },
+    });
+    const inProgressDay = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-19"), playerCount: 4, status: "in_progress" },
+    });
+    const rosterLockedDay = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-20"), playerCount: 4, status: "roster_locked" },
+    });
+    for (const d of [plannedDay, inProgressDay, rosterLockedDay]) {
+      await prisma.match.create({
+        data: {
+          gameDayId: d.id,
+          matchNumber: 1,
+          team1PlayerAId: paul.id,
+          team1PlayerBId: patrick.id,
+          team2PlayerAId: michi.id,
+          team2PlayerBId: thomas.id,
+          team1Score: 2,
+          team2Score: 1,
+        },
+      });
+    }
+    const finishedDay = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: finishedDay.id,
+        matchNumber: 1,
+        team1PlayerAId: paul.id,
+        team1PlayerBId: patrick.id,
+        team2PlayerAId: michi.id,
+        team2PlayerBId: thomas.id,
+        team1Score: 2,
+        team2Score: 1,
+      },
+    });
+
+    const result = await listArchivedGameDays(null);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(finishedDay.id);
+  });
 });
