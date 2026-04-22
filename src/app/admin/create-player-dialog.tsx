@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { isValidUsername } from "@/lib/auth/username";
 
 export function CreatePlayerDialog({
   open,
@@ -15,6 +16,7 @@ export function CreatePlayerDialog({
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,6 +25,7 @@ export function CreatePlayerDialog({
   function reset() {
     setEmail("");
     setName("");
+    setUsername("");
     setPassword("");
     setIsAdmin(false);
     setError(null);
@@ -30,16 +33,34 @@ export function CreatePlayerDialog({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    const trimmedUsername = username.trim();
+    if (trimmedUsername && !isValidUsername(trimmedUsername.toLowerCase())) {
+      setError(
+        "Benutzername: 3–32 Zeichen, nur Kleinbuchstaben, Ziffern und Unterstriche",
+      );
+      return;
+    }
+    setLoading(true);
     const res = await fetch("/api/players", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name, password, isAdmin }),
+      body: JSON.stringify({
+        email,
+        name,
+        password,
+        isAdmin,
+        username: trimmedUsername || undefined,
+      }),
     });
     setLoading(false);
     if (res.status === 409) {
-      setError("Ein Spieler mit dieser E-Mail existiert bereits");
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (body.error === "username_taken") {
+        setError("Dieser Benutzername ist bereits vergeben");
+      } else {
+        setError("Ein Spieler mit dieser E-Mail existiert bereits");
+      }
       return;
     }
     if (!res.ok) {
@@ -71,6 +92,17 @@ export function CreatePlayerDialog({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+          />
+        </div>
+        <div>
+          <Label htmlFor="new-player-username">Benutzername (optional)</Label>
+          <Input
+            id="new-player-username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="z. B. alice_42"
+            autoComplete="off"
           />
         </div>
         <div>

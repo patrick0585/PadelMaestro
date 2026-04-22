@@ -11,6 +11,7 @@ model Player {
   id             String    @id @default(uuid())
   name           String
   email          String    @unique
+  username       String?   @unique
   passwordHash   String?
   telegramId     BigInt?   @unique
   isAdmin        Boolean   @default(false)

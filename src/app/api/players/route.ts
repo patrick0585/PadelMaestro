@@ -2,13 +2,23 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { createPlayer, DuplicateEmailError } from "@/lib/players/create";
+import {
+  createPlayer,
+  DuplicateEmailError,
+  DuplicateUsernameError,
+} from "@/lib/players/create";
+import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
 const CreateSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   password: z.string().min(8),
   isAdmin: z.boolean().optional(),
+  username: z
+    .string()
+    .transform(normaliseUsername)
+    .refine(isValidUsername, { message: "invalid username" })
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -27,12 +37,16 @@ export async function POST(req: Request) {
       name: parsed.data.name,
       password: parsed.data.password,
       isAdmin: parsed.data.isAdmin ?? false,
+      username: parsed.data.username,
       actorId: session.user.id,
     });
     return NextResponse.json(player, { status: 201 });
   } catch (e) {
     if (e instanceof DuplicateEmailError) {
-      return NextResponse.json({ error: "duplicate_email" }, { status: 409 });
+      return NextResponse.json({ error: "email_taken" }, { status: 409 });
+    }
+    if (e instanceof DuplicateUsernameError) {
+      return NextResponse.json({ error: "username_taken" }, { status: 409 });
     }
     throw e;
   }
@@ -46,12 +60,20 @@ export async function GET(_req: Request) {
   const players = await prisma.player.findMany({
     where: { deletedAt: null },
     orderBy: { name: "asc" },
-    select: { id: true, email: true, name: true, isAdmin: true, passwordHash: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      username: true,
+      isAdmin: true,
+      passwordHash: true,
+    },
   });
   return NextResponse.json(
     players.map((p) => ({
       id: p.id,
       email: p.email,
+      username: p.username,
       name: p.name,
       isAdmin: p.isAdmin,
       hasPassword: p.passwordHash !== null,
