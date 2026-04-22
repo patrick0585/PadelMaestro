@@ -68,6 +68,11 @@ export default async function GameDayPage() {
     month: "long",
   });
   const timeText = new Date(day.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const showFinishBanner =
+    session.user.isAdmin &&
+    day.status === "in_progress" &&
+    day.matches.length > 0 &&
+    day.matches.every((m) => m.team1Score !== null && m.team2Score !== null);
 
   return (
     <div className="space-y-4">
@@ -122,15 +127,7 @@ export default async function GameDayPage() {
         </section>
       )}
 
-      {(() => {
-        const allScored =
-          day.matches.length > 0 &&
-          day.matches.every((m) => m.team1Score !== null && m.team2Score !== null);
-        if (session.user.isAdmin && day.status === "in_progress" && allScored) {
-          return <FinishBanner gameDayId={day.id} />;
-        }
-        return null;
-      })()}
+      {showFinishBanner && <FinishBanner gameDayId={day.id} />}
 
       {day.status === "finished" && (
         <div className="rounded-2xl border border-border bg-surface p-4">

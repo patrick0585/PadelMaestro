@@ -25,7 +25,7 @@ export function FinishBanner({ gameDayId }: { gameDayId: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-primary/40 bg-primary-soft p-4 space-y-3">
+    <div role="status" className="rounded-2xl border border-primary/40 bg-primary-soft p-4 space-y-3">
       <div>
         <div className="text-sm font-semibold text-foreground">Alle Matches gewertet.</div>
         <div className="text-sm text-foreground-muted">
