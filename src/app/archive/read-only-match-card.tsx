@@ -11,14 +11,19 @@ export interface ReadOnlyMatch {
 export function ReadOnlyMatchCard({ match }: { match: ReadOnlyMatch }) {
   const hasScore = match.team1Score !== null && match.team2Score !== null;
   const winner =
-    hasScore && match.team1Score! > match.team2Score!
-      ? "team1"
-      : hasScore && match.team2Score! > match.team1Score!
-        ? "team2"
-        : null;
+    match.team1Score !== null && match.team2Score !== null
+      ? match.team1Score > match.team2Score
+        ? "team1"
+        : match.team2Score > match.team1Score
+          ? "team2"
+          : null
+      : null;
 
   return (
-    <div className="rounded-xl border border-border bg-surface-muted p-3">
+    <article
+      aria-label={`Match ${match.matchNumber}`}
+      className="rounded-xl border border-border bg-surface-muted p-3"
+    >
       <div className="flex items-center justify-between">
         <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
           Match {match.matchNumber}
@@ -52,6 +57,6 @@ export function ReadOnlyMatchCard({ match }: { match: ReadOnlyMatch }) {
           <div className="text-[0.65rem] text-foreground-dim">Team B</div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
