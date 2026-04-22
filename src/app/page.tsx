@@ -4,7 +4,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
+import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 import { StatTile } from "@/components/ui/stat-tile";
+import { MatchFormStrip } from "@/components/match-form-strip";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
 
 export const dynamic = "force-dynamic";
@@ -18,21 +20,20 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const season = await getOrCreateActiveSeason();
-  const [ranking, plannedDay] = await Promise.all([
+  const [ranking, plannedDay, stats] = await Promise.all([
     computeRanking(season.id),
     prisma.gameDay.findFirst({
-      where: { status: "planned" },
+      where: { status: "planned", seasonId: season.id },
       orderBy: { date: "asc" },
       include: { participants: { select: { playerId: true, attendance: true } } },
     }),
+    computePlayerSeasonStats(session.user.id, season.id),
   ]);
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
 
-  let heroState: HeroState;
-  if (!plannedDay) {
-    heroState = { kind: "none" };
-  } else {
+  let heroState: HeroState | null = null;
+  if (plannedDay) {
     const confirmed = plannedDay.participants.filter((p) => p.attendance === "confirmed").length;
     const total = plannedDay.participants.length;
     const date = plannedDay.date.toISOString();
@@ -70,11 +71,139 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">Dein Padel</h1>
       </header>
 
-      <DashboardHero state={heroState} isAdmin={session.user.isAdmin} />
+      {heroState && <DashboardHero state={heroState} />}
 
       <div className="grid grid-cols-2 gap-3">
         <StatTile label="Dein PPG" value={myPpg} tone="primary" />
         <StatTile label="Rang" value={myRank} tone="lime" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile
+          label="Teilnahme"
+          value={stats.attendance.total === 0 ? null : `${stats.attendance.attended}/${stats.attendance.total}`}
+          hint="Spieltage"
+          tone="primary"
+        />
+        <StatTile
+          label="Win-Rate"
+          value={
+            stats.winRate.matches === 0
+              ? null
+              : `${Math.round((stats.winRate.wins / stats.winRate.matches) * 100)}%`
+          }
+          hint={stats.winRate.matches === 0 ? undefined : `${stats.winRate.wins} von ${stats.winRate.matches}`}
+          tone="lime"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+          Medaillen Saison {season.year}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-2xl" aria-hidden="true">🥇</div>
+            <div className="text-xl font-extrabold tabular-nums text-foreground">
+              {stats.medals.gold}
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl" aria-hidden="true">🥈</div>
+            <div className="text-xl font-extrabold tabular-nums text-foreground">
+              {stats.medals.silver}
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl" aria-hidden="true">🥉</div>
+            <div className="text-xl font-extrabold tabular-nums text-foreground">
+              {stats.medals.bronze}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {stats.recentForm.length > 0 && (
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Letzte {stats.recentForm.length} Matches
+          </div>
+          <div className="mt-2">
+            <MatchFormStrip outcomes={stats.recentForm} />
+          </div>
+        </div>
+      )}
+
+      {stats.bestPartner && (
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Teamwork
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl border border-success/30 bg-success-soft/40 p-3">
+              <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-success">
+                Beste Chemie
+              </div>
+              <div className="mt-1 font-bold text-foreground">{stats.bestPartner.name}</div>
+              <div className="mt-0.5 text-xs text-foreground-muted">
+                {stats.bestPartner.pointsTogether} Pt · {stats.bestPartner.matches}{" "}
+                {stats.bestPartner.matches === 1 ? "Match" : "Matches"}
+              </div>
+            </div>
+            {stats.worstPartner ? (
+              <div className="rounded-xl border border-border bg-surface-muted p-3">
+                <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-foreground-muted">
+                  Weniger Glück
+                </div>
+                <div className="mt-1 font-bold text-foreground">{stats.worstPartner.name}</div>
+                <div className="mt-0.5 text-xs text-foreground-muted">
+                  {stats.worstPartner.pointsTogether} Pt · {stats.worstPartner.matches}{" "}
+                  {stats.worstPartner.matches === 1 ? "Match" : "Matches"}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border p-3 text-xs text-foreground-muted">
+                Noch zu wenig Partner-Daten für einen Vergleich.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Joker Saison {season.year}
+          </span>
+          <span className="text-[0.7rem] font-semibold text-foreground-muted">
+            {stats.jokers.used} / {stats.jokers.total} eingesetzt
+          </span>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          {Array.from({ length: stats.jokers.total }, (_, i) => {
+            const used = i < stats.jokers.used;
+            return (
+              <span
+                key={i}
+                aria-label={used ? "Joker eingesetzt" : "Joker verfügbar"}
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-extrabold ${
+                  used
+                    ? "border border-border bg-surface-muted text-foreground-muted"
+                    : "bg-primary-soft text-primary-strong"
+                }`}
+              >
+                ★
+              </span>
+            );
+          })}
+          <span className="ml-2 text-sm font-semibold text-foreground">
+            {stats.jokers.remaining === 0
+              ? "Keine Joker mehr verfügbar"
+              : stats.jokers.remaining === 1
+                ? "1 Joker verfügbar"
+                : `${stats.jokers.remaining} Joker verfügbar`}
+          </span>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-surface p-4">
@@ -101,16 +230,6 @@ export default async function DashboardPage() {
           ))}
         </ul>
       </div>
-
-      {session.user.isAdmin && (
-        <Link
-          href="/admin"
-          className="block rounded-2xl border border-border bg-surface p-4 text-sm text-foreground-muted hover:border-border-strong"
-        >
-          <span className="font-semibold text-foreground">Admin</span>
-          <span className="ml-1">— Spieltag, Roster und Spielerverwaltung</span>
-        </Link>
-      )}
     </div>
   );
 }

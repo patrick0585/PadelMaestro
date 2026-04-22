@@ -1,12 +1,10 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export type HeroState =
-  | { kind: "none" }
   | { kind: "not-member"; gameDayId: string; date: string; time: string; confirmed: number; total: number }
   | {
       kind: "member";
@@ -22,28 +20,9 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
 }
 
-export function DashboardHero({ state, isAdmin }: { state: HeroState; isAdmin: boolean }) {
+export function DashboardHero({ state }: { state: HeroState }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-
-  if (state.kind === "none") {
-    return (
-      <div className="rounded-2xl border border-border bg-surface p-5">
-        <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-          Nächster Spieltag
-        </div>
-        <div className="mt-1 text-lg font-bold text-foreground">Noch kein Spieltag geplant</div>
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className="mt-3 inline-block rounded-xl border border-border-strong px-3 py-2 text-sm font-semibold text-foreground hover:bg-surface-muted"
-          >
-            Spieltag anlegen
-          </Link>
-        )}
-      </div>
-    );
-  }
 
   const confirmedChip = (
     <span className="text-[0.7rem] font-semibold text-primary-strong">
