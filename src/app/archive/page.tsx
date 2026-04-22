@@ -3,19 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Archive } from "lucide-react";
 import { listArchivedGameDays, type ArchivedGameDayRow } from "@/lib/archive/list";
+import { formatGameDayDate } from "@/lib/archive/format";
 
 export const dynamic = "force-dynamic";
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("de-DE", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
 
 function groupBySeason(rows: ArchivedGameDayRow[]): Map<number, ArchivedGameDayRow[]> {
   const grouped = new Map<number, ArchivedGameDayRow[]>();
@@ -73,17 +65,17 @@ export default async function ArchivePage() {
             {year}
           </h2>
           <ul className="space-y-2">
-            {grouped.get(year)!.map((row) => (
+            {(grouped.get(year) ?? []).map((row) => (
               <li key={row.id}>
                 <Link
                   href={`/archive/${row.id}`}
                   className="block rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  <div className="text-sm font-semibold text-foreground">{formatDate(row.date)}</div>
+                  <div className="text-sm font-semibold text-foreground">{formatGameDayDate(row.date)}</div>
                   {row.podium.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-foreground">
                       {row.podium.map((p, i) => (
-                        <span key={`${p.playerName}-${i}`} className="inline-flex items-center gap-1">
+                        <span key={i} className="inline-flex items-center gap-1">
                           <span aria-hidden="true">{MEDALS[i]}</span>
                           <span className="font-medium">{p.playerName}</span>
                           <span className="tabular-nums text-foreground-muted">{p.points}</span>
