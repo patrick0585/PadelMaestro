@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
+import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
 
@@ -18,13 +19,14 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const season = await getOrCreateActiveSeason();
-  const [ranking, plannedDay] = await Promise.all([
+  const [ranking, plannedDay, stats] = await Promise.all([
     computeRanking(season.id),
     prisma.gameDay.findFirst({
       where: { status: "planned" },
       orderBy: { date: "asc" },
       include: { participants: { select: { playerId: true, attendance: true } } },
     }),
+    computePlayerSeasonStats(session.user.id, season.id),
   ]);
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
@@ -73,6 +75,51 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         <StatTile label="Dein PPG" value={myPpg} tone="primary" />
         <StatTile label="Rang" value={myRank} tone="lime" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile
+          label="Teilnahme"
+          value={stats.attendance.total === 0 ? null : `${stats.attendance.attended}/${stats.attendance.total}`}
+          hint="Spieltage"
+          tone="primary"
+        />
+        <StatTile
+          label="Win-Rate"
+          value={
+            stats.winRate.matches === 0
+              ? null
+              : `${Math.round((stats.winRate.wins / stats.winRate.matches) * 100)}%`
+          }
+          hint={stats.winRate.matches === 0 ? undefined : `${stats.winRate.wins} von ${stats.winRate.matches}`}
+          tone="lime"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+          Medaillen Saison {season.year}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-2xl" aria-hidden="true">🥇</div>
+            <div className="text-xl font-extrabold tabular-nums text-foreground">
+              {stats.medals.gold}
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl" aria-hidden="true">🥈</div>
+            <div className="text-xl font-extrabold tabular-nums text-foreground">
+              {stats.medals.silver}
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl" aria-hidden="true">🥉</div>
+            <div className="text-xl font-extrabold tabular-nums text-foreground">
+              {stats.medals.bronze}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-surface p-4">
