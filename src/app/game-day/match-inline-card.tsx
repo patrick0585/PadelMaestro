@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Stepper } from "@/components/ui/stepper";
+import { determineWinner } from "@/lib/game-day/match-display";
 
 export interface MatchRow {
   id: string;
@@ -30,14 +31,7 @@ export function MatchInlineCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const winner =
-    hasScore && !editing
-      ? match.team1Score! > match.team2Score!
-        ? "team1"
-        : match.team2Score! > match.team1Score!
-          ? "team2"
-          : null
-      : null;
+  const winner = editing ? null : determineWinner(match.team1Score, match.team2Score);
 
   function startEdit() {
     setT1(match.team1Score ?? 0);

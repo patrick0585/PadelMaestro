@@ -1,3 +1,5 @@
+import { determineWinner } from "@/lib/game-day/match-display";
+
 export interface ReadOnlyMatch {
   matchNumber: number;
   team1A: string;
@@ -10,14 +12,7 @@ export interface ReadOnlyMatch {
 
 export function ReadOnlyMatchCard({ match }: { match: ReadOnlyMatch }) {
   const hasScore = match.team1Score !== null && match.team2Score !== null;
-  const winner =
-    match.team1Score !== null && match.team2Score !== null
-      ? match.team1Score > match.team2Score
-        ? "team1"
-        : match.team2Score > match.team1Score
-          ? "team2"
-          : null
-      : null;
+  const winner = determineWinner(match.team1Score, match.team2Score);
 
   return (
     <article

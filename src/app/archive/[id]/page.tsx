@@ -59,6 +59,7 @@ export default async function ArchiveDetailPage({
         <h1 className="text-2xl font-bold text-foreground">{formatGameDayDate(day.date)}</h1>
       </header>
 
+      {/* FinishedSummary internally calls computeGameDaySummary(day.id) */}
       <FinishedSummary
         gameDayId={day.id}
         scoredMatchCount={scoredMatchCount}
