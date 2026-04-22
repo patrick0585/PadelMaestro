@@ -134,6 +134,42 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {stats.bestPartner && (
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Teamwork
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl border border-success/30 bg-success-soft/40 p-3">
+              <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-success">
+                Beste Chemie
+              </div>
+              <div className="mt-1 font-bold text-foreground">{stats.bestPartner.name}</div>
+              <div className="mt-0.5 text-xs text-foreground-muted">
+                {stats.bestPartner.pointsTogether} Pt · {stats.bestPartner.matches}{" "}
+                {stats.bestPartner.matches === 1 ? "Match" : "Matches"}
+              </div>
+            </div>
+            {stats.worstPartner ? (
+              <div className="rounded-xl border border-border bg-surface-muted p-3">
+                <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-foreground-muted">
+                  Weniger Glück
+                </div>
+                <div className="mt-1 font-bold text-foreground">{stats.worstPartner.name}</div>
+                <div className="mt-0.5 text-xs text-foreground-muted">
+                  {stats.worstPartner.pointsTogether} Pt · {stats.worstPartner.matches}{" "}
+                  {stats.worstPartner.matches === 1 ? "Match" : "Matches"}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border p-3 text-xs text-foreground-muted">
+                Noch zu wenig Partner-Daten für einen Vergleich.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-border bg-surface p-4">
         <div className="flex items-center justify-between">
           <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
