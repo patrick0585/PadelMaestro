@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   const [ranking, plannedDay, stats] = await Promise.all([
     computeRanking(season.id),
     prisma.gameDay.findFirst({
-      where: { status: "planned" },
+      where: { status: "planned", seasonId: season.id },
       orderBy: { date: "asc" },
       include: { participants: { select: { playerId: true, attendance: true } } },
     }),
@@ -197,9 +197,11 @@ export default async function DashboardPage() {
             );
           })}
           <span className="ml-2 text-sm font-semibold text-foreground">
-            {stats.jokers.remaining === 1
-              ? "1 Joker verfügbar"
-              : `${stats.jokers.remaining} Joker verfügbar`}
+            {stats.jokers.remaining === 0
+              ? "Keine Joker mehr verfügbar"
+              : stats.jokers.remaining === 1
+                ? "1 Joker verfügbar"
+                : `${stats.jokers.remaining} Joker verfügbar`}
           </span>
         </div>
       </div>
