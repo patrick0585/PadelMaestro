@@ -7,15 +7,18 @@ import {
   DuplicateEmailError,
   DuplicateUsernameError,
 } from "@/lib/players/create";
-
-const RAW_USERNAME_REGEX = /^[a-zA-Z0-9_]{3,32}$/;
+import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
 const CreateSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   password: z.string().min(8),
   isAdmin: z.boolean().optional(),
-  username: z.string().regex(RAW_USERNAME_REGEX).optional(),
+  username: z
+    .string()
+    .transform(normaliseUsername)
+    .refine(isValidUsername, { message: "invalid username" })
+    .optional(),
 });
 
 export async function POST(req: Request) {
