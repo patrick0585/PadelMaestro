@@ -19,19 +19,35 @@ async function makeUser(i = 1) {
     data: { name: `U${i}`, email: `u${i}@x`, passwordHash: "x" },
   });
 }
-async function makeSeasonAndDay(status: "planned" | "roster_locked" | "in_progress" | "finished") {
+let dayCounter = 0;
+async function makeSeasonAndDay(
+  status: "planned" | "roster_locked" | "in_progress" | "finished",
+) {
   const year = new Date().getFullYear();
-  const season = await prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
-  });
+  const season =
+    (await prisma.season.findFirst({ where: { year } })) ??
+    (await prisma.season.create({
+      data: {
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    }));
+  dayCounter += 1;
+  const date = new Date(`${year}-01-01`);
+  date.setUTCDate(date.getUTCDate() + dayCounter);
   const day = await prisma.gameDay.create({
-    data: { seasonId: season.id, date: new Date(`${year}-04-21`), status, playerCount: 4 },
+    data: { seasonId: season.id, date, status, playerCount: 4 },
   });
   return { season, day };
 }
 
 describe("deletePlayer", () => {
-  beforeEach(resetDb);
+  beforeEach(async () => {
+    await resetDb();
+    dayCounter = 0;
+  });
 
   it("soft-deletes an active player and writes an audit log", async () => {
     const admin = await makeAdmin();
@@ -47,8 +63,8 @@ describe("deletePlayer", () => {
     });
     expect(audit).toHaveLength(1);
     const payload = audit[0].payload as { name: string; email: string };
-    expect(payload.name).toBe("U1");
-    expect(payload.email).toBe("u1@x");
+    expect(payload.name).toBe(target.name);
+    expect(payload.email).toBe(target.email);
   });
 
   it("throws PlayerNotFoundError for unknown id", async () => {
@@ -112,12 +128,28 @@ describe("deletePlayer", () => {
     ).rejects.toBeInstanceOf(ActiveParticipationError);
   });
 
+  it("throws ActiveParticipationError when joker on a non-finished day", async () => {
+    const admin = await makeAdmin();
+    const target = await makeUser();
+    const { day } = await makeSeasonAndDay("in_progress");
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: day.id, playerId: target.id, attendance: "joker" },
+    });
+    await expect(
+      deletePlayer({ playerId: target.id, actorId: admin.id }),
+    ).rejects.toBeInstanceOf(ActiveParticipationError);
+  });
+
   it("allows deletion when only declined or pending on non-finished days", async () => {
     const admin = await makeAdmin();
     const target = await makeUser();
     const { day: planned } = await makeSeasonAndDay("planned");
+    const { day: inProgress } = await makeSeasonAndDay("in_progress");
     await prisma.gameDayParticipant.create({
       data: { gameDayId: planned.id, playerId: target.id, attendance: "declined" },
+    });
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: inProgress.id, playerId: target.id, attendance: "pending" },
     });
     await deletePlayer({ playerId: target.id, actorId: admin.id });
     const row = await prisma.player.findUnique({ where: { id: target.id } });
