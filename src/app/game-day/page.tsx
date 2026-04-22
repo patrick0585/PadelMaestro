@@ -6,6 +6,8 @@ import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
+import { AddExtraMatchButton } from "./add-extra-match-button";
+import { FinishBanner } from "./finish-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +68,11 @@ export default async function GameDayPage() {
     month: "long",
   });
   const timeText = new Date(day.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const showFinishBanner =
+    session.user.isAdmin &&
+    day.status === "in_progress" &&
+    day.matches.length > 0 &&
+    day.matches.every((m) => m.team1Score !== null && m.team2Score !== null);
 
   return (
     <div className="space-y-4">
@@ -113,8 +120,14 @@ export default async function GameDayPage() {
               />
             ))}
           </div>
+          {session.user.isAdmin &&
+            (day.status === "roster_locked" || day.status === "in_progress") && (
+              <AddExtraMatchButton gameDayId={day.id} />
+            )}
         </section>
       )}
+
+      {showFinishBanner && <FinishBanner gameDayId={day.id} />}
 
       {day.status === "finished" && (
         <div className="rounded-2xl border border-border bg-surface p-4">

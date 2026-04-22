@@ -78,7 +78,7 @@ describe("recordJokerUse", () => {
     const { season, player, gameDay } = await setup();
     for (let i = 0; i < MAX_JOKERS_PER_SEASON; i++) {
       const g = await prisma.gameDay.create({
-        data: { seasonId: season.id, date: new Date(2026, 3, 21 + i) },
+        data: { seasonId: season.id, date: new Date(`2026-04-${22 + i}`) },
       });
       await prisma.gameDayParticipant.create({
         data: { gameDayId: g.id, playerId: player.id },
