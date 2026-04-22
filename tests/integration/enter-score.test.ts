@@ -116,7 +116,7 @@ describe("enterScore", () => {
     expect(after.status).toBe("in_progress");
   });
 
-  it("advances status to finished when the last match is scored", async () => {
+  it("keeps status in_progress when the last match is scored (no auto-finish)", async () => {
     const { players, day, matches } = await setupFivePlayerGame();
     for (const m of matches) {
       await enterScore({
@@ -129,11 +129,11 @@ describe("enterScore", () => {
     }
 
     const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
-    expect(after.status).toBe("finished");
+    expect(after.status).toBe("in_progress");
   });
 
-  it("rejects score edits on a finished game day", async () => {
-    const { players, matches } = await setupFivePlayerGame();
+  it("rejects score edits after the day is manually finished", async () => {
+    const { players, day, matches } = await setupFivePlayerGame();
     for (const m of matches) {
       await enterScore({
         matchId: m.id,
@@ -143,6 +143,7 @@ describe("enterScore", () => {
         expectedVersion: 0,
       });
     }
+    await prisma.gameDay.update({ where: { id: day.id }, data: { status: "finished" } });
 
     await expect(
       enterScore({

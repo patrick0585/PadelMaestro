@@ -7,6 +7,7 @@ import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
 import { AddExtraMatchButton } from "./add-extra-match-button";
+import { FinishBanner } from "./finish-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +121,16 @@ export default async function GameDayPage() {
             )}
         </section>
       )}
+
+      {(() => {
+        const allScored =
+          day.matches.length > 0 &&
+          day.matches.every((m) => m.team1Score !== null && m.team2Score !== null);
+        if (session.user.isAdmin && day.status === "in_progress" && allScored) {
+          return <FinishBanner gameDayId={day.id} />;
+        }
+        return null;
+      })()}
 
       {day.status === "finished" && (
         <div className="rounded-2xl border border-border bg-surface p-4">

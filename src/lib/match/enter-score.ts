@@ -58,18 +58,5 @@ export async function enterScore(input: EnterScoreInput) {
     data: { status: "in_progress" },
   });
 
-  const unscored = await prisma.match.count({
-    where: {
-      gameDayId: match.gameDayId,
-      OR: [{ team1Score: null }, { team2Score: null }],
-    },
-  });
-  if (unscored === 0) {
-    await prisma.gameDay.updateMany({
-      where: { id: match.gameDayId, status: "in_progress" },
-      data: { status: "finished" },
-    });
-  }
-
   return prisma.match.findUniqueOrThrow({ where: { id: input.matchId } });
 }
