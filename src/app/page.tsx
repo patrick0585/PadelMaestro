@@ -173,6 +173,40 @@ export default async function DashboardPage() {
       <div className="rounded-2xl border border-border bg-surface p-4">
         <div className="flex items-center justify-between">
           <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Joker Saison {season.year}
+          </span>
+          <span className="text-[0.7rem] font-semibold text-foreground-muted">
+            {stats.jokers.used} / {stats.jokers.total} eingesetzt
+          </span>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          {Array.from({ length: stats.jokers.total }, (_, i) => {
+            const used = i < stats.jokers.used;
+            return (
+              <span
+                key={i}
+                aria-label={used ? "Joker eingesetzt" : "Joker verfügbar"}
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-extrabold ${
+                  used
+                    ? "border border-border bg-surface-muted text-foreground-muted"
+                    : "bg-primary-soft text-primary-strong"
+                }`}
+              >
+                ★
+              </span>
+            );
+          })}
+          <span className="ml-2 text-sm font-semibold text-foreground">
+            {stats.jokers.remaining === 1
+              ? "1 Joker verfügbar"
+              : `${stats.jokers.remaining} Joker verfügbar`}
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
             Top 3
           </span>
           <Link href="/ranking" className="text-xs font-semibold text-primary">
