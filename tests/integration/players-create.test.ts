@@ -132,7 +132,78 @@ describe("POST /api/players", () => {
       body: JSON.stringify({ email: "dup@example.com", name: "B", password: "hunter22extra" }),
       headers: { "content-type": "application/json" },
     });
-    expect((await POST(secondReq)).status).toBe(409);
+    const res = await POST(secondReq);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("email_taken");
+  });
+
+  it("accepts an optional username and stores it lowercase", async () => {
+    const admin = await makeAdmin();
+    asAdmin(admin.id);
+    const req = new Request("http://localhost/api/players", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "alice@example.com",
+        name: "Alice",
+        password: "hunter22extra",
+        username: "AliceSmith",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    const row = await prisma.player.findUniqueOrThrow({
+      where: { email: "alice@example.com" },
+    });
+    expect(row.username).toBe("alicesmith");
+  });
+
+  it("returns 400 when username does not match the regex", async () => {
+    const admin = await makeAdmin();
+    asAdmin(admin.id);
+    const req = new Request("http://localhost/api/players", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "bad@example.com",
+        name: "Bad",
+        password: "hunter22extra",
+        username: "no spaces",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 409 with username_taken for duplicate username (case-insensitive)", async () => {
+    const admin = await makeAdmin();
+    asAdmin(admin.id);
+    const first = new Request("http://localhost/api/players", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "first@example.com",
+        name: "First",
+        password: "hunter22extra",
+        username: "shared",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    expect((await POST(first)).status).toBe(201);
+    const second = new Request("http://localhost/api/players", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "second@example.com",
+        name: "Second",
+        password: "hunter22extra",
+        username: "SHARED",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(second);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("username_taken");
   });
 });
 
