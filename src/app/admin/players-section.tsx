@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreatePlayerDialog } from "./create-player-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 import { EditPlayerDialog, type EditablePlayer } from "./edit-player-dialog";
+import { DeletePlayerDialog } from "./delete-player-dialog";
 
 export interface PlayerRow {
   id: string;
@@ -21,6 +22,7 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [resetFor, setResetFor] = useState<PlayerRow | null>(null);
   const [editFor, setEditFor] = useState<EditablePlayer | null>(null);
+  const [deleteFor, setDeleteFor] = useState<PlayerRow | null>(null);
 
   return (
     <Card>
@@ -68,6 +70,14 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                     Passwort
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Spieler ${p.name} löschen`}
+                  onClick={() => setDeleteFor(p)}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </Button>
               </div>
             </li>
           ))}
@@ -84,6 +94,13 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
         open={editFor !== null}
         onClose={() => setEditFor(null)}
         player={editFor}
+      />
+      <DeletePlayerDialog
+        open={deleteFor !== null}
+        onClose={() => setDeleteFor(null)}
+        playerId={deleteFor?.id ?? null}
+        playerName={deleteFor?.name ?? null}
+        playerEmail={deleteFor?.email ?? null}
       />
     </Card>
   );
