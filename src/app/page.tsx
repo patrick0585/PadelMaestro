@@ -29,10 +29,8 @@ export default async function DashboardPage() {
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
 
-  let heroState: HeroState;
-  if (!plannedDay) {
-    heroState = { kind: "none" };
-  } else {
+  let heroState: HeroState | null = null;
+  if (plannedDay) {
     const confirmed = plannedDay.participants.filter((p) => p.attendance === "confirmed").length;
     const total = plannedDay.participants.length;
     const date = plannedDay.date.toISOString();
@@ -70,7 +68,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">Dein Padel</h1>
       </header>
 
-      <DashboardHero state={heroState} isAdmin={session.user.isAdmin} />
+      {heroState && <DashboardHero state={heroState} />}
 
       <div className="grid grid-cols-2 gap-3">
         <StatTile label="Dein PPG" value={myPpg} tone="primary" />
@@ -100,17 +98,6 @@ export default async function DashboardPage() {
             </li>
           ))}
         </ul>
-      </div>
-
-      {session.user.isAdmin && (
-        <Link
-          href="/admin"
-          className="block rounded-2xl border border-border bg-surface p-4 text-sm text-foreground-muted hover:border-border-strong"
-        >
-          <span className="font-semibold text-foreground">Admin</span>
-          <span className="ml-1">— Spieltag, Roster und Spielerverwaltung</span>
-        </Link>
-      )}
-    </div>
+      </div>    </div>
   );
 }
