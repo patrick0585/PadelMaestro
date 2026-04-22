@@ -5,6 +5,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { StartGameDayButton } from "./start-game-day-button";
+import { DeleteGameDayButton } from "./delete-game-day-button";
 import { PlayersSection } from "./players-section";
 import {
   ParticipantsRoster,
@@ -54,8 +55,8 @@ export default async function AdminPage() {
       passwordHash: true,
     },
   });
-  const plannedDay = await prisma.gameDay.findFirst({
-    where: { status: "planned" },
+  const manageableDay = await prisma.gameDay.findFirst({
+    where: { status: { in: ["planned", "roster_locked"] } },
     orderBy: { date: "desc" },
     include: {
       participants: {
@@ -87,21 +88,33 @@ export default async function AdminPage() {
         <CardBody className="space-y-3">
           <h2 className="text-base font-semibold text-foreground">Spieltage</h2>
           <CreateGameDayForm />
-          {plannedDay && (
+          {manageableDay && (
             <div className="space-y-3 rounded-xl border border-border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="text-sm">
                   <div className="font-medium text-foreground">
-                    Offener Spieltag: {new Date(plannedDay.date).toLocaleDateString("de-DE")}
+                    {manageableDay.status === "planned" ? "Offener Spieltag" : "Spieltag läuft"}
+                    : {new Date(manageableDay.date).toLocaleDateString("de-DE")}
                   </div>
-                  <Badge variant="neutral">planned</Badge>
+                  <Badge variant="neutral">{manageableDay.status}</Badge>
                 </div>
-                <StartGameDayButton gameDayId={plannedDay.id} />
+                <div className="flex items-center gap-2">
+                  {manageableDay.status === "planned" && (
+                    <StartGameDayButton gameDayId={manageableDay.id} />
+                  )}
+                  <DeleteGameDayButton
+                    gameDayId={manageableDay.id}
+                    dateLabel={new Date(manageableDay.date).toLocaleDateString("de-DE")}
+                    status={manageableDay.status as "planned" | "roster_locked"}
+                  />
+                </div>
               </div>
-              <ParticipantsRoster
-                gameDayId={plannedDay.id}
-                participants={buildRosterRows(plannedDay.participants, players)}
-              />
+              {manageableDay.status === "planned" && (
+                <ParticipantsRoster
+                  gameDayId={manageableDay.id}
+                  participants={buildRosterRows(manageableDay.participants, players)}
+                />
+              )}
             </div>
           )}
         </CardBody>

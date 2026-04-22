@@ -134,7 +134,7 @@ model JokerUse {
 
   player  Player  @relation(fields: [playerId], references: [id])
   season  Season  @relation(fields: [seasonId], references: [id])
-  gameDay GameDay @relation(fields: [gameDayId], references: [id])
+  gameDay GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, seasonId, gameDayId])
   @@index([seasonId, playerId])
