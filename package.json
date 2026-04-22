@@ -16,7 +16,9 @@
     "db:reset": "prisma migrate reset",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "import:historical": "tsx scripts/import-historical.ts"
+    "import:historical": "tsx scripts/import-historical.ts",
+    "fix:gameday-duplicates": "tsx scripts/fix-gameday-duplicates.ts",
+    "reset:password": "tsx scripts/reset-password.ts"
   },
   "keywords": [],
   "author": "",
