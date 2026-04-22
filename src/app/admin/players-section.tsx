@@ -1,15 +1,18 @@
 "use client";
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreatePlayerDialog } from "./create-player-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
+import { EditPlayerDialog, type EditablePlayer } from "./edit-player-dialog";
 
 export interface PlayerRow {
   id: string;
   name: string;
   email: string;
+  username: string | null;
   isAdmin: boolean;
   hasPassword: boolean;
 }
@@ -17,6 +20,7 @@ export interface PlayerRow {
 export function PlayersSection({ players }: { players: PlayerRow[] }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [resetFor, setResetFor] = useState<PlayerRow | null>(null);
+  const [editFor, setEditFor] = useState<EditablePlayer | null>(null);
 
   return (
     <Card>
@@ -35,11 +39,30 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
             >
               <div className="text-sm">
                 <div className="font-medium text-foreground">{p.name}</div>
-                <div className="text-xs text-muted-foreground">{p.email}</div>
+                <div className="text-xs text-muted-foreground">
+                  {p.email}
+                  {p.username && <span className="ml-2">· @{p.username}</span>}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {p.isAdmin && <Badge variant="primary">Admin</Badge>}
                 {!p.hasPassword && <Badge variant="neutral">Nur Stats</Badge>}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Spieler ${p.name} bearbeiten`}
+                  onClick={() =>
+                    setEditFor({
+                      id: p.id,
+                      name: p.name,
+                      email: p.email,
+                      username: p.username,
+                      isAdmin: p.isAdmin,
+                    })
+                  }
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                </Button>
                 {p.hasPassword && (
                   <Button variant="ghost" size="sm" onClick={() => setResetFor(p)}>
                     Passwort
@@ -56,6 +79,11 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
         onClose={() => setResetFor(null)}
         playerId={resetFor?.id ?? null}
         playerName={resetFor?.name ?? null}
+      />
+      <EditPlayerDialog
+        open={editFor !== null}
+        onClose={() => setEditFor(null)}
+        player={editFor}
       />
     </Card>
   );
