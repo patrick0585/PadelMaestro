@@ -45,7 +45,14 @@ export default async function AdminPage() {
   const players = await prisma.player.findMany({
     where: { deletedAt: null },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, email: true, isAdmin: true, passwordHash: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      username: true,
+      isAdmin: true,
+      passwordHash: true,
+    },
   });
   const plannedDay = await prisma.gameDay.findFirst({
     where: { status: "planned" },
@@ -62,6 +69,7 @@ export default async function AdminPage() {
     id: p.id,
     name: p.name,
     email: p.email,
+    username: p.username,
     isAdmin: p.isAdmin,
     hasPassword: p.passwordHash !== null,
   }));

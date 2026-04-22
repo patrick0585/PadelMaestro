@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { isValidUsername } from "@/lib/auth/username";
+import { isValidUsername, normaliseUsername } from "@/lib/auth/username";
 
 export function CreatePlayerDialog({
   open,
@@ -35,7 +35,8 @@ export function CreatePlayerDialog({
     e.preventDefault();
     setError(null);
     const trimmedUsername = username.trim();
-    if (trimmedUsername && !isValidUsername(trimmedUsername.toLowerCase())) {
+    const normalisedUsername = trimmedUsername ? normaliseUsername(trimmedUsername) : "";
+    if (trimmedUsername && !isValidUsername(normalisedUsername)) {
       setError(
         "Benutzername: 3–32 Zeichen, nur Kleinbuchstaben, Ziffern und Unterstriche",
       );
@@ -50,7 +51,7 @@ export function CreatePlayerDialog({
         name,
         password,
         isAdmin,
-        username: trimmedUsername || undefined,
+        username: normalisedUsername || undefined,
       }),
     });
     setLoading(false);
@@ -116,8 +117,12 @@ export function CreatePlayerDialog({
             required
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-foreground">
+        <label
+          htmlFor="new-player-is-admin"
+          className="flex items-center gap-2 text-sm text-foreground"
+        >
           <input
+            id="new-player-is-admin"
             type="checkbox"
             checked={isAdmin}
             onChange={(e) => setIsAdmin(e.target.checked)}
