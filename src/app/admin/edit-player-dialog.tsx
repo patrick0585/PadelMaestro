@@ -56,11 +56,16 @@ export function EditPlayerDialog({
       return;
     }
 
+    if (player.username && !trimmedUsername) {
+      setError("Ein zugewiesener Benutzername kann aktuell nicht entfernt werden");
+      return;
+    }
+
     const diff: Record<string, unknown> = {};
     if (trimmedName !== player.name) diff.name = trimmedName;
     if (trimmedEmail !== player.email) diff.email = trimmedEmail;
-    if (normalisedUsername !== (player.username ?? "")) {
-      diff.username = normalisedUsername || undefined;
+    if (normalisedUsername && normalisedUsername !== (player.username ?? "")) {
+      diff.username = normalisedUsername;
     }
     if (isAdmin !== player.isAdmin) diff.isAdmin = isAdmin;
 
@@ -135,8 +140,12 @@ export function EditPlayerDialog({
             autoComplete="off"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-foreground">
+        <label
+          htmlFor="edit-player-is-admin"
+          className="flex items-center gap-2 text-sm text-foreground"
+        >
           <input
+            id="edit-player-is-admin"
             type="checkbox"
             checked={isAdmin}
             onChange={(e) => setIsAdmin(e.target.checked)}
