@@ -64,3 +64,52 @@ export async function PATCH(
     throw e;
   }
 }
+
+import {
+  deletePlayer,
+  PlayerNotFoundError as DeletePlayerNotFoundError,
+  SelfDeleteError,
+  LastAdminError as DeleteLastAdminError,
+  ActiveParticipationError,
+} from "@/lib/players/delete";
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  if (!session.user.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  const { id } = await params;
+  try {
+    await deletePlayer({ playerId: id, actorId: session.user.id });
+    return new NextResponse(null, { status: 204 });
+  } catch (e) {
+    if (e instanceof DeletePlayerNotFoundError) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    if (e instanceof SelfDeleteError) {
+      return NextResponse.json(
+        { error: "self_delete", message: "Du kannst dich nicht selbst löschen" },
+        { status: 409 },
+      );
+    }
+    if (e instanceof DeleteLastAdminError) {
+      return NextResponse.json(
+        { error: "last_admin", message: "Der letzte verbleibende Admin kann nicht gelöscht werden" },
+        { status: 409 },
+      );
+    }
+    if (e instanceof ActiveParticipationError) {
+      return NextResponse.json(
+        { error: "active_participation", message: "Spieler ist für einen laufenden Spieltag eingeplant" },
+        { status: 409 },
+      );
+    }
+    throw e;
+  }
+}
