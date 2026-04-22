@@ -81,7 +81,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
       const target = (e.meta?.target ?? []) as string[];
       if (target.includes("username")) throw new DuplicateUsernameError(username ?? "");
       if (target.includes("email")) throw new DuplicateEmailError(input.email);
-      throw new DuplicateEmailError(input.email);
+      throw e;
     }
     throw e;
   }
