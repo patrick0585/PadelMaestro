@@ -7,7 +7,6 @@ import {
   DuplicateEmailError,
   DuplicateUsernameError,
   LastAdminError,
-  NoFieldsError,
 } from "@/lib/players/update";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
@@ -37,13 +36,10 @@ export async function PATCH(
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) {
     const flat = parsed.error.flatten();
-    const isEmpty =
-      flat.formErrors.some((m) => m === "no_fields") ||
-      (body !== null && typeof body === "object" && Object.keys(body as object).length === 0);
-    return NextResponse.json(
-      { error: isEmpty ? "no_fields" : "invalid", details: flat },
-      { status: 400 },
-    );
+    if (flat.formErrors.includes("no_fields")) {
+      return NextResponse.json({ error: "no_fields" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "invalid", details: flat }, { status: 400 });
   }
   try {
     const updated = await updatePlayer({
@@ -53,9 +49,6 @@ export async function PATCH(
     });
     return NextResponse.json(updated, { status: 200 });
   } catch (e) {
-    if (e instanceof NoFieldsError) {
-      return NextResponse.json({ error: "no_fields" }, { status: 400 });
-    }
     if (e instanceof PlayerNotFoundError) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
