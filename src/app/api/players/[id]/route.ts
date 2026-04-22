@@ -8,6 +8,13 @@ import {
   DuplicateUsernameError,
   LastAdminError,
 } from "@/lib/players/update";
+import {
+  deletePlayer,
+  PlayerNotFoundError as DeletePlayerNotFoundError,
+  SelfDeleteError,
+  LastAdminError as DeleteLastAdminError,
+  ActiveParticipationError,
+} from "@/lib/players/delete";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
 const PatchSchema = z
@@ -64,14 +71,6 @@ export async function PATCH(
     throw e;
   }
 }
-
-import {
-  deletePlayer,
-  PlayerNotFoundError as DeletePlayerNotFoundError,
-  SelfDeleteError,
-  LastAdminError as DeleteLastAdminError,
-  ActiveParticipationError,
-} from "@/lib/players/delete";
 
 export async function DELETE(
   _req: Request,
