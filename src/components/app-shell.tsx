@@ -10,14 +10,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   }
   const { isAdmin, name } = session.user;
 
-  let avatarVersion = 0;
-  if (session?.user?.id) {
-    const row = await prisma.player.findUnique({
-      where: { id: session.user.id },
-      select: { avatarVersion: true },
-    });
-    avatarVersion = row?.avatarVersion ?? 0;
-  }
+  const row = await prisma.player.findUnique({
+    where: { id: session.user.id },
+    select: { avatarVersion: true },
+  });
+  const avatarVersion = row?.avatarVersion ?? 0;
 
   return (
     <div className="flex min-h-screen flex-col">
