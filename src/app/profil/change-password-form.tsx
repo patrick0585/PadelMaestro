@@ -35,6 +35,11 @@ export function ChangePasswordForm() {
       return;
     }
     if (res.status === 401) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (body.error === "unauthorized") {
+        window.location.href = "/login";
+        return;
+      }
       setStatus({ kind: "error", message: "Aktuelles Passwort ist falsch." });
       return;
     }
@@ -78,7 +83,6 @@ export function ChangePasswordForm() {
           id="confirm-password"
           type="password"
           autoComplete="new-password"
-          minLength={8}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
