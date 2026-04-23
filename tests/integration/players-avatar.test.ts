@@ -347,4 +347,25 @@ describe("DELETE /api/players/[id]/avatar (admin)", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it("returns 401 without a session", async () => {
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce(null);
+    const res = await adminDelete(
+      new Request(`http://test/api/players/${target.id}/avatar`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 for a missing player", async () => {
+    const admin = await makePlayer("Admin", { isAdmin: true });
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const unknown = "00000000-0000-0000-0000-000000000000";
+    const res = await adminDelete(
+      new Request(`http://test/api/players/${unknown}/avatar`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: unknown }) },
+    );
+    expect(res.status).toBe(404);
+  });
 });
