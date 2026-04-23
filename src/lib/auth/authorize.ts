@@ -9,8 +9,9 @@ const CredentialsSchema = z.object({
 });
 
 // Dummy bcrypt hash so timing is equalised for unknown identifiers.
+// Must use the same cost factor as hash.ts (12) or timing diverges.
 const DUMMY_HASH =
-  "$2b$10$CwTycUXWue0Thq9StjUM0uJ8xWJh7G4r8vGG3qJPiE5qiVXc3vN8C";
+  "$2b$12$8sANOXIue.8nEZjolEcnOeIuI/e.bcGuTH1cYjCoyhiLMSVkd6I4W";
 
 export type AuthorizedUser = {
   id: string;
