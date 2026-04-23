@@ -294,8 +294,8 @@ describe("computePlayerSeasonStats", () => {
       },
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
-    expect(stats.bestPartner).toEqual({ name: "Paul", pointsTogether: 5, matches: 2 });
-    expect(stats.worstPartner).toEqual({ name: "Michi", pointsTogether: 1, matches: 1 });
+    expect(stats.bestPartner).toEqual({ playerId: paul.id, name: "Paul", avatarVersion: 0, pointsTogether: 5, matches: 2 });
+    expect(stats.worstPartner).toEqual({ playerId: michi.id, name: "Michi", avatarVersion: 0, pointsTogether: 1, matches: 1 });
   });
 
   it("returns worstPartner as null when the player has only one distinct partner", async () => {
@@ -313,7 +313,7 @@ describe("computePlayerSeasonStats", () => {
       },
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
-    expect(stats.bestPartner).toEqual({ name: "Paul", pointsTogether: 3, matches: 1 });
+    expect(stats.bestPartner).toEqual({ playerId: paul.id, name: "Paul", avatarVersion: 0, pointsTogether: 3, matches: 1 });
     expect(stats.worstPartner).toBeNull();
   });
 
@@ -368,8 +368,8 @@ describe("computePlayerSeasonStats", () => {
       },
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
-    expect(stats.bestPartner).toEqual({ name: "Alex", pointsTogether: 5, matches: 3 });
-    expect(stats.worstPartner).toEqual({ name: "Bob", pointsTogether: 5, matches: 2 });
+    expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 5, matches: 3 });
+    expect(stats.worstPartner).toEqual({ playerId: bob.id, name: "Bob", avatarVersion: 0, pointsTogether: 5, matches: 2 });
   });
 
   it("computes joker balance from JokerUse rows for the season", async () => {
@@ -440,7 +440,7 @@ describe("computePlayerSeasonStats", () => {
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
     expect(stats.winRate).toEqual({ wins: 0, losses: 0, draws: 2, matches: 2 });
-    expect(stats.bestPartner).toEqual({ name: "Alex", pointsTogether: 3, matches: 2 });
+    expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 3, matches: 2 });
   });
 
   it("does not expose soft-deleted partners by name", async () => {

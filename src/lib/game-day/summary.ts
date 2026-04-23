@@ -4,6 +4,7 @@ import type { GameDayStatus } from "@prisma/client";
 export interface GameDaySummaryRow {
   playerId: string;
   playerName: string;
+  avatarVersion: number;
   points: number;
   matches: number;
 }
@@ -58,14 +59,16 @@ export async function computeGameDaySummary(
   const players = playerIds.length
     ? await prisma.player.findMany({
         where: { id: { in: playerIds } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, avatarVersion: true },
       })
     : [];
   const nameById = new Map(players.map((p) => [p.id, p.name]));
+  const versionById = new Map(players.map((p) => [p.id, p.avatarVersion]));
 
   const rows: GameDaySummaryRow[] = playerIds.map((pid) => ({
     playerId: pid,
     playerName: nameById.get(pid) ?? "Unbekannt",
+    avatarVersion: versionById.get(pid) ?? 0,
     points: totals.get(pid)!.points,
     matches: totals.get(pid)!.matches,
   }));

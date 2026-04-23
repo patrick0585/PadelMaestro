@@ -1,7 +1,8 @@
+import { Avatar } from "@/components/ui/avatar";
 import type { RankingRow } from "@/lib/ranking/compute";
 
 const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
-const GRID = "grid grid-cols-[2rem_1fr_3rem_3rem_2.25rem_2.25rem] items-center gap-2";
+const GRID = "grid grid-cols-[2rem_2.5rem_1fr_3rem_3rem_2.25rem_2.25rem] items-center gap-2";
 
 export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
   if (ranking.length === 0) {
@@ -17,6 +18,7 @@ export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
         className={`${GRID} border-b border-border bg-surface-muted px-3 py-2 text-[0.6rem] font-semibold uppercase tracking-wider text-foreground-muted`}
       >
         <span className="text-center">Pos</span>
+        <span aria-hidden="true" />
         <span>Name</span>
         <span className="text-right">Pt</span>
         <span className="text-right">Ø</span>
@@ -35,6 +37,7 @@ export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
                 <span className="text-sm font-extrabold text-primary">{r.rank}</span>
               )}
             </span>
+            <Avatar playerId={r.playerId} name={r.playerName} avatarVersion={r.avatarVersion} size={32} />
             <span className="truncate text-sm font-semibold text-foreground">{r.playerName}</span>
             <span className="text-right text-sm font-semibold tabular-nums text-foreground">
               {r.points.toFixed(0)}

@@ -4,6 +4,7 @@ export interface RankingRow {
   rank: number;
   playerId: string;
   playerName: string;
+  avatarVersion: number;
   games: number;
   points: number;
   pointsPerGame: number;
@@ -15,6 +16,7 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
     Array<{
       player_id: string;
       player_name: string;
+      avatar_version: number;
       games: bigint;
       points: number;
       jokers_used: bigint;
@@ -48,6 +50,7 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
     SELECT
       p.id AS player_id,
       p.name AS player_name,
+      p."avatarVersion" AS avatar_version,
       COALESCE(COUNT(played.points), 0)::bigint + COALESCE(j.games_credited, 0)::bigint AS games,
       COALESCE(SUM(played.points), 0)::float + COALESCE(j.points_credited, 0)::float AS points,
       COALESCE(j.jokers_used, 0)::bigint AS jokers_used
@@ -56,7 +59,7 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
     LEFT JOIN jokers j ON j.player_id = p.id
     WHERE p."deletedAt" IS NULL
       AND (played.points IS NOT NULL OR j.jokers_used IS NOT NULL)
-    GROUP BY p.id, p.name, j.games_credited, j.points_credited, j.jokers_used
+    GROUP BY p.id, p.name, p."avatarVersion", j.games_credited, j.points_credited, j.jokers_used
     ORDER BY (
       (COALESCE(SUM(played.points), 0)::float + COALESCE(j.points_credited, 0)::float)
       / NULLIF(
@@ -74,6 +77,7 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
       rank: i + 1,
       playerId: r.player_id,
       playerName: r.player_name,
+      avatarVersion: Number(r.avatar_version),
       games,
       points,
       pointsPerGame: games === 0 ? 0 : points / games,
