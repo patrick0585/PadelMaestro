@@ -36,6 +36,28 @@ describe("<DashboardHero> (member)", () => {
     render(<DashboardHero state={member({ attendance: "confirmed" })} />);
     expect(screen.getByRole("button", { name: "Dabei sein" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Nicht dabei" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Joker setzen" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("marks no button active when attendance is pending", () => {
+    render(<DashboardHero state={member({ attendance: "pending" })} />);
+    expect(screen.getByRole("button", { name: "Dabei sein" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Nicht dabei" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Joker setzen" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("marks Nicht dabei active when attendance is declined", () => {
+    render(<DashboardHero state={member({ attendance: "declined" })} />);
+    expect(screen.getByRole("button", { name: "Dabei sein" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Nicht dabei" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Joker setzen" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("marks Joker setzen active when attendance is joker", () => {
+    render(<DashboardHero state={member({ attendance: "joker" })} />);
+    expect(screen.getByRole("button", { name: "Dabei sein" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Nicht dabei" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Joker setzen" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("disables Joker setzen when no jokers are remaining and shows helper text", () => {

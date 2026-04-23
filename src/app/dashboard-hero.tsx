@@ -59,7 +59,12 @@ export function DashboardHero({ state }: { state: HeroState }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status: next }),
     });
-    return res.ok;
+    if (res.ok) return true;
+    if (res.status === 409) {
+      const body = (await res.json().catch(() => null)) as { code?: ErrorCode } | null;
+      if (body?.code) setError(ERROR_MESSAGES[body.code]);
+    }
+    return false;
   }
 
   async function deleteJoker(): Promise<boolean> {
