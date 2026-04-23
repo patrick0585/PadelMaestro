@@ -27,6 +27,7 @@ export function PlannedSection({
   const [error, setError] = useState<string | null>(null);
 
   const confirmed = participants.filter((p) => p.attendance === "confirmed");
+  const rosterSize = participants.filter((p) => p.attendance !== "joker").length;
 
   async function setStatus(next: Exclude<MemberAttendance, "joker">) {
     setBusy(true);
@@ -73,7 +74,7 @@ export function PlannedSection({
                     : "Noch offen"}
             </Badge>
             <span className="text-[0.7rem] font-semibold text-primary-strong">
-              {confirmed.length} / {participants.length} bestätigt
+              {confirmed.length} / {rosterSize} bestätigt
             </span>
           </div>
           {!meIsJoker && (

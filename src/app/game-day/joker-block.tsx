@@ -28,7 +28,7 @@ export function JokerBlock({ jokers }: { jokers: JokerUseRow[] }) {
                 <span className="truncate text-sm font-semibold text-foreground">
                   {j.playerName}
                 </span>
-                <Badge variant="primary">Joker</Badge>
+                <Badge variant="warning">Joker</Badge>
               </div>
               <div className="text-[0.7rem] text-foreground-muted tabular-nums">
                 {j.gamesCredited} × {formatDe(j.ppgAtUse, 2)} ≈{" "}
