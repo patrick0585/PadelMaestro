@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
 import {
@@ -7,6 +7,19 @@ import {
   PlayerNotFoundError,
 } from "@/lib/players/change-password";
 import { hashPassword, verifyPassword } from "@/lib/auth/hash";
+
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
+import { auth } from "@/auth";
+import { POST } from "@/app/api/profile/password/route";
+const authMock = auth as unknown as ReturnType<typeof vi.fn>;
+
+function jsonRequest(body: unknown): Request {
+  return new Request("http://test/api/profile/password", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
 async function makePlayer(name: string, password: string) {
   const passwordHash = await hashPassword(password);
@@ -82,5 +95,38 @@ describe("changeOwnPassword", () => {
     expect(logs).toHaveLength(1);
     expect(logs[0].actorId).toBe(me.id);
     expect(logs[0].entityType).toBe("Player");
+  });
+});
+
+describe("POST /api/profile/password", () => {
+  beforeEach(resetDb);
+
+  it("returns 401 when not logged in", async () => {
+    authMock.mockResolvedValueOnce(null);
+    const res = await POST(jsonRequest({ currentPassword: "x", newPassword: "newpass12" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 on schema violation (short newPassword)", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(jsonRequest({ currentPassword: "oldpass12", newPassword: "short" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 when current password is wrong", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(jsonRequest({ currentPassword: "WRONG", newPassword: "newpass12" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 204 on success and updates the hash", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(jsonRequest({ currentPassword: "oldpass12", newPassword: "newpass12" }));
+    expect(res.status).toBe(204);
+    const updated = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(await verifyPassword("newpass12", updated.passwordHash!)).toBe(true);
   });
 });
