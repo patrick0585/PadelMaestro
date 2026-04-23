@@ -53,6 +53,7 @@ export default async function AdminPage() {
       username: true,
       isAdmin: true,
       passwordHash: true,
+      avatarVersion: true,
     },
   });
   const manageableDay = await prisma.gameDay.findFirst({
@@ -73,6 +74,7 @@ export default async function AdminPage() {
     username: p.username,
     isAdmin: p.isAdmin,
     hasPassword: p.passwordHash !== null,
+    avatarVersion: p.avatarVersion,
   }));
 
   return (
