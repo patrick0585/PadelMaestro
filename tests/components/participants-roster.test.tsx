@@ -52,6 +52,7 @@ describe("<ParticipantsRoster>", () => {
 describe("<ParticipantsRoster> admin joker actions", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("opens the confirm dialog and POSTs the admin joker route on confirm", async () => {
@@ -67,6 +68,9 @@ describe("<ParticipantsRoster> admin joker actions", () => {
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe("/api/game-days/gd-1/participants/p1/joker");
     expect(init.method).toBe("POST");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /Joker für Werner setzen/ })).not.toBeInTheDocument(),
+    );
   });
 
   it("DELETEs the admin joker route when 'Joker entfernen' is confirmed", async () => {
@@ -84,5 +88,8 @@ describe("<ParticipantsRoster> admin joker actions", () => {
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe("/api/game-days/gd-1/participants/p1/joker");
     expect(init.method).toBe("DELETE");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /Joker von Werner entfernen/ })).not.toBeInTheDocument(),
+    );
   });
 });

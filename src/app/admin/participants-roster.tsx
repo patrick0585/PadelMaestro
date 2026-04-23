@@ -33,12 +33,14 @@ type Zone = typeof POOL | typeof ROSTER;
 function PlayerCard({
   row,
   dimmed,
+  busy,
   onMove,
   onSetJoker,
   onCancelJoker,
 }: {
   row: RosterRow;
   dimmed: boolean;
+  busy: boolean;
   onMove: () => void;
   onSetJoker: () => void;
   onCancelJoker: () => void;
@@ -91,7 +93,10 @@ function PlayerCard({
             e.stopPropagation();
             onCancelJoker();
           }}
-          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted"
+          disabled={busy}
+          className={`ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted ${
+            busy ? "opacity-60" : ""
+          }`}
         >
           Joker entfernen
         </button>
@@ -103,7 +108,10 @@ function PlayerCard({
             e.stopPropagation();
             onSetJoker();
           }}
-          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted"
+          disabled={busy}
+          className={`ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted ${
+            busy ? "opacity-60" : ""
+          }`}
         >
           Joker für {row.name} setzen
         </button>
@@ -285,6 +293,7 @@ export function ParticipantsRoster({
                 key={r.playerId}
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
+                busy={jokerBusy}
                 onMove={() => patch(r.playerId, "confirmed")}
                 onSetJoker={() => setJokerTarget(r)}
                 onCancelJoker={() => setCancelTarget(r)}
@@ -303,6 +312,7 @@ export function ParticipantsRoster({
                 key={r.playerId}
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
+                busy={jokerBusy}
                 onMove={() => patch(r.playerId, "pending")}
                 onSetJoker={() => setJokerTarget(r)}
                 onCancelJoker={() => setCancelTarget(r)}
