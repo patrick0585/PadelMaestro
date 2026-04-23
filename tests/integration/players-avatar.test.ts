@@ -75,6 +75,16 @@ describe("setPlayerAvatar", () => {
     expect(after.avatarData).toBeNull();
   });
 
+  it("does not throw FileTooLargeError at exactly MAX_BYTES (5 MB)", async () => {
+    // 5 MB of zero bytes is not a valid image, so we expect InvalidImageError
+    // from sharp — not FileTooLargeError. That confirms the boundary is `> MAX_BYTES`.
+    const me = await makePlayer("Me");
+    const edge = Buffer.alloc(5 * 1024 * 1024, 0);
+    await expect(
+      setPlayerAvatar({ playerId: me.id, file: edge, actorId: me.id }),
+    ).rejects.toBeInstanceOf(InvalidImageError);
+  });
+
   it("throws InvalidImageError for non-image bytes without touching the row", async () => {
     const me = await makePlayer("Me");
     const junk = Buffer.from("this is not an image");
@@ -206,6 +216,20 @@ describe("POST /api/profile/avatar", () => {
     expect(res.status).toBe(413);
   });
 
+  it("returns 413 immediately via Content-Length fast-reject without reading the body", async () => {
+    const me = await makePlayer("Me");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const req = new Request("http://test/api/profile/avatar", {
+      method: "POST",
+      headers: { "content-length": String(5 * 1024 * 1024 + 1) },
+      body: "tiny",
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(after.avatarVersion).toBe(0);
+  });
+
   it("returns 200 with { version } on success and stores WebP bytes", async () => {
     const me = await makePlayer("Me");
     authMock.mockResolvedValueOnce({ user: { id: me.id } });
@@ -297,6 +321,21 @@ describe("PUT /api/players/[id]/avatar (admin)", () => {
       { params: Promise.resolve({ id: target.id }) },
     );
     expect(res.status).toBe(413);
+  });
+
+  it("returns 413 immediately via Content-Length fast-reject without reading the body", async () => {
+    const admin = await makePlayer("Admin", { isAdmin: true });
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const req = new Request(`http://test/api/players/${target.id}/avatar`, {
+      method: "PUT",
+      headers: { "content-length": String(5 * 1024 * 1024 + 1) },
+      body: "tiny",
+    });
+    const res = await adminPut(req, { params: Promise.resolve({ id: target.id }) });
+    expect(res.status).toBe(413);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(after.avatarVersion).toBe(0);
   });
 
   it("returns 200 with { version } on success and records admin as actor", async () => {
@@ -406,6 +445,7 @@ describe("GET /api/players/[id]/avatar", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/webp");
     expect(res.headers.get("cache-control")).toContain("immutable");
+    expect(res.headers.get("cache-control")).toContain("private");
     expect(res.headers.get("etag")).toBe(`"${me.id}-1"`);
     const body = Buffer.from(await res.arrayBuffer());
     expect(body.length).toBeGreaterThan(0);
