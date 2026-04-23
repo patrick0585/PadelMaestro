@@ -287,6 +287,18 @@ describe("PUT /api/players/[id]/avatar (admin)", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 413 for a > 5 MB file", async () => {
+    const admin = await makePlayer("Admin", { isAdmin: true });
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const big = Buffer.alloc(5 * 1024 * 1024 + 1);
+    const res = await adminPut(
+      adminMultipart(`http://test/api/players/${target.id}/avatar`, big),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(413);
+  });
+
   it("returns 200 with { version } on success and records admin as actor", async () => {
     const admin = await makePlayer("Admin", { isAdmin: true });
     const target = await makePlayer("Target");

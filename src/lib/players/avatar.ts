@@ -23,7 +23,7 @@ export class FileTooLargeError extends Error {
 }
 
 // 5 MB cap; the route layer also sniffs Content-Length, but this is source of truth.
-const MAX_BYTES = 5 * 1024 * 1024;
+export const MAX_BYTES = 5 * 1024 * 1024;
 
 export interface SetPlayerAvatarInput {
   playerId: string;

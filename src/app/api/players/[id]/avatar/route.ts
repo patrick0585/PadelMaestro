@@ -7,9 +7,8 @@ import {
   PlayerNotFoundError,
   InvalidImageError,
   FileTooLargeError,
+  MAX_BYTES,
 } from "@/lib/players/avatar";
-
-const MAX_BYTES = 5 * 1024 * 1024;
 
 function tooLargeByContentLength(req: Request): boolean {
   const raw = req.headers.get("content-length");
