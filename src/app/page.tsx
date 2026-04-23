@@ -6,7 +6,6 @@ import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 import { StatTile } from "@/components/ui/stat-tile";
-import { MatchFormStrip } from "@/components/match-form-strip";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
 
 export const dynamic = "force-dynamic";
@@ -123,14 +122,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {stats.recentForm.length > 0 && (
+      {stats.recentDays.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Letzte {stats.recentForm.length} Matches
+            Letzte {stats.recentDays.length} Spieltage
           </div>
-          <div className="mt-2">
-            <MatchFormStrip outcomes={stats.recentForm} />
-          </div>
+          {/* TODO Task 2: replace with DayPpgStrip component */}
         </div>
       )}
 

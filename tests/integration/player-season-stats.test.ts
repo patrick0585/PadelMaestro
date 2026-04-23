@@ -26,7 +26,7 @@ describe("computePlayerSeasonStats", () => {
       medals: { gold: 0, silver: 0, bronze: 0 },
       attendance: { attended: 0, total: 0 },
       winRate: { wins: 0, losses: 0, draws: 0, matches: 0 },
-      recentForm: [],
+      recentDays: [],
       bestPartner: null,
       worstPartner: null,
       jokers: { used: 0, remaining: 2, total: 2 },
@@ -147,7 +147,7 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.winRate).toEqual({ wins: 1, losses: 1, draws: 1, matches: 3 });
   });
 
-  it("returns recent form newest-first across last 5 scored matches", async () => {
+  it("returns recent days newest-first with PPG and trend vs previous day", async () => {
     const season = await makeSeason();
     const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
     const day1 = await prisma.gameDay.create({
@@ -187,7 +187,42 @@ describe("computePlayerSeasonStats", () => {
       });
     }
     const stats = await computePlayerSeasonStats(me.id, season.id);
-    expect(stats.recentForm).toEqual(["L", "W", "W", "D", "L"]);
+    expect(stats.recentDays).toHaveLength(2);
+    expect(stats.recentDays[0].ppg).toBeCloseTo(5 / 3, 5);
+    expect(stats.recentDays[0].delta).toBe("up");
+    expect(stats.recentDays[1].ppg).toBeCloseTo(4 / 3, 5);
+    expect(stats.recentDays[1].delta).toBe("flat");
+  });
+
+  it("marks delta as 'down' when a day's PPG is lower than the previous day's", async () => {
+    const season = await makeSeason();
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const day1 = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-03"), playerCount: 4, status: "finished" },
+    });
+    const day2 = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day1.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: a.id,
+        team2PlayerAId: b.id, team2PlayerBId: c.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day2.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: a.id,
+        team2PlayerAId: b.id, team2PlayerBId: c.id,
+        team1Score: 1, team2Score: 3,
+      },
+    });
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.recentDays[0].ppg).toBeCloseTo(1, 5);
+    expect(stats.recentDays[0].delta).toBe("down");
+    expect(stats.recentDays[1].delta).toBe("flat");
   });
 
   it("computes best and worst partner by total points together", async () => {
