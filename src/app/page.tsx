@@ -7,6 +7,7 @@ import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
+import { DayPpgStrip } from "@/components/day-ppg-strip";
 
 export const dynamic = "force-dynamic";
 
@@ -63,12 +64,30 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-          Hi{firstName ? `, ${firstName}` : ""}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">Dein Padel</h1>
-      </header>
+      {(() => {
+        const subtitleParts: string[] = [];
+        if (myRow) subtitleParts.push(`Platz ${myRow.rank}`);
+        if (stats.attendance.attended > 0) {
+          subtitleParts.push(
+            `${stats.attendance.attended} ${stats.attendance.attended === 1 ? "Spieltag" : "Spieltage"}`,
+          );
+        }
+        if (stats.jokers.remaining > 0) {
+          subtitleParts.push(
+            `${stats.jokers.remaining} ${stats.jokers.remaining === 1 ? "Joker" : "Joker"}`,
+          );
+        }
+        const subtitle =
+          subtitleParts.length > 0 ? subtitleParts.join(" · ") : `Saison ${season.year}`;
+        return (
+          <header>
+            <h1 className="text-2xl font-bold text-foreground">
+              Hi{firstName ? `, ${firstName}` : ""}
+            </h1>
+            <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
+          </header>
+        );
+      })()}
 
       {heroState && <DashboardHero state={heroState} />}
 
@@ -125,9 +144,12 @@ export default async function DashboardPage() {
       {stats.recentDays.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Letzte {stats.recentDays.length} Spieltage
+            Letzte {stats.recentDays.length}{" "}
+            {stats.recentDays.length === 1 ? "Spieltag" : "Spieltage"}
           </div>
-          {/* TODO Task 2: replace with DayPpgStrip component */}
+          <div className="mt-2">
+            <DayPpgStrip days={stats.recentDays} />
+          </div>
         </div>
       )}
 
@@ -148,8 +170,8 @@ export default async function DashboardPage() {
               </div>
             </div>
             {stats.worstPartner ? (
-              <div className="rounded-xl border border-border bg-surface-muted p-3">
-                <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-foreground-muted">
+              <div className="rounded-xl border border-destructive/30 bg-destructive-soft/40 p-3">
+                <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-destructive">
                   Weniger Glück
                 </div>
                 <div className="mt-1 font-bold text-foreground">{stats.worstPartner.name}</div>
