@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { recordJokerUse, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { recordJokerUse, cancelJokerUse, JokerNotFoundError, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 import { resetDb } from "../helpers/reset-db";
 
 async function setup() {
@@ -100,5 +100,48 @@ describe("recordJokerUse", () => {
     await expect(recordJokerUse({ playerId: player.id, gameDayId: gameDay.id })).rejects.toThrow(
       /locked/i,
     );
+  });
+});
+
+describe("cancelJokerUse", () => {
+  beforeEach(resetDb);
+
+  it("deletes the JokerUse, resets attendance to pending, and writes an audit log", async () => {
+    const { player, gameDay } = await setup();
+    await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
+
+    await cancelJokerUse({ playerId: player.id, gameDayId: gameDay.id });
+
+    const uses = await prisma.jokerUse.count({ where: { playerId: player.id } });
+    expect(uses).toBe(0);
+
+    const part = await prisma.gameDayParticipant.findUniqueOrThrow({
+      where: { gameDayId_playerId: { gameDayId: gameDay.id, playerId: player.id } },
+    });
+    expect(part.attendance).toBe("pending");
+
+    const logs = await prisma.auditLog.findMany({
+      where: { actorId: player.id, action: "joker.cancel" },
+    });
+    expect(logs).toHaveLength(1);
+  });
+
+  it("throws JokerLockedError when the game day is no longer planned", async () => {
+    const { player, gameDay } = await setup();
+    await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
+    await prisma.gameDay.update({
+      where: { id: gameDay.id },
+      data: { status: "roster_locked" },
+    });
+    await expect(
+      cancelJokerUse({ playerId: player.id, gameDayId: gameDay.id }),
+    ).rejects.toThrow(/locked/i);
+  });
+
+  it("throws JokerNotFoundError when no joker is set", async () => {
+    const { player, gameDay } = await setup();
+    await expect(
+      cancelJokerUse({ playerId: player.id, gameDayId: gameDay.id }),
+    ).rejects.toBeInstanceOf(JokerNotFoundError);
   });
 });

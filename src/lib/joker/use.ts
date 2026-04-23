@@ -90,3 +90,54 @@ export async function recordJokerUse(args: { playerId: string; gameDayId: string
     return use;
   });
 }
+
+export class JokerNotFoundError extends Error {
+  constructor(message = "No Joker set for this player on this game day") {
+    super(message);
+    this.name = "JokerNotFoundError";
+  }
+}
+
+export async function cancelJokerUse(args: { playerId: string; gameDayId: string }) {
+  const gameDay = await prisma.gameDay.findUniqueOrThrow({
+    where: { id: args.gameDayId },
+    select: { id: true, status: true, seasonId: true },
+  });
+  if (gameDay.status !== "planned") {
+    throw new JokerLockedError();
+  }
+
+  const existing = await prisma.jokerUse.findUnique({
+    where: {
+      playerId_seasonId_gameDayId: {
+        playerId: args.playerId,
+        seasonId: gameDay.seasonId,
+        gameDayId: args.gameDayId,
+      },
+    },
+  });
+  if (!existing) throw new JokerNotFoundError();
+
+  return prisma.$transaction(async (tx) => {
+    await tx.jokerUse.delete({ where: { id: existing.id } });
+    await tx.gameDayParticipant.update({
+      where: {
+        gameDayId_playerId: { gameDayId: args.gameDayId, playerId: args.playerId },
+      },
+      data: { attendance: "pending", respondedAt: new Date() },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: args.playerId,
+        action: "joker.cancel",
+        entityType: "JokerUse",
+        entityId: existing.id,
+        payload: {
+          gameDayId: args.gameDayId,
+          ppgAtUse: existing.ppgAtUse.toString(),
+          pointsCredited: existing.pointsCredited.toString(),
+        },
+      },
+    });
+  });
+}
