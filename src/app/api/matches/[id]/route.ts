@@ -6,6 +6,7 @@ import {
   ScoreConflictError,
   GameDayFinishedError,
   NotAllowedError,
+  InvalidScoreError,
 } from "@/lib/match/enter-score";
 
 const Schema = z.object({
@@ -45,9 +46,9 @@ export async function PUT(
     if (err instanceof GameDayFinishedError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
-      { status: 400 },
-    );
+    if (err instanceof InvalidScoreError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
   }
 }

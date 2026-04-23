@@ -23,6 +23,13 @@ export class NotAllowedError extends Error {
   }
 }
 
+export class InvalidScoreError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "InvalidScoreError";
+  }
+}
+
 export interface EnterScoreInput {
   matchId: string;
   team1Score: number;
@@ -54,7 +61,7 @@ export async function enterScore(input: EnterScoreInput) {
 
   const format: MatchFormat = match.gameDay.playerCount === 4 ? "tennis-set" : "sum-to-3";
   const v = validateScore(input.team1Score, input.team2Score, format);
-  if (!v.ok) throw new Error(v.reason);
+  if (!v.ok) throw new InvalidScoreError(v.reason);
 
   const result = await prisma.match.updateMany({
     where: { id: input.matchId, version: input.expectedVersion },

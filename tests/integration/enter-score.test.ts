@@ -59,6 +59,7 @@ describe("enterScore", () => {
         team2Score: 1,
         scoredBy: players[0].id,
         expectedVersion: 0,
+        isAdmin: true,
       }),
     ).rejects.toThrow(/sum to 3/i);
   });
@@ -80,6 +81,7 @@ describe("enterScore", () => {
         team2Score: 3,
         scoredBy: players[1].id,
         expectedVersion: 0,
+        isAdmin: true,
       }),
     ).rejects.toThrow(ScoreConflictError);
   });

@@ -2,6 +2,27 @@ import { prisma } from "@/lib/db";
 import { assignPlayersToTemplate } from "@/lib/pairings/assign";
 import { generateSeed } from "@/lib/pairings/shuffle";
 
+export class GameDayAlreadyLockedError extends Error {
+  constructor() {
+    super("game day is already locked or finished");
+    this.name = "GameDayAlreadyLockedError";
+  }
+}
+
+export class InsufficientPlayersError extends Error {
+  constructor() {
+    super("need at least 4 confirmed players");
+    this.name = "InsufficientPlayersError";
+  }
+}
+
+export class TooManyPlayersError extends Error {
+  constructor() {
+    super("at most 6 confirmed players allowed");
+    this.name = "TooManyPlayersError";
+  }
+}
+
 export async function lockRoster(gameDayId: string, actorId: string) {
   const day = await prisma.gameDay.findUniqueOrThrow({
     where: { id: gameDayId },
@@ -9,12 +30,12 @@ export async function lockRoster(gameDayId: string, actorId: string) {
   });
 
   if (day.status !== "planned") {
-    throw new Error("Game day is already locked or finished");
+    throw new GameDayAlreadyLockedError();
   }
 
   const confirmed = day.participants.filter((p) => p.attendance === "confirmed");
-  if (confirmed.length < 4) throw new Error("Need at least 4 confirmed players");
-  if (confirmed.length > 6) throw new Error("At most 6 confirmed players allowed");
+  if (confirmed.length < 4) throw new InsufficientPlayersError();
+  if (confirmed.length > 6) throw new TooManyPlayersError();
 
   const players = confirmed.map((p) => ({ id: p.player.id, name: p.player.name }));
   const seed = generateSeed();
