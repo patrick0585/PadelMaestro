@@ -347,7 +347,7 @@ export function ParticipantsRoster({
       >
         <div className="space-y-3 text-sm text-foreground">
           <p>
-            Der Joker wird entfernt und die Teilnahme auf „unbestätigt" zurückgesetzt.
+            Der Joker wird entfernt und die Teilnahme auf „unbestätigt“ zurückgesetzt.
             Der Slot steht wieder zur Verfügung.
           </p>
           <div className="flex justify-end gap-2">
