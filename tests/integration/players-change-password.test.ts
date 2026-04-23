@@ -8,6 +8,9 @@ import {
 } from "@/lib/players/change-password";
 import { hashPassword, verifyPassword } from "@/lib/auth/hash";
 
+// vi.mock is hoisted to file scope; it's inert for the service `describe`
+// block because those tests never touch `auth()`, but be aware if adding
+// tests that call session-gated helpers from the service module.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 import { POST } from "@/app/api/profile/password/route";
@@ -112,6 +115,8 @@ describe("POST /api/profile/password", () => {
     authMock.mockResolvedValueOnce({ user: { id: me.id } });
     const res = await POST(jsonRequest({ currentPassword: "oldpass12", newPassword: "short" }));
     expect(res.status).toBe(400);
+    const unchanged = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(await verifyPassword("oldpass12", unchanged.passwordHash!)).toBe(true);
   });
 
   it("returns 401 when current password is wrong", async () => {

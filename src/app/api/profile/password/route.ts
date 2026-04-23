@@ -8,8 +8,10 @@ import {
 } from "@/lib/players/change-password";
 
 const Schema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  // Cap at 72 bytes — bcrypt silently truncates longer inputs, which would let
+  // an attacker who knows the first 72 bytes authenticate with any suffix.
+  currentPassword: z.string().min(1).max(72),
+  newPassword: z.string().min(8).max(72),
 });
 
 export async function POST(req: Request) {
