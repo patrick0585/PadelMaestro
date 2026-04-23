@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -154,5 +155,91 @@ describe("getPlayerAvatar", () => {
     await setPlayerAvatar({ playerId: me.id, file: FIXTURE, actorId: me.id });
     await prisma.player.update({ where: { id: me.id }, data: { deletedAt: new Date() } });
     expect(await getPlayerAvatar(me.id)).toBeNull();
+  });
+});
+
+import { POST, DELETE } from "@/app/api/profile/avatar/route";
+
+function multipartRequest(url: string, file: Buffer | null, method: "POST" | "DELETE" = "POST"): Request {
+  if (file === null) {
+    return new Request(url, { method });
+  }
+  const body = new FormData();
+  const blob = new Blob([file as unknown as BlobPart], { type: "image/png" });
+  body.append("file", blob, "avatar.png");
+  return new Request(url, { method, body });
+}
+
+describe("POST /api/profile/avatar", () => {
+  beforeEach(resetDb);
+
+  it("returns 401 when not logged in", async () => {
+    authMock.mockResolvedValueOnce(null);
+    const res = await POST(multipartRequest("http://test/api/profile/avatar", FIXTURE));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when the file field is missing", async () => {
+    const me = await makePlayer("Me");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const req = new Request("http://test/api/profile/avatar", { method: "POST", body: new FormData() });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for non-image bytes", async () => {
+    const me = await makePlayer("Me");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(
+      multipartRequest("http://test/api/profile/avatar", Buffer.from("not-an-image")),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_image");
+  });
+
+  it("returns 413 for a > 5 MB file", async () => {
+    const me = await makePlayer("Me");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const big = Buffer.alloc(5 * 1024 * 1024 + 1);
+    const res = await POST(multipartRequest("http://test/api/profile/avatar", big));
+    expect(res.status).toBe(413);
+  });
+
+  it("returns 200 with { version } on success and stores WebP bytes", async () => {
+    const me = await makePlayer("Me");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(multipartRequest("http://test/api/profile/avatar", FIXTURE));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ version: 1 });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(after.avatarMimeType).toBe("image/webp");
+    expect(after.avatarVersion).toBe(1);
+  });
+});
+
+describe("DELETE /api/profile/avatar", () => {
+  beforeEach(resetDb);
+
+  it("returns 401 when not logged in", async () => {
+    authMock.mockResolvedValueOnce(null);
+    const res = await DELETE(new Request("http://test/api/profile/avatar", { method: "DELETE" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 204 and clears the row for an authenticated user", async () => {
+    const me = await makePlayer("Me");
+    // seed an avatar first
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    await POST(multipartRequest("http://test/api/profile/avatar", FIXTURE));
+
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await DELETE(new Request("http://test/api/profile/avatar", { method: "DELETE" }));
+    expect(res.status).toBe(204);
+
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(after.avatarData).toBeNull();
+    expect(after.avatarVersion).toBe(2);
   });
 });
