@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
+import { rateLimitRequest } from "@/lib/rate-limit";
 
 const CredentialsSchema = z.object({
   identifier: z.string().min(1),
@@ -23,10 +24,15 @@ export type AuthorizedUser = {
 
 export async function authorizeCredentials(
   raw: unknown,
+  request?: Request,
 ): Promise<AuthorizedUser | null> {
   const parsed = CredentialsSchema.safeParse(raw);
   if (!parsed.success) return null;
   const { identifier, password } = parsed.data;
+  if (request) {
+    const rl = rateLimitRequest(request, "login", { windowMs: 60_000, max: 10 });
+    if (!rl.allowed) return null;
+  }
   const normalised = normaliseUsername(identifier);
   const player = await prisma.player.findFirst({
     where: {

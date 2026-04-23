@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { rateLimitRequest } from "@/lib/rate-limit";
 import { resetPlayerPassword, PlayerNotFoundError } from "@/lib/players/reset-password";
 
 // Cap at 72 bytes — bcrypt silently truncates longer inputs.
@@ -13,6 +14,16 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.isAdmin) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  const rl = rateLimitRequest(req, `admin-password-reset:${session.user.id}`, {
+    windowMs: 60_000,
+    max: 20,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
   }
   const { id } = await params;
   const body = await req.json().catch(() => null);
