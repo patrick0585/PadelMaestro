@@ -29,11 +29,13 @@ export function AvatarDialog({
     if (!open) {
       setFile(null);
       setError(null);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+      setPreviewUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
       if (fileRef.current) fileRef.current.value = "";
     }
-  }, [open, previewUrl]);
+  }, [open]);
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
@@ -115,7 +117,7 @@ export function AvatarDialog({
           />
         </div>
         {error && (
-          <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
+          <p role="alert" className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
