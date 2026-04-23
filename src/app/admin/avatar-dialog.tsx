@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -95,9 +96,12 @@ export function AvatarDialog({
       <div className="space-y-3">
         <div className="flex items-center gap-4">
           {previewUrl ? (
-            <img
+            <Image
               src={previewUrl}
               alt="Vorschau"
+              width={96}
+              height={96}
+              unoptimized
               className="h-24 w-24 shrink-0 rounded-full object-cover"
             />
           ) : playerId ? (

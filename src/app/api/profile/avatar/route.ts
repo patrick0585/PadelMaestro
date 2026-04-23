@@ -64,7 +64,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ version: row.avatarVersion }, { status: 200 });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function DELETE(_req: Request) {
   const session = await auth();
   if (!session?.user?.id) {

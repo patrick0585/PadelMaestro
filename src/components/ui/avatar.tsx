@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { initials } from "@/lib/player/initials";
 
 export type AvatarSize = 32 | 40 | 48 | 64 | 96;
@@ -41,10 +42,13 @@ export function Avatar({
 
   return (
     <span className={base}>
-      <img
+      <Image
         src={`/api/players/${playerId}/avatar?v=${avatarVersion}`}
         alt={name}
+        width={size}
+        height={size}
         loading="lazy"
+        unoptimized
         className="h-full w-full object-cover"
       />
     </span>
