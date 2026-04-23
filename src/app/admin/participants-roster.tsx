@@ -13,6 +13,9 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { JokerConfirmDialog } from "@/components/joker-confirm-dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export type ParticipantAttendance = "pending" | "confirmed" | "declined" | "joker";
 
@@ -161,6 +164,41 @@ export function ParticipantsRoster({
   const [local, setLocal] = useState(participants);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
+  const [jokerTarget, setJokerTarget] = useState<RosterRow | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<RosterRow | null>(null);
+  const [jokerBusy, setJokerBusy] = useState(false);
+
+  async function adminSetJoker(row: RosterRow) {
+    setJokerBusy(true);
+    setError(null);
+    const res = await fetch(
+      `/api/game-days/${gameDayId}/participants/${row.playerId}/joker`,
+      { method: "POST" },
+    );
+    setJokerBusy(false);
+    if (res.ok) {
+      setJokerTarget(null);
+      router.refresh();
+      return;
+    }
+    setError("Konnte Joker nicht setzen");
+  }
+
+  async function adminCancelJoker(row: RosterRow) {
+    setJokerBusy(true);
+    setError(null);
+    const res = await fetch(
+      `/api/game-days/${gameDayId}/participants/${row.playerId}/joker`,
+      { method: "DELETE" },
+    );
+    setJokerBusy(false);
+    if (res.ok) {
+      setCancelTarget(null);
+      router.refresh();
+      return;
+    }
+    setError("Konnte Joker nicht entfernen");
+  }
 
   useEffect(() => {
     setLocal(participants);
@@ -248,8 +286,8 @@ export function ParticipantsRoster({
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
                 onMove={() => patch(r.playerId, "confirmed")}
-                onSetJoker={() => {}}
-                onCancelJoker={() => {}}
+                onSetJoker={() => setJokerTarget(r)}
+                onCancelJoker={() => setCancelTarget(r)}
               />
             ))}
           </DropColumn>
@@ -266,8 +304,8 @@ export function ParticipantsRoster({
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
                 onMove={() => patch(r.playerId, "pending")}
-                onSetJoker={() => {}}
-                onCancelJoker={() => {}}
+                onSetJoker={() => setJokerTarget(r)}
+                onCancelJoker={() => setCancelTarget(r)}
               />
             ))}
           </DropColumn>
@@ -283,6 +321,40 @@ export function ParticipantsRoster({
           {error}
         </p>
       )}
+      <JokerConfirmDialog
+        open={jokerTarget !== null}
+        onClose={() => setJokerTarget(null)}
+        onConfirm={() => jokerTarget && adminSetJoker(jokerTarget)}
+        jokersRemaining={jokerTarget?.jokersRemaining ?? 0}
+        ppgSnapshot={null}
+        loading={jokerBusy}
+        targetName={jokerTarget?.name}
+      />
+      <Dialog
+        open={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        title={cancelTarget ? `Joker von ${cancelTarget.name} entfernen?` : ""}
+      >
+        <div className="space-y-3 text-sm text-foreground">
+          <p>
+            Der Joker wird entfernt und die Teilnahme auf „unbestätigt" zurückgesetzt.
+            Der Slot steht wieder zur Verfügung.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setCancelTarget(null)} disabled={jokerBusy}>
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => cancelTarget && adminCancelJoker(cancelTarget)}
+              loading={jokerBusy}
+            >
+              Ja, entfernen
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
