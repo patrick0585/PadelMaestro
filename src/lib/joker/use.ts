@@ -57,7 +57,7 @@ async function recordJokerUseInternal(args: {
 }) {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
-    include: { season: true },
+    select: { id: true, status: true, seasonId: true },
   });
   if (gameDay.status !== "planned") throw new JokerLockedError();
 

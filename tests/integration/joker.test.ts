@@ -154,22 +154,21 @@ describe("recordJokerUseAsAdmin", () => {
       data: { name: "Admin", email: "a@x", passwordHash: "x", isAdmin: true },
     });
 
-    await recordJokerUseAsAdmin({
+    const use = await recordJokerUseAsAdmin({
       actorId: admin.id,
       playerId: player.id,
       gameDayId: gameDay.id,
     });
 
-    const use = await prisma.jokerUse.findFirstOrThrow({
-      where: { playerId: player.id, gameDayId: gameDay.id },
-    });
-    expect(Number(use.gamesCredited)).toBe(JOKER_GAMES_CREDITED);
+    expect(use.gamesCredited).toBe(JOKER_GAMES_CREDITED);
+    expect(Number(use.ppgAtUse)).toBe(0);
+    expect(Number(use.pointsCredited)).toBe(0);
 
-    const log = await prisma.auditLog.findFirstOrThrow({
+    const log = await prisma.auditLog.findFirst({
       where: { action: "joker.use.admin" },
     });
-    expect(log.actorId).toBe(admin.id);
-    expect((log.payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
+    expect(log?.actorId).toBe(admin.id);
+    expect((log?.payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
   });
 
   it("rejects when the cap is already reached", async () => {
