@@ -15,6 +15,30 @@ async function makeUser(name: string) {
   });
 }
 
+async function makeFinishedDayWithOneMatch(
+  seasonId: string,
+  date: Date,
+  players: { id: string }[],
+): Promise<{ id: string }> {
+  const [a, b, c, d] = players;
+  const day = await prisma.gameDay.create({
+    data: { seasonId, date, playerCount: 4, status: "finished" },
+  });
+  await prisma.match.create({
+    data: {
+      gameDayId: day.id,
+      matchNumber: 1,
+      team1PlayerAId: a.id,
+      team1PlayerBId: b.id,
+      team2PlayerAId: c.id,
+      team2PlayerBId: d.id,
+      team1Score: 2,
+      team2Score: 1,
+    },
+  });
+  return day;
+}
+
 describe("listArchivedGameDays", () => {
   beforeEach(resetDb);
 
@@ -247,5 +271,49 @@ describe("listArchivedGameDays", () => {
     const result = await listArchivedGameDays(null);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe(finishedDay.id);
+  });
+
+  it("populates jokerCount per finished day", async () => {
+    const season = await makeSeason(2026);
+    const players = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    const [paul, patrick] = players;
+    const day = await makeFinishedDayWithOneMatch(season.id, new Date("2026-04-17"), players);
+    await prisma.jokerUse.create({
+      data: {
+        playerId: paul.id,
+        seasonId: season.id,
+        gameDayId: day.id,
+        ppgAtUse: "1.000",
+        gamesCredited: 10,
+        pointsCredited: "10.00",
+      },
+    });
+    await prisma.jokerUse.create({
+      data: {
+        playerId: patrick.id,
+        seasonId: season.id,
+        gameDayId: day.id,
+        ppgAtUse: "1.500",
+        gamesCredited: 10,
+        pointsCredited: "15.00",
+      },
+    });
+
+    const result = await listArchivedGameDays(null);
+    expect(result).toHaveLength(1);
+    expect(result[0].jokerCount).toBe(2);
+  });
+
+  it("defaults jokerCount to 0 when no jokers were used", async () => {
+    const season = await makeSeason(2026);
+    const players = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    await makeFinishedDayWithOneMatch(season.id, new Date("2026-04-17"), players);
+    const result = await listArchivedGameDays(null);
+    expect(result).toHaveLength(1);
+    expect(result[0].jokerCount).toBe(0);
   });
 });

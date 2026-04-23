@@ -1,6 +1,7 @@
 "use client";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { formatDe } from "@/lib/format";
 
 export interface JokerConfirmDialogProps {
   open: boolean;
@@ -10,13 +11,6 @@ export interface JokerConfirmDialogProps {
   ppgSnapshot: number | null;
   loading?: boolean;
   targetName?: string;
-}
-
-function formatDe(value: number, digits: number): string {
-  return value.toLocaleString("de-DE", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
 }
 
 export function JokerConfirmDialog({

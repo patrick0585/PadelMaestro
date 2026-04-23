@@ -6,11 +6,18 @@ import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
+import { RosterChips, type RosterAttendance } from "./roster-chips";
 import { AddExtraMatchButton } from "./add-extra-match-button";
 import { FinishBanner } from "./finish-banner";
 import { FinishedSummary } from "./finished-summary";
 
 export const dynamic = "force-dynamic";
+
+function normalizeAttendance(value: string): RosterAttendance {
+  return value === "confirmed" || value === "declined" || value === "joker"
+    ? value
+    : "pending";
+}
 
 export default async function GameDayPage() {
   const session = await auth();
@@ -74,6 +81,12 @@ export default async function GameDayPage() {
     day.matches.length > 0 &&
     day.matches.every((m) => m.team1Score !== null && m.team2Score !== null);
 
+  const participants = day.participants.map((p) => ({
+    playerId: p.playerId,
+    name: p.player.name,
+    attendance: normalizeAttendance(p.attendance),
+  }));
+
   return (
     <div className="space-y-4">
       <header>
@@ -85,13 +98,21 @@ export default async function GameDayPage() {
       {day.status === "planned" && (
         <PlannedSection
           gameDayId={day.id}
-          me={me ? { playerId: me.playerId, name: me.player.name, attendance: (me.attendance === "confirmed" || me.attendance === "declined") ? me.attendance : "pending" } : null}
-          participants={day.participants.map((p) => ({
-            playerId: p.playerId,
-            name: p.player.name,
-            attendance: (p.attendance === "confirmed" || p.attendance === "declined") ? p.attendance : "pending",
-          }))}
+          me={
+            me
+              ? {
+                  playerId: me.playerId,
+                  name: me.player.name,
+                  attendance: normalizeAttendance(me.attendance),
+                }
+              : null
+          }
+          participants={participants}
         />
+      )}
+
+      {(day.status === "roster_locked" || day.status === "in_progress") && (
+        <RosterChips participants={participants} />
       )}
 
       {day.matches.length > 0 && (day.status === "roster_locked" || day.status === "in_progress" || day.status === "finished") && (
