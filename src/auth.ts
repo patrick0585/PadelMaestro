@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { authorizeCredentials } from "@/lib/auth/authorize";
+import { prisma } from "@/lib/db";
 
 const DEV_PLACEHOLDERS = new Set([
   "dev-secret-replace-me",
@@ -34,6 +35,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorize: authorizeCredentials,
     }),
   ],
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
+        token.username = (user as { username?: string | null }).username ?? null;
+        return token;
+      }
+
+      const id = (token as { id?: string }).id;
+      if (!id) return token;
+
+      const player = await prisma.player.findUnique({
+        where: { id },
+        select: { isAdmin: true, deletedAt: true, username: true },
+      });
+
+      if (!player || player.deletedAt) {
+        return null;
+      }
+
+      token.isAdmin = player.isAdmin;
+      token.username = player.username;
+      return token;
+    },
+  },
 });
 
 declare module "next-auth" {
