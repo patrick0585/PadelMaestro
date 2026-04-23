@@ -61,15 +61,19 @@ async function recordJokerUseInternal(args: {
   });
   if (gameDay.status !== "planned") throw new JokerLockedError();
 
-  const existing = await prisma.jokerUse.count({
-    where: { playerId: args.playerId, seasonId: gameDay.seasonId },
-  });
-  if (existing >= MAX_JOKERS_PER_SEASON) throw new JokerCapExceededError();
-
   const ppg = await snapshotPpg(args.playerId, gameDay.seasonId);
   const points = ppg * JOKER_GAMES_CREDITED;
 
   return prisma.$transaction(async (tx) => {
+    // Serialise concurrent joker creates for the same (player, season) so the
+    // cap check below sees all committed joker uses. Released when the tx ends.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${args.playerId}), hashtext(${gameDay.seasonId}))`;
+
+    const existing = await tx.jokerUse.count({
+      where: { playerId: args.playerId, seasonId: gameDay.seasonId },
+    });
+    if (existing >= MAX_JOKERS_PER_SEASON) throw new JokerCapExceededError();
+
     const use = await tx.jokerUse.create({
       data: {
         playerId: args.playerId,
@@ -96,6 +100,7 @@ async function recordJokerUseInternal(args: {
           ppg,
           points,
           gameDayId: args.gameDayId,
+          seasonId: gameDay.seasonId,
           targetPlayerId: args.playerId,
         },
       },

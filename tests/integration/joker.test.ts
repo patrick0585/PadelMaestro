@@ -101,6 +101,42 @@ describe("recordJokerUse", () => {
       /locked/i,
     );
   });
+
+  it("enforces the season cap atomically under concurrent requests", async () => {
+    const { season, player } = await setup();
+    const days = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        prisma.gameDay.create({
+          data: {
+            seasonId: season.id,
+            date: new Date(`2026-05-0${i + 1}`),
+            status: "planned",
+          },
+        }),
+      ),
+    );
+    await Promise.all(
+      days.map((d) =>
+        prisma.gameDayParticipant.create({
+          data: { gameDayId: d.id, playerId: player.id, attendance: "pending" },
+        }),
+      ),
+    );
+
+    const results = await Promise.allSettled(
+      days.map((d) => recordJokerUse({ playerId: player.id, gameDayId: d.id })),
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const capErrors = results.filter(
+      (r) => r.status === "rejected" && /max/i.test(String(r.reason)),
+    ).length;
+
+    expect(ok).toBe(MAX_JOKERS_PER_SEASON);
+    expect(capErrors).toBe(5 - MAX_JOKERS_PER_SEASON);
+    expect(await prisma.jokerUse.count({ where: { playerId: player.id } })).toBe(
+      MAX_JOKERS_PER_SEASON,
+    );
+  });
 });
 
 describe("cancelJokerUse", () => {
@@ -150,7 +186,7 @@ describe("recordJokerUseAsAdmin", () => {
   beforeEach(resetDb);
 
   it("records a JokerUse with actorId=admin and audit action joker.use.admin", async () => {
-    const { player, gameDay } = await setup();
+    const { season, player, gameDay } = await setup();
     const admin = await prisma.player.create({
       data: { name: "Admin", email: "a@x", passwordHash: "x", isAdmin: true },
     });
@@ -170,6 +206,7 @@ describe("recordJokerUseAsAdmin", () => {
     });
     expect(log?.actorId).toBe(admin.id);
     expect((log?.payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
+    expect((log?.payload as { seasonId: string }).seasonId).toBe(season.id);
   });
 
   it("rejects when the cap is already reached", async () => {
