@@ -12,28 +12,38 @@ import {
   type ParticipantAttendance,
   type RosterRow,
 } from "./participants-roster";
+import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { getOrCreateActiveSeason } from "@/lib/season";
 
 export const dynamic = "force-dynamic";
 
 type ParticipantWithPlayer = {
   playerId: string;
-  attendance: ParticipantAttendance | "joker";
+  attendance: ParticipantAttendance;
   player: { id: string; name: string };
 };
 
 function buildRosterRows(
   participants: ParticipantWithPlayer[],
   activePlayers: { id: string; name: string }[],
+  jokersRemainingByPlayer: Map<string, number>,
 ): RosterRow[] {
   const byId = new Map(participants.map((p) => [p.playerId, p]));
   return activePlayers
     .map((player) => {
       const participant = byId.get(player.id);
       const attendance: ParticipantAttendance =
-        participant?.attendance === "confirmed" || participant?.attendance === "declined"
+        participant?.attendance === "confirmed" ||
+        participant?.attendance === "declined" ||
+        participant?.attendance === "joker"
           ? participant.attendance
           : "pending";
-      return { playerId: player.id, name: player.name, attendance };
+      return {
+        playerId: player.id,
+        name: player.name,
+        attendance,
+        jokersRemaining: jokersRemainingByPlayer.get(player.id) ?? 0,
+      };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
@@ -66,6 +76,17 @@ export default async function AdminPage() {
       },
     },
   });
+
+  const season = await getOrCreateActiveSeason();
+  const jokerCounts = await prisma.jokerUse.groupBy({
+    by: ["playerId"],
+    where: { seasonId: season.id },
+    _count: { _all: true },
+  });
+  const jokerCountById = new Map(jokerCounts.map((j) => [j.playerId, j._count._all]));
+  const jokersRemaining = new Map<string, number>(
+    players.map((p) => [p.id, Math.max(0, MAX_JOKERS_PER_SEASON - (jokerCountById.get(p.id) ?? 0))]),
+  );
 
   const playersForUi = players.map((p) => ({
     id: p.id,
@@ -116,7 +137,7 @@ export default async function AdminPage() {
               {manageableDay.status === "planned" && (
                 <ParticipantsRoster
                   gameDayId={manageableDay.id}
-                  participants={buildRosterRows(manageableDay.participants, players)}
+                  participants={buildRosterRows(manageableDay.participants, players, jokersRemaining)}
                 />
               )}
             </div>

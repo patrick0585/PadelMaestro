@@ -13,13 +13,17 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { JokerConfirmDialog } from "@/components/joker-confirm-dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
-export type ParticipantAttendance = "pending" | "confirmed" | "declined";
+export type ParticipantAttendance = "pending" | "confirmed" | "declined" | "joker";
 
 export interface RosterRow {
   playerId: string;
   name: string;
   attendance: ParticipantAttendance;
+  jokersRemaining: number;
 }
 
 const POOL = "pool";
@@ -29,11 +33,17 @@ type Zone = typeof POOL | typeof ROSTER;
 function PlayerCard({
   row,
   dimmed,
+  busy,
   onMove,
+  onSetJoker,
+  onCancelJoker,
 }: {
   row: RosterRow;
   dimmed: boolean;
+  busy: boolean;
   onMove: () => void;
+  onSetJoker: () => void;
+  onCancelJoker: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: row.playerId,
@@ -41,8 +51,9 @@ function PlayerCard({
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
-  const toRoster = row.attendance !== "confirmed";
-  const zoneLabel = row.attendance === "confirmed" ? "Dabei" : "Pool";
+  const isAttending = row.attendance === "confirmed" || row.attendance === "joker";
+  const toRoster = !isAttending;
+  const zoneLabel = isAttending ? "Dabei" : "Pool";
   return (
     <div
       ref={setNodeRef}
@@ -54,7 +65,14 @@ function PlayerCard({
         isDragging ? "opacity-40" : ""
       } ${dimmed ? "opacity-60" : ""}`}
     >
-      <span className="flex-1 text-sm font-medium text-foreground">{row.name}</span>
+      <span className="flex-1 text-sm font-medium text-foreground">
+        {row.name}
+        {row.attendance === "joker" && (
+          <span className="ml-2 rounded-full border border-primary/50 bg-primary-soft px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-primary-strong">
+            Joker
+          </span>
+        )}
+      </span>
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
@@ -67,6 +85,45 @@ function PlayerCard({
       >
         {toRoster ? "→" : "←"}
       </button>
+      {row.attendance === "joker" ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCancelJoker();
+          }}
+          disabled={busy}
+          className={`ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted ${
+            busy ? "opacity-60" : ""
+          }`}
+        >
+          Joker entfernen
+        </button>
+      ) : row.jokersRemaining > 0 ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetJoker();
+          }}
+          disabled={busy}
+          className={`ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted ${
+            busy ? "opacity-60" : ""
+          }`}
+        >
+          Joker für {row.name} setzen
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border px-2 text-xs font-semibold text-foreground-muted opacity-60"
+        >
+          Keine Joker übrig
+        </button>
+      )}
     </div>
   );
 }
@@ -115,6 +172,41 @@ export function ParticipantsRoster({
   const [local, setLocal] = useState(participants);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
+  const [jokerTarget, setJokerTarget] = useState<RosterRow | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<RosterRow | null>(null);
+  const [jokerBusy, setJokerBusy] = useState(false);
+
+  async function adminSetJoker(row: RosterRow) {
+    setJokerBusy(true);
+    setError(null);
+    const res = await fetch(
+      `/api/game-days/${gameDayId}/participants/${row.playerId}/joker`,
+      { method: "POST" },
+    );
+    setJokerBusy(false);
+    if (res.ok) {
+      setJokerTarget(null);
+      router.refresh();
+      return;
+    }
+    setError("Konnte Joker nicht setzen");
+  }
+
+  async function adminCancelJoker(row: RosterRow) {
+    setJokerBusy(true);
+    setError(null);
+    const res = await fetch(
+      `/api/game-days/${gameDayId}/participants/${row.playerId}/joker`,
+      { method: "DELETE" },
+    );
+    setJokerBusy(false);
+    if (res.ok) {
+      setCancelTarget(null);
+      router.refresh();
+      return;
+    }
+    setError("Konnte Joker nicht entfernen");
+  }
 
   useEffect(() => {
     setLocal(participants);
@@ -174,14 +266,16 @@ export function ParticipantsRoster({
     const row = local.find((r) => r.playerId === playerId);
     if (!row) return;
     if (zone === ROSTER && row.attendance !== "confirmed") {
+      if (row.attendance === "joker") return; // joker stays put — cancel only via explicit button
       void patch(playerId, "confirmed");
     } else if (zone === POOL && row.attendance === "confirmed") {
       void patch(playerId, "pending");
     }
+    // intentionally no drag-cancel for joker: admin must click the explicit "Joker entfernen" button
   }
 
-  const pool = local.filter((r) => r.attendance !== "confirmed");
-  const roster = local.filter((r) => r.attendance === "confirmed");
+  const pool = local.filter((r) => r.attendance !== "confirmed" && r.attendance !== "joker");
+  const roster = local.filter((r) => r.attendance === "confirmed" || r.attendance === "joker");
 
   return (
     <div className="space-y-3">
@@ -199,7 +293,10 @@ export function ParticipantsRoster({
                 key={r.playerId}
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
+                busy={jokerBusy}
                 onMove={() => patch(r.playerId, "confirmed")}
+                onSetJoker={() => setJokerTarget(r)}
+                onCancelJoker={() => setCancelTarget(r)}
               />
             ))}
           </DropColumn>
@@ -215,7 +312,10 @@ export function ParticipantsRoster({
                 key={r.playerId}
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
+                busy={jokerBusy}
                 onMove={() => patch(r.playerId, "pending")}
+                onSetJoker={() => setJokerTarget(r)}
+                onCancelJoker={() => setCancelTarget(r)}
               />
             ))}
           </DropColumn>
@@ -231,6 +331,40 @@ export function ParticipantsRoster({
           {error}
         </p>
       )}
+      <JokerConfirmDialog
+        open={jokerTarget !== null}
+        onClose={() => setJokerTarget(null)}
+        onConfirm={() => jokerTarget && adminSetJoker(jokerTarget)}
+        jokersRemaining={jokerTarget?.jokersRemaining ?? 0}
+        ppgSnapshot={null}
+        loading={jokerBusy}
+        targetName={jokerTarget?.name}
+      />
+      <Dialog
+        open={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        title={cancelTarget ? `Joker von ${cancelTarget.name} entfernen?` : ""}
+      >
+        <div className="space-y-3 text-sm text-foreground">
+          <p>
+            Der Joker wird entfernt und die Teilnahme auf „unbestätigt“ zurückgesetzt.
+            Der Slot steht wieder zur Verfügung.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setCancelTarget(null)} disabled={jokerBusy}>
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => cancelTarget && adminCancelJoker(cancelTarget)}
+              loading={jokerBusy}
+            >
+              Ja, entfernen
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

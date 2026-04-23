@@ -12,8 +12,12 @@ import { DayPpgStrip } from "@/components/day-ppg-strip";
 
 export const dynamic = "force-dynamic";
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+function ppgFromStats(
+  stats: { winRate: { matches: number } },
+  myRow: { pointsPerGame: number } | undefined,
+): number | null {
+  if (!myRow || stats.winRate.matches === 0) return null;
+  return myRow.pointsPerGame;
 }
 
 export default async function DashboardPage() {
@@ -39,33 +43,36 @@ export default async function DashboardPage() {
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
 
+  const myRow = ranking.find((r) => r.playerId === session.user.id);
+
   let heroState: HeroState | null = null;
   if (plannedDay) {
     const confirmed = plannedDay.participants.filter((p) => p.attendance === "confirmed").length;
     const total = plannedDay.participants.length;
     const date = plannedDay.date.toISOString();
-    const time = formatTime(plannedDay.date.toISOString());
     const meParticipant = plannedDay.participants.find((p) => p.playerId === session.user.id);
     if (!meParticipant) {
-      heroState = { kind: "not-member", gameDayId: plannedDay.id, date, time, confirmed, total };
+      heroState = { kind: "not-member", gameDayId: plannedDay.id, date, confirmed, total };
     } else {
       const attendance =
-        meParticipant.attendance === "confirmed" || meParticipant.attendance === "declined"
+        meParticipant.attendance === "confirmed" ||
+        meParticipant.attendance === "declined" ||
+        meParticipant.attendance === "joker"
           ? meParticipant.attendance
           : "pending";
       heroState = {
         kind: "member",
         gameDayId: plannedDay.id,
         date,
-        time,
         confirmed,
         total,
         attendance,
+        jokersRemaining: stats.jokers.remaining,
+        ppgSnapshot: ppgFromStats(stats, myRow),
       };
     }
   }
 
-  const myRow = ranking.find((r) => r.playerId === session.user.id);
   const myPpg = myRow ? myRow.pointsPerGame.toFixed(2) : null;
   const myRank = myRow ? `#${myRow.rank}` : null;
 

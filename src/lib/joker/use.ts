@@ -17,6 +17,13 @@ export class JokerCapExceededError extends Error {
   }
 }
 
+export class JokerNotFoundError extends Error {
+  constructor(message = "No Joker set for this player on this game day") {
+    super(message);
+    this.name = "JokerNotFoundError";
+  }
+}
+
 async function snapshotPpg(playerId: string, seasonId: string): Promise<number> {
   const rows = await prisma.$queryRaw<
     Array<{ games: bigint; points: number | null }>
@@ -42,21 +49,22 @@ async function snapshotPpg(playerId: string, seasonId: string): Promise<number> 
   return games === 0 ? 0 : points / games;
 }
 
-export async function recordJokerUse(args: { playerId: string; gameDayId: string }) {
+async function recordJokerUseInternal(args: {
+  actorId: string;
+  playerId: string;
+  gameDayId: string;
+  auditAction: "joker.use" | "joker.use.admin";
+}) {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
-    include: { season: true },
+    select: { id: true, status: true, seasonId: true },
   });
-  if (gameDay.status !== "planned") {
-    throw new JokerLockedError();
-  }
+  if (gameDay.status !== "planned") throw new JokerLockedError();
 
   const existing = await prisma.jokerUse.count({
     where: { playerId: args.playerId, seasonId: gameDay.seasonId },
   });
-  if (existing >= MAX_JOKERS_PER_SEASON) {
-    throw new JokerCapExceededError();
-  }
+  if (existing >= MAX_JOKERS_PER_SEASON) throw new JokerCapExceededError();
 
   const ppg = await snapshotPpg(args.playerId, gameDay.seasonId);
   const points = ppg * JOKER_GAMES_CREDITED;
@@ -80,13 +88,104 @@ export async function recordJokerUse(args: { playerId: string; gameDayId: string
     });
     await tx.auditLog.create({
       data: {
-        actorId: args.playerId,
-        action: "joker.use",
+        actorId: args.actorId,
+        action: args.auditAction,
         entityType: "JokerUse",
         entityId: use.id,
-        payload: { ppg, points, gameDayId: args.gameDayId },
+        payload: {
+          ppg,
+          points,
+          gameDayId: args.gameDayId,
+          targetPlayerId: args.playerId,
+        },
       },
     });
     return use;
   });
+}
+
+export async function recordJokerUse(args: { playerId: string; gameDayId: string }) {
+  return recordJokerUseInternal({
+    actorId: args.playerId,
+    playerId: args.playerId,
+    gameDayId: args.gameDayId,
+    auditAction: "joker.use",
+  });
+}
+
+export async function recordJokerUseAsAdmin(args: {
+  actorId: string;
+  playerId: string;
+  gameDayId: string;
+}) {
+  return recordJokerUseInternal({ ...args, auditAction: "joker.use.admin" });
+}
+
+async function cancelJokerUseInternal(args: {
+  actorId: string;
+  playerId: string;
+  gameDayId: string;
+  auditAction: "joker.cancel" | "joker.cancel.admin";
+}): Promise<void> {
+  const gameDay = await prisma.gameDay.findUniqueOrThrow({
+    where: { id: args.gameDayId },
+    select: { id: true, status: true, seasonId: true },
+  });
+  if (gameDay.status !== "planned") throw new JokerLockedError();
+
+  const existing = await prisma.jokerUse.findUnique({
+    where: {
+      playerId_seasonId_gameDayId: {
+        playerId: args.playerId,
+        seasonId: gameDay.seasonId,
+        gameDayId: args.gameDayId,
+      },
+    },
+  });
+  if (!existing) throw new JokerNotFoundError();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.jokerUse.delete({ where: { id: existing.id } });
+    await tx.gameDayParticipant.update({
+      where: {
+        gameDayId_playerId: { gameDayId: args.gameDayId, playerId: args.playerId },
+      },
+      data: { attendance: "pending", respondedAt: new Date() },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: args.actorId,
+        action: args.auditAction,
+        entityType: "JokerUse",
+        entityId: existing.id,
+        payload: {
+          gameDayId: args.gameDayId,
+          seasonId: gameDay.seasonId,
+          targetPlayerId: args.playerId,
+          ppgAtUse: Number(existing.ppgAtUse),
+          pointsCredited: Number(existing.pointsCredited),
+        },
+      },
+    });
+  });
+}
+
+export async function cancelJokerUse(args: {
+  playerId: string;
+  gameDayId: string;
+}): Promise<void> {
+  return cancelJokerUseInternal({
+    actorId: args.playerId,
+    playerId: args.playerId,
+    gameDayId: args.gameDayId,
+    auditAction: "joker.cancel",
+  });
+}
+
+export async function cancelJokerUseAsAdmin(args: {
+  actorId: string;
+  playerId: string;
+  gameDayId: string;
+}): Promise<void> {
+  return cancelJokerUseInternal({ ...args, auditAction: "joker.cancel.admin" });
 }
