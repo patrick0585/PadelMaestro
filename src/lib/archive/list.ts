@@ -12,6 +12,7 @@ export interface ArchivedGameDayRow {
   seasonYear: number;
   matchCount: number;
   playerCount: number;
+  jokerCount: number;
   podium: ArchivePodiumEntry[];
   self: { points: number; matches: number } | null;
 }
@@ -34,7 +35,17 @@ export async function listArchivedGameDays(
   });
   if (days.length === 0) return [];
 
-  const summaries = await Promise.all(days.map((d) => computeGameDaySummary(d.id)));
+  const [summaries, jokerCounts] = await Promise.all([
+    Promise.all(days.map((d) => computeGameDaySummary(d.id))),
+    prisma.jokerUse.groupBy({
+      by: ["gameDayId"],
+      where: { gameDayId: { in: days.map((d) => d.id) } },
+      _count: { _all: true },
+    }),
+  ]);
+  const jokerByDay = new Map(
+    jokerCounts.map((r) => [r.gameDayId, r._count._all]),
+  );
 
   const rows: ArchivedGameDayRow[] = [];
   for (let i = 0; i < days.length; i++) {
@@ -53,10 +64,10 @@ export async function listArchivedGameDays(
     rows.push({
       id: day.id,
       date: day.date,
-      // GameDay.date is a Prisma @db.Date stored at midnight UTC; format.ts uses UTC too.
       seasonYear: day.date.getUTCFullYear(),
       matchCount: day._count.matches,
       playerCount: rowsFromSummary.length,
+      jokerCount: jokerByDay.get(day.id) ?? 0,
       podium,
       self,
     });

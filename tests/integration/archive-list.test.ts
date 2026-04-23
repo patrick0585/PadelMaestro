@@ -248,4 +248,74 @@ describe("listArchivedGameDays", () => {
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe(finishedDay.id);
   });
+
+  it("populates jokerCount per finished day", async () => {
+    const season = await makeSeason(2026);
+    const [paul, patrick, michi, thomas] = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-17"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: paul.id,
+        team1PlayerBId: patrick.id,
+        team2PlayerAId: michi.id,
+        team2PlayerBId: thomas.id,
+        team1Score: 2,
+        team2Score: 1,
+      },
+    });
+    await prisma.jokerUse.create({
+      data: {
+        playerId: paul.id,
+        seasonId: season.id,
+        gameDayId: day.id,
+        ppgAtUse: "1.000",
+        gamesCredited: 10,
+        pointsCredited: "10.00",
+      },
+    });
+    await prisma.jokerUse.create({
+      data: {
+        playerId: patrick.id,
+        seasonId: season.id,
+        gameDayId: day.id,
+        ppgAtUse: "1.500",
+        gamesCredited: 10,
+        pointsCredited: "15.00",
+      },
+    });
+
+    const result = await listArchivedGameDays(null);
+    expect(result).toHaveLength(1);
+    expect(result[0].jokerCount).toBe(2);
+  });
+
+  it("defaults jokerCount to 0 when no jokers were used", async () => {
+    const season = await makeSeason(2026);
+    const [paul, patrick, michi, thomas] = await Promise.all(
+      ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-17"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: paul.id,
+        team1PlayerBId: patrick.id,
+        team2PlayerAId: michi.id,
+        team2PlayerBId: thomas.id,
+        team1Score: 2,
+        team2Score: 1,
+      },
+    });
+    const result = await listArchivedGameDays(null);
+    expect(result[0].jokerCount).toBe(0);
+  });
 });
