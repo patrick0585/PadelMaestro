@@ -25,6 +25,14 @@ describe("<DayPpgStrip>", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("renders a single chip when the list has one day", () => {
+    render(<DayPpgStrip days={[{ gameDayId: "only", ppg: 1.5, delta: "flat" }]} />);
+    const chips = screen.getAllByRole("listitem");
+    expect(chips).toHaveLength(1);
+    expect(chips[0]).toHaveTextContent("1.5");
+    expect(chips[0]).toHaveAttribute("aria-label", expect.stringContaining("Unverändert"));
+  });
+
   it("applies trend-specific aria labels", () => {
     render(
       <DayPpgStrip

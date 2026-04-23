@@ -462,6 +462,31 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.bestPartner?.name).toBe("Unbekannt");
   });
 
+  it("marks delta as 'flat' when two consecutive days share the same display PPG", async () => {
+    const season = await makeSeason();
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const day1 = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-03"), playerCount: 4, status: "finished" },
+    });
+    const day2 = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    // Both days: player scores 2 in one match → PPG 2.0 on both.
+    for (const day of [day1, day2]) {
+      await prisma.match.create({
+        data: {
+          gameDayId: day.id, matchNumber: 1,
+          team1PlayerAId: me.id, team1PlayerBId: a.id,
+          team2PlayerAId: b.id, team2PlayerBId: c.id,
+          team1Score: 2, team2Score: 0,
+        },
+      });
+    }
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.recentDays[0].delta).toBe("flat");
+    expect(stats.recentDays[1].delta).toBe("flat");
+  });
+
   it("never returns the same partner as both best and worst when ties cascade", async () => {
     // Two partners with identical points, matches, and name-tiebreaker behavior:
     // both sorts resolve to the alphabetically-first partner. Without a distinct-id

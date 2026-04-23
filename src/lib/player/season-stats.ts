@@ -157,15 +157,22 @@ export async function computePlayerSeasonStats(
     gameDayId,
     ppg: v.points / v.matches,
   }));
+  // Compare deltas at display precision (1 decimal) so two days that render
+  // the same PPG on the chip are treated as "flat" rather than up/down due to
+  // floating-point jitter in the integer-division quotient.
+  const toDisplayPpg = (ppg: number) => Math.round(ppg * 10) / 10;
   const recentDays: DayTrend[] = dayPpgList.slice(0, RECENT_DAYS_COUNT).map((d, i, arr) => {
     const prev = arr[i + 1];
-    const delta: TrendDelta = !prev
-      ? "flat"
-      : d.ppg > prev.ppg
-        ? "up"
-        : d.ppg < prev.ppg
-          ? "down"
-          : "flat";
+    const cur = toDisplayPpg(d.ppg);
+    const prevRounded = prev ? toDisplayPpg(prev.ppg) : null;
+    const delta: TrendDelta =
+      prevRounded === null
+        ? "flat"
+        : cur > prevRounded
+          ? "up"
+          : cur < prevRounded
+            ? "down"
+            : "flat";
     return { gameDayId: d.gameDayId, ppg: d.ppg, delta };
   });
 
