@@ -4,7 +4,15 @@ import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 
 export type MatchOutcome = "W" | "L" | "D";
 
-const RECENT_FORM_MATCH_COUNT = 5;
+export type TrendDelta = "up" | "down" | "flat";
+
+export interface DayTrend {
+  gameDayId: string;
+  ppg: number;
+  delta: TrendDelta;
+}
+
+const RECENT_DAYS_COUNT = 5;
 
 export interface PartnerStat {
   name: string;
@@ -16,7 +24,7 @@ export interface PlayerSeasonStats {
   medals: { gold: number; silver: number; bronze: number };
   attendance: { attended: number; total: number };
   winRate: { wins: number; losses: number; draws: number; matches: number };
-  recentForm: MatchOutcome[];
+  recentDays: DayTrend[];
   bestPartner: PartnerStat | null;
   worstPartner: PartnerStat | null;
   jokers: { used: number; remaining: number; total: number };
@@ -134,9 +142,39 @@ export async function computePlayerSeasonStats(
     else winRate.draws += 1;
   }
 
-  const recentForm: MatchOutcome[] = rows
-    .slice(0, RECENT_FORM_MATCH_COUNT)
-    .map((r) => outcomeFor(r, playerId));
+  // Rows are sorted newest-first (gameDay.date DESC, matchNumber DESC).
+  // Day ordering is deterministic because GameDay has @@unique([seasonId, date])
+  // (see prisma/schema.prisma), so two attended days can't share a date.
+  // Map insertion order therefore gives us days newest-first too.
+  const perDay = new Map<string, { points: number; matches: number }>();
+  for (const r of rows) {
+    const cur = perDay.get(r.gameDayId) ?? { points: 0, matches: 0 };
+    cur.points += myPoints(r, playerId);
+    cur.matches += 1;
+    perDay.set(r.gameDayId, cur);
+  }
+  const dayPpgList = [...perDay.entries()].map(([gameDayId, v]) => ({
+    gameDayId,
+    ppg: v.points / v.matches,
+  }));
+  // Compare deltas at display precision (1 decimal) so two days that render
+  // the same PPG on the chip are treated as "flat" rather than up/down due to
+  // floating-point jitter in the integer-division quotient.
+  const toDisplayPpg = (ppg: number) => Math.round(ppg * 10) / 10;
+  const recentDays: DayTrend[] = dayPpgList.slice(0, RECENT_DAYS_COUNT).map((d, i, arr) => {
+    const prev = arr[i + 1];
+    const cur = toDisplayPpg(d.ppg);
+    const prevRounded = prev ? toDisplayPpg(prev.ppg) : null;
+    const delta: TrendDelta =
+      prevRounded === null
+        ? "flat"
+        : cur > prevRounded
+          ? "up"
+          : cur < prevRounded
+            ? "down"
+            : "flat";
+    return { gameDayId: d.gameDayId, ppg: d.ppg, delta };
+  });
 
   const partnerTotals = new Map<string, { pointsTogether: number; matches: number }>();
   for (const r of rows) {
@@ -184,7 +222,7 @@ export async function computePlayerSeasonStats(
     medals,
     attendance: { attended: attendedDays.size, total: finishedDayCount },
     winRate,
-    recentForm,
+    recentDays,
     bestPartner,
     worstPartner,
     jokers: {
