@@ -42,7 +42,7 @@ export function JokerConfirmDialog({
           <p>
             Aktuelle PPG: <strong>{formatDe(ppgSnapshot, 2)}</strong> → du bekommst{" "}
             <strong>
-              10 × {formatDe(ppgSnapshot, 2)} ≈ {formatDe(ppgSnapshot * 10, 1)} Punkte
+              10 × {formatDe(ppgSnapshot, 2)} ≈ {Math.round(ppgSnapshot * 10)} Punkte
             </strong>{" "}
             gutgeschrieben.
           </p>
