@@ -34,6 +34,7 @@ export async function POST(_req: Request, ctx: Params) {
       gameDayId: id,
     });
     revalidatePath("/");
+    revalidatePath("/admin");
     return new NextResponse(null, { status: 201 });
   } catch (err) {
     if (err instanceof JokerLockedError) {
@@ -58,6 +59,7 @@ export async function DELETE(_req: Request, ctx: Params) {
       gameDayId: id,
     });
     revalidatePath("/");
+    revalidatePath("/admin");
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (err instanceof JokerLockedError) {
