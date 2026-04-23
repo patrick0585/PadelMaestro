@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import {
   setPlayerAvatar,
   deletePlayerAvatar,
+  getPlayerAvatar,
   PlayerNotFoundError,
   InvalidImageError,
   FileTooLargeError,
@@ -85,4 +86,22 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
     throw e;
   }
   return new NextResponse(null, { status: 204 });
+}
+
+export async function GET(_req: Request, ctx: RouteCtx) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const { id } = await ctx.params;
+  const avatar = await getPlayerAvatar(id);
+  if (!avatar) return new NextResponse(null, { status: 404 });
+  return new NextResponse(new Uint8Array(avatar.data), {
+    status: 200,
+    headers: {
+      "Content-Type": avatar.mimeType,
+      "Cache-Control": "public, max-age=31536000, immutable",
+      ETag: `"${id}-${avatar.version}"`,
+    },
+  });
 }

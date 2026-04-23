@@ -244,7 +244,7 @@ describe("DELETE /api/profile/avatar", () => {
   });
 });
 
-import { PUT as adminPut, DELETE as adminDelete } from "@/app/api/players/[id]/avatar/route";
+import { PUT as adminPut, DELETE as adminDelete, GET as adminGet } from "@/app/api/players/[id]/avatar/route";
 
 function adminMultipart(url: string, file: Buffer): Request {
   const body = new FormData();
@@ -379,5 +379,46 @@ describe("DELETE /api/players/[id]/avatar (admin)", () => {
       { params: Promise.resolve({ id: unknown }) },
     );
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/players/[id]/avatar", () => {
+  beforeEach(resetDb);
+
+  it("returns 404 when the player has no avatar", async () => {
+    const me = await makePlayer("Me");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await adminGet(
+      new Request(`http://test/api/players/${me.id}/avatar`),
+      { params: Promise.resolve({ id: me.id }) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns the bytes with Content-Type image/webp and an immutable Cache-Control", async () => {
+    const me = await makePlayer("Me");
+    await setPlayerAvatar({ playerId: me.id, actorId: me.id, file: FIXTURE });
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await adminGet(
+      new Request(`http://test/api/players/${me.id}/avatar`),
+      { params: Promise.resolve({ id: me.id }) },
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/webp");
+    expect(res.headers.get("cache-control")).toContain("immutable");
+    expect(res.headers.get("etag")).toBe(`"${me.id}-1"`);
+    const body = Buffer.from(await res.arrayBuffer());
+    expect(body.length).toBeGreaterThan(0);
+  });
+
+  it("returns 401 when not logged in", async () => {
+    const me = await makePlayer("Me");
+    await setPlayerAvatar({ playerId: me.id, actorId: me.id, file: FIXTURE });
+    authMock.mockResolvedValueOnce(null);
+    const res = await adminGet(
+      new Request(`http://test/api/players/${me.id}/avatar`),
+      { params: Promise.resolve({ id: me.id }) },
+    );
+    expect(res.status).toBe(401);
   });
 });
