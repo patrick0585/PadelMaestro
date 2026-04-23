@@ -2,12 +2,7 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "";
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
+import { initials } from "@/lib/player/initials";
 
 export function UserMenu({ name }: { name: string }) {
   const [open, setOpen] = useState(false);
