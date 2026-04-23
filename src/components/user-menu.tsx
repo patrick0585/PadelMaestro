@@ -2,9 +2,17 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { initials } from "@/lib/player/initials";
+import { Avatar } from "@/components/ui/avatar";
 
-export function UserMenu({ name }: { name: string }) {
+export function UserMenu({
+  playerId,
+  name,
+  avatarVersion,
+}: {
+  playerId: string;
+  name: string;
+  avatarVersion: number;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +35,7 @@ export function UserMenu({ name }: { name: string }) {
         onClick={() => setOpen((v) => !v)}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated text-sm font-semibold text-primary border border-border-strong"
       >
-        {initials(name)}
+        <Avatar playerId={playerId} name={name} avatarVersion={avatarVersion} size={40} />
       </button>
       {open && (
         <div
