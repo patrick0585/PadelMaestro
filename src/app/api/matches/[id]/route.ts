@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { enterScore, ScoreConflictError, GameDayFinishedError } from "@/lib/match/enter-score";
+import {
+  enterScore,
+  ScoreConflictError,
+  GameDayFinishedError,
+  NotAllowedError,
+} from "@/lib/match/enter-score";
 
 const Schema = z.object({
   team1Score: z.number().int().min(0),
@@ -27,9 +32,13 @@ export async function PUT(
       team2Score: body.data.team2Score,
       scoredBy: session.user.id,
       expectedVersion: body.data.expectedVersion,
+      isAdmin: session.user.isAdmin ?? false,
     });
     return NextResponse.json({ match });
   } catch (err) {
+    if (err instanceof NotAllowedError) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
     if (err instanceof ScoreConflictError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
