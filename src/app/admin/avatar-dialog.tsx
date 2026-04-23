@@ -113,11 +113,12 @@ export function AvatarDialog({
             type="file"
             accept="image/*"
             onChange={onPick}
+            disabled={loading}
             className="text-sm text-foreground-muted file:mr-3 file:rounded-xl file:border file:border-border-strong file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:text-foreground"
           />
         </div>
         {error && (
-          <p role="alert" className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
+          <p role="alert" className="rounded-xl bg-destructive-soft/40 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
