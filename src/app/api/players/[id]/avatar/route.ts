@@ -100,7 +100,7 @@ export async function GET(_req: Request, ctx: RouteCtx) {
     status: 200,
     headers: {
       "Content-Type": avatar.mimeType,
-      "Cache-Control": "public, max-age=31536000, immutable",
+      "Cache-Control": "private, max-age=31536000, immutable",
       ETag: `"${id}-${avatar.version}"`,
     },
   });
