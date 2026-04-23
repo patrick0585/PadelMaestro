@@ -26,6 +26,7 @@ export async function listJokersForGameDay(
     gamesCredited: r.gamesCredited,
     pointsCredited: Number(r.pointsCredited),
   }));
+  // App is German-only — use de collation so umlauts sort alongside their base letters.
   mapped.sort((a, b) => a.playerName.localeCompare(b.playerName, "de"));
   return mapped;
 }

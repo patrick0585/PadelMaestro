@@ -61,15 +61,17 @@ describe("listJokersForGameDay", () => {
     expect(typeof rows[0].pointsCredited).toBe("number");
   });
 
-  it("sorts rows alphabetically by player name (de collation)", async () => {
+  it("sorts rows alphabetically by player name with de collation", async () => {
     const season = await makeSeason(2026);
     const day = await prisma.gameDay.create({
       data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
     });
-    const [zoe, anna, mike] = await Promise.all(
-      ["Zoe", "Anna", "Mike"].map(makePlayer),
+    // Includes an umlaut name so the "de" locale sort is actually exercised:
+    // under default/en collation Ö would sort after Z, under "de" it sorts like O.
+    const [zoe, anna, oezlem, mike] = await Promise.all(
+      ["Zoe", "Anna", "Özlem", "Mike"].map(makePlayer),
     );
-    for (const p of [zoe, anna, mike]) {
+    for (const p of [zoe, anna, oezlem, mike]) {
       await prisma.jokerUse.create({
         data: {
           playerId: p.id,
@@ -82,7 +84,7 @@ describe("listJokersForGameDay", () => {
       });
     }
     const names = (await listJokersForGameDay(day.id)).map((r) => r.playerName);
-    expect(names).toEqual(["Anna", "Mike", "Zoe"]);
+    expect(names).toEqual(["Anna", "Mike", "Özlem", "Zoe"]);
   });
 
   it("ignores JokerUse rows from other game days", async () => {
