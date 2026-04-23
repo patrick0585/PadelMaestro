@@ -1,3 +1,6 @@
+// Per-process in-memory buckets. Resets on restart and is NOT shared across
+// instances — fine for the single-VPS deployment; switch to Redis/Upstash if
+// we ever run more than one Next.js process.
 const buckets = new Map<string, number[]>();
 
 function clientIp(req: Request): string {

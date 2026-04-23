@@ -32,5 +32,8 @@ export function isSameOriginMutation(
     }
   }
 
+  // Browsers always send at least one of Origin or Referer for same-site
+  // fetch/XHR, so missing both means a non-browser client or an actor that
+  // stripped them — treat as CSRF rather than softening.
   return false;
 }
