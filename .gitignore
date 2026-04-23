@@ -50,4 +50,7 @@ tmp/
 # Brainstorm mockups
 .superpowers/
 
+# Local data imports (raw spreadsheets may contain personal data)
+*.xlsx
+
 /generated/prisma

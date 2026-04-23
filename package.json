@@ -16,7 +16,9 @@
     "db:reset": "prisma migrate reset",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:initial": "tsx scripts/seed-initial.ts",
     "import:historical": "tsx scripts/import-historical.ts",
+    "import:statistik": "tsx scripts/import-statistik.ts",
     "fix:gameday-duplicates": "tsx scripts/fix-gameday-duplicates.ts",
     "reset:password": "tsx scripts/reset-password.ts"
   },
@@ -64,6 +66,7 @@
     "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "xlsx": "^0.18.5"
   }
 }
