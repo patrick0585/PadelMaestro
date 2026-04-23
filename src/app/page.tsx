@@ -62,32 +62,27 @@ export default async function DashboardPage() {
 
   const top3 = ranking.slice(0, 3);
 
+  const subtitleParts: string[] = [];
+  if (myRow) subtitleParts.push(`Platz ${myRow.rank}`);
+  if (stats.attendance.attended > 0) {
+    subtitleParts.push(
+      `${stats.attendance.attended} ${stats.attendance.attended === 1 ? "Spieltag" : "Spieltage"}`,
+    );
+  }
+  if (stats.jokers.remaining > 0) {
+    subtitleParts.push(`${stats.jokers.remaining} Joker`);
+  }
+  const subtitle =
+    subtitleParts.length > 0 ? subtitleParts.join(" · ") : `Saison ${season.year}`;
+
   return (
     <div className="space-y-4">
-      {(() => {
-        const subtitleParts: string[] = [];
-        if (myRow) subtitleParts.push(`Platz ${myRow.rank}`);
-        if (stats.attendance.attended > 0) {
-          subtitleParts.push(
-            `${stats.attendance.attended} ${stats.attendance.attended === 1 ? "Spieltag" : "Spieltage"}`,
-          );
-        }
-        if (stats.jokers.remaining > 0) {
-          subtitleParts.push(
-            `${stats.jokers.remaining} ${stats.jokers.remaining === 1 ? "Joker" : "Joker"}`,
-          );
-        }
-        const subtitle =
-          subtitleParts.length > 0 ? subtitleParts.join(" · ") : `Saison ${season.year}`;
-        return (
-          <header>
-            <h1 className="text-2xl font-bold text-foreground">
-              Hi{firstName ? `, ${firstName}` : ""}
-            </h1>
-            <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
-          </header>
-        );
-      })()}
+      <header>
+        <h1 className="text-2xl font-bold text-foreground">
+          Hi{firstName ? `, ${firstName}` : ""}
+        </h1>
+        <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
+      </header>
 
       {heroState && <DashboardHero state={heroState} />}
 
