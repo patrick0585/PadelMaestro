@@ -243,3 +243,108 @@ describe("DELETE /api/profile/avatar", () => {
     expect(after.avatarVersion).toBe(2);
   });
 });
+
+import { PUT as adminPut, DELETE as adminDelete } from "@/app/api/players/[id]/avatar/route";
+
+function adminMultipart(url: string, file: Buffer): Request {
+  const body = new FormData();
+  body.append("file", new Blob([file as unknown as BlobPart], { type: "image/png" }), "avatar.png");
+  return new Request(url, { method: "PUT", body });
+}
+
+describe("PUT /api/players/[id]/avatar (admin)", () => {
+  beforeEach(resetDb);
+
+  it("returns 401 without a session", async () => {
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce(null);
+    const res = await adminPut(
+      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a non-admin user", async () => {
+    const admin = await makePlayer("NotAdmin");
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: false } });
+    const res = await adminPut(
+      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for a missing player", async () => {
+    const admin = await makePlayer("Admin", { isAdmin: true });
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const unknown = "00000000-0000-0000-0000-000000000000";
+    const res = await adminPut(
+      adminMultipart(`http://test/api/players/${unknown}/avatar`, FIXTURE),
+      { params: Promise.resolve({ id: unknown }) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 200 with { version } on success and records admin as actor", async () => {
+    const admin = await makePlayer("Admin", { isAdmin: true });
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const res = await adminPut(
+      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ version: 1 });
+
+    const logs = await prisma.auditLog.findMany({
+      where: { entityId: target.id, action: "player.avatar_change" },
+    });
+    expect(logs).toHaveLength(1);
+    expect(logs[0].actorId).toBe(admin.id);
+  });
+});
+
+describe("DELETE /api/players/[id]/avatar (admin)", () => {
+  beforeEach(resetDb);
+
+  it("clears the target avatar and records the admin as actor", async () => {
+    const admin = await makePlayer("Admin", { isAdmin: true });
+    const target = await makePlayer("Target");
+    // seed
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    await adminPut(
+      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+
+    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const res = await adminDelete(
+      new Request(`http://test/api/players/${target.id}/avatar`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(204);
+
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(after.avatarData).toBeNull();
+    expect(after.avatarVersion).toBe(2);
+
+    const logs = await prisma.auditLog.findMany({
+      where: { entityId: target.id, action: "player.avatar_change" },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(logs[1].actorId).toBe(admin.id);
+  });
+
+  it("returns 403 for non-admin", async () => {
+    const nobody = await makePlayer("Nobody");
+    const target = await makePlayer("Target");
+    authMock.mockResolvedValueOnce({ user: { id: nobody.id, isAdmin: false } });
+    const res = await adminDelete(
+      new Request(`http://test/api/players/${target.id}/avatar`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: target.id }) },
+    );
+    expect(res.status).toBe(403);
+  });
+});
