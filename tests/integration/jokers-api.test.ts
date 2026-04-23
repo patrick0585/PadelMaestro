@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
-import { DELETE } from "@/app/api/jokers/route";
+import { DELETE, POST } from "@/app/api/jokers/route";
 import { recordJokerUse } from "@/lib/joker/use";
 import { resetDb } from "../helpers/reset-db";
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
@@ -28,6 +30,14 @@ async function setup() {
 function req(body: unknown) {
   return new Request("http://localhost/api/jokers", {
     method: "DELETE",
+    body: JSON.stringify(body),
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function postReq(body: unknown) {
+  return new Request("http://localhost/api/jokers", {
+    method: "POST",
     body: JSON.stringify(body),
     headers: { "content-type": "application/json" },
   });
@@ -77,5 +87,61 @@ describe("DELETE /api/jokers", () => {
     const res = await DELETE(req({ gameDayId: gameDay.id }));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ code: "JOKER_LOCKED" });
+  });
+});
+
+describe("POST /api/jokers", () => {
+  beforeEach(async () => {
+    authMock.mockReset();
+    await resetDb();
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    const { gameDay } = await setup();
+    authMock.mockResolvedValue(null);
+    const res = await POST(postReq({ gameDayId: gameDay.id }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 409 JOKER_LOCKED when the game day is roster_locked", async () => {
+    const { player, gameDay } = await setup();
+    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "roster_locked" } });
+    authMock.mockResolvedValue({
+      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
+    });
+    const res = await POST(postReq({ gameDayId: gameDay.id }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ code: "JOKER_LOCKED" });
+  });
+
+  it("returns 409 JOKER_CAP_EXCEEDED when the season cap is reached", async () => {
+    const { season, player, gameDay } = await setup();
+
+    // Create a second game day in the same season so we can use two jokers
+    const gameDay2 = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-28"), status: "planned" },
+    });
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: gameDay2.id, playerId: player.id, attendance: "pending" },
+    });
+
+    // Use both joker slots (MAX_JOKERS_PER_SEASON = 2)
+    await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
+    await recordJokerUse({ playerId: player.id, gameDayId: gameDay2.id });
+
+    // Third game day to attempt the cap-exceeding POST
+    const gameDay3 = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-05-05"), status: "planned" },
+    });
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: gameDay3.id, playerId: player.id, attendance: "pending" },
+    });
+
+    authMock.mockResolvedValue({
+      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
+    });
+    const res = await POST(postReq({ gameDayId: gameDay3.id }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ code: "JOKER_CAP_EXCEEDED" });
   });
 });

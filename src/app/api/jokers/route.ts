@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
 import {
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
       playerId: session.user.id,
       gameDayId: body.data.gameDayId,
     });
+    revalidatePath("/");
     return NextResponse.json({ jokerUse }, { status: 201 });
   } catch (err) {
     if (err instanceof JokerLockedError) {
@@ -47,6 +49,7 @@ export async function DELETE(req: Request) {
       playerId: session.user.id,
       gameDayId: body.data.gameDayId,
     });
+    revalidatePath("/");
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (err instanceof JokerLockedError) {
