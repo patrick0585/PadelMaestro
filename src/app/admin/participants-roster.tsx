@@ -220,6 +220,7 @@ export function ParticipantsRoster({
     const row = local.find((r) => r.playerId === playerId);
     if (!row) return;
     if (zone === ROSTER && row.attendance !== "confirmed") {
+      if (row.attendance === "joker") return; // joker stays put — cancel only via explicit button
       void patch(playerId, "confirmed");
     } else if (zone === POOL && row.attendance === "confirmed") {
       void patch(playerId, "pending");

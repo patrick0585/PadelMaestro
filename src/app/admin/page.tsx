@@ -12,6 +12,8 @@ import {
   type ParticipantAttendance,
   type RosterRow,
 } from "./participants-roster";
+import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { getOrCreateActiveSeason } from "@/lib/season";
 
 export const dynamic = "force-dynamic";
 
@@ -75,21 +77,15 @@ export default async function AdminPage() {
     },
   });
 
-  const season = await prisma.season.findFirstOrThrow({
-    where: { isActive: true },
-    select: { id: true },
-  });
+  const season = await getOrCreateActiveSeason();
   const jokerCounts = await prisma.jokerUse.groupBy({
     by: ["playerId"],
     where: { seasonId: season.id },
     _count: { _all: true },
   });
-  const MAX_JOKERS = 2;
+  const jokerCountById = new Map(jokerCounts.map((j) => [j.playerId, j._count._all]));
   const jokersRemaining = new Map<string, number>(
-    players.map((p) => {
-      const used = jokerCounts.find((j) => j.playerId === p.id)?._count._all ?? 0;
-      return [p.id, Math.max(0, MAX_JOKERS - used)];
-    }),
+    players.map((p) => [p.id, Math.max(0, MAX_JOKERS_PER_SEASON - (jokerCountById.get(p.id) ?? 0))]),
   );
 
   const playersForUi = players.map((p) => ({
