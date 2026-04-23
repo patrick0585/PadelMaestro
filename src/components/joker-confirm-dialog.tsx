@@ -40,7 +40,11 @@ export function JokerConfirmDialog({
         </p>
         {ppgSnapshot !== null ? (
           <p>
-            <strong>{`Aktuelle PPG: ${formatDe(ppgSnapshot, 2)} → 10 × ${formatDe(ppgSnapshot, 2)} ≈ ${formatDe(ppgSnapshot * 10, 1)} Punkte`}</strong>
+            Aktuelle PPG: <strong>{formatDe(ppgSnapshot, 2)}</strong> → du bekommst{" "}
+            <strong>
+              10 × {formatDe(ppgSnapshot, 2)} ≈ {formatDe(ppgSnapshot * 10, 1)} Punkte
+            </strong>{" "}
+            gutgeschrieben.
           </p>
         ) : (
           <p>Bisher keine Statistik — die PPG wird beim Setzen des Jokers festgeschrieben.</p>

@@ -15,7 +15,8 @@ describe("<JokerConfirmDialog>", () => {
       />,
     );
     expect(screen.getByText(/1\. von 2 Jokern/)).toBeInTheDocument();
-    expect(screen.getByText(/1,64/)).toBeInTheDocument();
+    // Two occurrences of "1,64" are expected now (standalone + inside "10 × 1,64 ≈ ...").
+    expect(screen.getAllByText(/1,64/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/16,4 Punkte/)).toBeInTheDocument();
   });
 
@@ -72,5 +73,25 @@ describe("<JokerConfirmDialog>", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /Joker setzen/ }));
     expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("disables both buttons while loading", () => {
+    render(
+      <JokerConfirmDialog
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        jokersRemaining={2}
+        ppgSnapshot={1.5}
+        loading
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Abbrechen/ })).toBeDisabled();
+    // Primary button is a Button with loading={true} — its visible text becomes "…"
+    // but the disabled state is still observable.
+    const confirmButton = screen.getAllByRole("button").find(
+      (b) => b !== screen.getByRole("button", { name: /Abbrechen/ }),
+    );
+    expect(confirmButton).toBeDisabled();
   });
 });
