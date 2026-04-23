@@ -124,6 +124,7 @@ describe("cancelJokerUse", () => {
       where: { actorId: player.id, action: "joker.cancel" },
     });
     expect(logs).toHaveLength(1);
+    expect((logs[0].payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
   });
 
   it("throws JokerLockedError when the game day is no longer planned", async () => {

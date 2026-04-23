@@ -160,6 +160,7 @@ async function cancelJokerUseInternal(args: {
         entityId: existing.id,
         payload: {
           gameDayId: args.gameDayId,
+          seasonId: gameDay.seasonId,
           targetPlayerId: args.playerId,
           ppgAtUse: Number(existing.ppgAtUse),
           pointsCredited: Number(existing.pointsCredited),
