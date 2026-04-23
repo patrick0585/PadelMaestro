@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { recordJokerUse, recordJokerUseAsAdmin, cancelJokerUse, JokerNotFoundError, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { recordJokerUse, recordJokerUseAsAdmin, cancelJokerUse, cancelJokerUseAsAdmin, JokerNotFoundError, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 import { resetDb } from "../helpers/reset-db";
 
 async function setup() {
@@ -188,5 +188,35 @@ describe("recordJokerUseAsAdmin", () => {
     await expect(
       recordJokerUseAsAdmin({ actorId: admin.id, playerId: player.id, gameDayId: gameDay.id }),
     ).rejects.toThrow(/max/i);
+  });
+});
+
+describe("cancelJokerUseAsAdmin", () => {
+  beforeEach(resetDb);
+
+  it("cancels the joker and writes audit action joker.cancel.admin", async () => {
+    const { player, gameDay } = await setup();
+    const admin = await prisma.player.create({
+      data: { name: "Admin", email: "ac@x", passwordHash: "x", isAdmin: true },
+    });
+    await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
+
+    await cancelJokerUseAsAdmin({
+      actorId: admin.id,
+      playerId: player.id,
+      gameDayId: gameDay.id,
+    });
+
+    const uses = await prisma.jokerUse.count({ where: { playerId: player.id } });
+    expect(uses).toBe(0);
+    const part = await prisma.gameDayParticipant.findUniqueOrThrow({
+      where: { gameDayId_playerId: { gameDayId: gameDay.id, playerId: player.id } },
+    });
+    expect(part.attendance).toBe("pending");
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "joker.cancel.admin" },
+    });
+    expect(log.actorId).toBe(admin.id);
+    expect((log.payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
   });
 });

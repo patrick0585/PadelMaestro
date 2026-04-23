@@ -121,17 +121,17 @@ export async function recordJokerUseAsAdmin(args: {
   return recordJokerUseInternal({ ...args, auditAction: "joker.use.admin" });
 }
 
-export async function cancelJokerUse(args: {
+async function cancelJokerUseInternal(args: {
+  actorId: string;
   playerId: string;
   gameDayId: string;
+  auditAction: "joker.cancel" | "joker.cancel.admin";
 }): Promise<void> {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
     select: { id: true, status: true, seasonId: true },
   });
-  if (gameDay.status !== "planned") {
-    throw new JokerLockedError();
-  }
+  if (gameDay.status !== "planned") throw new JokerLockedError();
 
   const existing = await prisma.jokerUse.findUnique({
     where: {
@@ -154,16 +154,37 @@ export async function cancelJokerUse(args: {
     });
     await tx.auditLog.create({
       data: {
-        actorId: args.playerId,
-        action: "joker.cancel",
+        actorId: args.actorId,
+        action: args.auditAction,
         entityType: "JokerUse",
         entityId: existing.id,
         payload: {
           gameDayId: args.gameDayId,
+          targetPlayerId: args.playerId,
           ppgAtUse: Number(existing.ppgAtUse),
           pointsCredited: Number(existing.pointsCredited),
         },
       },
     });
   });
+}
+
+export async function cancelJokerUse(args: {
+  playerId: string;
+  gameDayId: string;
+}): Promise<void> {
+  return cancelJokerUseInternal({
+    actorId: args.playerId,
+    playerId: args.playerId,
+    gameDayId: args.gameDayId,
+    auditAction: "joker.cancel",
+  });
+}
+
+export async function cancelJokerUseAsAdmin(args: {
+  actorId: string;
+  playerId: string;
+  gameDayId: string;
+}): Promise<void> {
+  return cancelJokerUseInternal({ ...args, auditAction: "joker.cancel.admin" });
 }
