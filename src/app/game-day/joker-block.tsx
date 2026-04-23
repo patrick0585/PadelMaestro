@@ -1,19 +1,16 @@
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { formatDe } from "@/lib/format";
 import type { JokerUseRow } from "@/lib/joker/list";
-
-function formatDe(value: number, digits: number): string {
-  return value.toLocaleString("de-DE", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
 
 export function JokerBlock({ jokers }: { jokers: JokerUseRow[] }) {
   if (jokers.length === 0) return null;
 
   return (
-    <section className="space-y-2 rounded-2xl border border-border bg-surface p-4">
+    <section
+      aria-label="Joker an diesem Tag"
+      className="space-y-2 rounded-2xl border border-border bg-surface p-4"
+    >
       <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
         Joker an diesem Tag
       </div>
