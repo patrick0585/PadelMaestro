@@ -142,8 +142,10 @@ export async function computePlayerSeasonStats(
     else winRate.draws += 1;
   }
 
-  // Rows are sorted newest-first (gameDay.date DESC, matchNumber DESC),
-  // so Map insertion order gives us days newest-first too.
+  // Rows are sorted newest-first (gameDay.date DESC, matchNumber DESC).
+  // Day ordering is deterministic because GameDay has @@unique([seasonId, date])
+  // (see prisma/schema.prisma), so two attended days can't share a date.
+  // Map insertion order therefore gives us days newest-first too.
   const perDay = new Map<string, { points: number; matches: number }>();
   for (const r of rows) {
     const cur = perDay.get(r.gameDayId) ?? { points: 0, matches: 0 };

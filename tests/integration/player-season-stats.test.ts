@@ -225,6 +225,42 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.recentDays[1].delta).toBe("flat");
   });
 
+  it("caps recentDays at 5 entries and discards older attended days", async () => {
+    const season = await makeSeason();
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const dates = [
+      "2026-04-03",
+      "2026-04-10",
+      "2026-04-17",
+      "2026-04-24",
+      "2026-05-01",
+      "2026-05-08",
+    ];
+    const dayIds: string[] = [];
+    for (let i = 0; i < dates.length; i += 1) {
+      const day = await prisma.gameDay.create({
+        data: { seasonId: season.id, date: new Date(dates[i]), playerCount: 4, status: "finished" },
+      });
+      dayIds.push(day.id);
+      // Player scores (i + 1) on team1; all 6 PPGs are distinct integers.
+      await prisma.match.create({
+        data: {
+          gameDayId: day.id, matchNumber: 1,
+          team1PlayerAId: me.id, team1PlayerBId: a.id,
+          team2PlayerAId: b.id, team2PlayerBId: c.id,
+          team1Score: i + 1, team2Score: 0,
+        },
+      });
+    }
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.recentDays).toHaveLength(5);
+    // Oldest in the 5-slice has no in-slice predecessor → "flat".
+    expect(stats.recentDays[4].delta).toBe("flat");
+    // The truly-oldest (first) day is dropped from the slice.
+    const oldestDroppedId = dayIds[0];
+    expect(stats.recentDays.map((d) => d.gameDayId)).not.toContain(oldestDroppedId);
+  });
+
   it("computes best and worst partner by total points together", async () => {
     const season = await makeSeason();
     const [me, paul, michi, x, y] = await Promise.all(
