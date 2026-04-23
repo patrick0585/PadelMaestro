@@ -76,6 +76,7 @@ export default async function ArchivePage() {
                     {row.jokerCount > 0 && (
                       <span
                         data-testid="joker-badge"
+                        aria-label={`${row.jokerCount} Joker eingesetzt`}
                         className="ml-2 inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-warning"
                       >
                         Joker {row.jokerCount}
