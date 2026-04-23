@@ -14,12 +14,13 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 
-export type ParticipantAttendance = "pending" | "confirmed" | "declined";
+export type ParticipantAttendance = "pending" | "confirmed" | "declined" | "joker";
 
 export interface RosterRow {
   playerId: string;
   name: string;
   attendance: ParticipantAttendance;
+  jokersRemaining: number;
 }
 
 const POOL = "pool";
@@ -30,10 +31,14 @@ function PlayerCard({
   row,
   dimmed,
   onMove,
+  onSetJoker,
+  onCancelJoker,
 }: {
   row: RosterRow;
   dimmed: boolean;
   onMove: () => void;
+  onSetJoker: () => void;
+  onCancelJoker: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: row.playerId,
@@ -41,8 +46,9 @@ function PlayerCard({
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
-  const toRoster = row.attendance !== "confirmed";
-  const zoneLabel = row.attendance === "confirmed" ? "Dabei" : "Pool";
+  const isAttending = row.attendance === "confirmed" || row.attendance === "joker";
+  const toRoster = !isAttending;
+  const zoneLabel = isAttending ? "Dabei" : "Pool";
   return (
     <div
       ref={setNodeRef}
@@ -54,7 +60,14 @@ function PlayerCard({
         isDragging ? "opacity-40" : ""
       } ${dimmed ? "opacity-60" : ""}`}
     >
-      <span className="flex-1 text-sm font-medium text-foreground">{row.name}</span>
+      <span className="flex-1 text-sm font-medium text-foreground">
+        {row.name}
+        {row.attendance === "joker" && (
+          <span className="ml-2 rounded-full border border-primary/50 bg-primary-soft px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-primary-strong">
+            Joker
+          </span>
+        )}
+      </span>
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
@@ -67,6 +80,39 @@ function PlayerCard({
       >
         {toRoster ? "→" : "←"}
       </button>
+      {row.attendance === "joker" ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCancelJoker();
+          }}
+          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted"
+        >
+          Joker entfernen
+        </button>
+      ) : row.jokersRemaining > 0 ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetJoker();
+          }}
+          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted"
+        >
+          Joker für {row.name} setzen
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border px-2 text-xs font-semibold text-foreground-muted opacity-60"
+        >
+          Keine Joker übrig
+        </button>
+      )}
     </div>
   );
 }
@@ -178,10 +224,11 @@ export function ParticipantsRoster({
     } else if (zone === POOL && row.attendance === "confirmed") {
       void patch(playerId, "pending");
     }
+    // intentionally no drag-cancel for joker: admin must click the explicit "Joker entfernen" button
   }
 
-  const pool = local.filter((r) => r.attendance !== "confirmed");
-  const roster = local.filter((r) => r.attendance === "confirmed");
+  const pool = local.filter((r) => r.attendance !== "confirmed" && r.attendance !== "joker");
+  const roster = local.filter((r) => r.attendance === "confirmed" || r.attendance === "joker");
 
   return (
     <div className="space-y-3">
@@ -200,6 +247,8 @@ export function ParticipantsRoster({
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
                 onMove={() => patch(r.playerId, "confirmed")}
+                onSetJoker={() => {}}
+                onCancelJoker={() => {}}
               />
             ))}
           </DropColumn>
@@ -216,6 +265,8 @@ export function ParticipantsRoster({
                 row={r}
                 dimmed={pendingIds.has(r.playerId)}
                 onMove={() => patch(r.playerId, "pending")}
+                onSetJoker={() => {}}
+                onCancelJoker={() => {}}
               />
             ))}
           </DropColumn>

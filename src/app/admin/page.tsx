@@ -17,23 +17,31 @@ export const dynamic = "force-dynamic";
 
 type ParticipantWithPlayer = {
   playerId: string;
-  attendance: ParticipantAttendance | "joker";
+  attendance: ParticipantAttendance;
   player: { id: string; name: string };
 };
 
 function buildRosterRows(
   participants: ParticipantWithPlayer[],
   activePlayers: { id: string; name: string }[],
+  jokersRemainingByPlayer: Map<string, number>,
 ): RosterRow[] {
   const byId = new Map(participants.map((p) => [p.playerId, p]));
   return activePlayers
     .map((player) => {
       const participant = byId.get(player.id);
       const attendance: ParticipantAttendance =
-        participant?.attendance === "confirmed" || participant?.attendance === "declined"
+        participant?.attendance === "confirmed" ||
+        participant?.attendance === "declined" ||
+        participant?.attendance === "joker"
           ? participant.attendance
           : "pending";
-      return { playerId: player.id, name: player.name, attendance };
+      return {
+        playerId: player.id,
+        name: player.name,
+        attendance,
+        jokersRemaining: jokersRemainingByPlayer.get(player.id) ?? 0,
+      };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
@@ -66,6 +74,23 @@ export default async function AdminPage() {
       },
     },
   });
+
+  const season = await prisma.season.findFirstOrThrow({
+    where: { isActive: true },
+    select: { id: true },
+  });
+  const jokerCounts = await prisma.jokerUse.groupBy({
+    by: ["playerId"],
+    where: { seasonId: season.id },
+    _count: { _all: true },
+  });
+  const MAX_JOKERS = 2;
+  const jokersRemaining = new Map<string, number>(
+    players.map((p) => {
+      const used = jokerCounts.find((j) => j.playerId === p.id)?._count._all ?? 0;
+      return [p.id, Math.max(0, MAX_JOKERS - used)];
+    }),
+  );
 
   const playersForUi = players.map((p) => ({
     id: p.id,
@@ -116,7 +141,7 @@ export default async function AdminPage() {
               {manageableDay.status === "planned" && (
                 <ParticipantsRoster
                   gameDayId={manageableDay.id}
-                  participants={buildRosterRows(manageableDay.participants, players)}
+                  participants={buildRosterRows(manageableDay.participants, players, jokersRemaining)}
                 />
               )}
             </div>
