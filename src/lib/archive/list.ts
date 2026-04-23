@@ -64,6 +64,7 @@ export async function listArchivedGameDays(
     rows.push({
       id: day.id,
       date: day.date,
+      // GameDay.date is a Prisma @db.Date stored at midnight UTC; format.ts uses UTC too.
       seasonYear: day.date.getUTCFullYear(),
       matchCount: day._count.matches,
       playerCount: rowsFromSummary.length,
