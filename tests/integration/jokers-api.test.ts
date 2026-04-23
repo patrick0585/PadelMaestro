@@ -125,7 +125,7 @@ describe("POST /api/jokers", () => {
       data: { gameDayId: gameDay2.id, playerId: player.id, attendance: "pending" },
     });
 
-    // Use both joker slots (MAX_JOKERS_PER_SEASON = 2)
+    // Exhaust MAX_JOKERS_PER_SEASON slots
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay2.id });
 
