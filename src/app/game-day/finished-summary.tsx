@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/ui/avatar";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 
 const PODIUM_STYLES = [
@@ -54,6 +55,7 @@ export async function FinishedSummary({
               <span className="text-2xl" role="img" aria-label={style.rankLabel}>
                 {style.medal}
               </span>
+              <Avatar playerId={row.playerId} name={row.playerName} avatarVersion={row.avatarVersion} size={40} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-foreground">{row.playerName}</div>
                 <div className="text-[0.7rem] text-foreground-muted">
@@ -91,7 +93,10 @@ export async function FinishedSummary({
                 )}
               </td>
               <td className="py-1.5 pr-2 text-foreground">
-                <span className="block truncate">{row.playerName}</span>
+                <span className="flex items-center gap-2">
+                  <Avatar playerId={row.playerId} name={row.playerName} avatarVersion={row.avatarVersion} size={32} />
+                  <span className="block truncate">{row.playerName}</span>
+                </span>
               </td>
               <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-foreground">
                 {row.points}

@@ -2,14 +2,17 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import { Avatar } from "@/components/ui/avatar";
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "";
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-export function UserMenu({ name }: { name: string }) {
+export function UserMenu({
+  playerId,
+  name,
+  avatarVersion,
+}: {
+  playerId: string;
+  name: string;
+  avatarVersion: number;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -30,9 +33,9 @@ export function UserMenu({ name }: { name: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated text-sm font-semibold text-primary border border-border-strong"
+        className="rounded-full"
       >
-        {initials(name)}
+        <Avatar playerId={playerId} name={name} avatarVersion={avatarVersion} size={40} />
       </button>
       {open && (
         <div

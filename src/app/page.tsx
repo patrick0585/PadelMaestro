@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
+import { Avatar } from "@/components/ui/avatar";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
 import { DayPpgStrip } from "@/components/day-ppg-strip";
@@ -18,6 +19,12 @@ function formatTime(iso: string): string {
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
+
+  const me = await prisma.player.findUnique({
+    where: { id: session.user.id },
+    select: { avatarVersion: true },
+  });
+  const meAvatarVersion = me?.avatarVersion ?? 0;
 
   const season = await getOrCreateActiveSeason();
   const [ranking, plannedDay, stats] = await Promise.all([
@@ -38,12 +45,14 @@ export default async function DashboardPage() {
     const total = plannedDay.participants.length;
     const date = plannedDay.date.toISOString();
     const time = formatTime(plannedDay.date.toISOString());
-    const me = plannedDay.participants.find((p) => p.playerId === session.user.id);
-    if (!me) {
+    const meParticipant = plannedDay.participants.find((p) => p.playerId === session.user.id);
+    if (!meParticipant) {
       heroState = { kind: "not-member", gameDayId: plannedDay.id, date, time, confirmed, total };
     } else {
       const attendance =
-        me.attendance === "confirmed" || me.attendance === "declined" ? me.attendance : "pending";
+        meParticipant.attendance === "confirmed" || meParticipant.attendance === "declined"
+          ? meParticipant.attendance
+          : "pending";
       heroState = {
         kind: "member",
         gameDayId: plannedDay.id,
@@ -77,11 +86,19 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-bold text-foreground">
-          Hi{firstName ? `, ${firstName}` : ""}
-        </h1>
-        <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
+      <header className="flex items-center gap-3">
+        <Avatar
+          playerId={session.user.id}
+          name={session.user.name ?? ""}
+          avatarVersion={meAvatarVersion}
+          size={48}
+        />
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Hi{firstName ? `, ${firstName}` : ""}
+          </h1>
+          <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
+        </div>
       </header>
 
       {heroState && <DashboardHero state={heroState} />}
@@ -158,7 +175,10 @@ export default async function DashboardPage() {
               <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-success">
                 Beste Chemie
               </div>
-              <div className="mt-1 font-bold text-foreground">{stats.bestPartner.name}</div>
+              <div className="mt-1 flex items-center gap-2 font-bold text-foreground">
+                <Avatar playerId={stats.bestPartner.playerId} name={stats.bestPartner.name} avatarVersion={stats.bestPartner.avatarVersion} size={32} />
+                {stats.bestPartner.name}
+              </div>
               <div className="mt-0.5 text-xs text-foreground-muted">
                 {stats.bestPartner.pointsTogether} Pt · {stats.bestPartner.matches}{" "}
                 {stats.bestPartner.matches === 1 ? "Match" : "Matches"}
@@ -169,7 +189,10 @@ export default async function DashboardPage() {
                 <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-destructive">
                   Weniger Glück
                 </div>
-                <div className="mt-1 font-bold text-foreground">{stats.worstPartner.name}</div>
+                <div className="mt-1 flex items-center gap-2 font-bold text-foreground">
+                  <Avatar playerId={stats.worstPartner.playerId} name={stats.worstPartner.name} avatarVersion={stats.worstPartner.avatarVersion} size={32} />
+                  {stats.worstPartner.name}
+                </div>
                 <div className="mt-0.5 text-xs text-foreground-muted">
                   {stats.worstPartner.pointsTogether} Pt · {stats.worstPartner.matches}{" "}
                   {stats.worstPartner.matches === 1 ? "Match" : "Matches"}
@@ -236,6 +259,7 @@ export default async function DashboardPage() {
           {top3.map((r) => (
             <li key={r.playerId} className="flex items-center gap-3 py-1 text-sm">
               <span className="w-5 text-right font-extrabold text-primary">{r.rank}</span>
+              <Avatar playerId={r.playerId} name={r.playerName} avatarVersion={r.avatarVersion} size={32} />
               <span className="flex-1 font-semibold text-foreground">{r.playerName}</span>
               <span className="font-semibold tabular-nums text-foreground-muted">
                 {r.pointsPerGame.toFixed(2)}

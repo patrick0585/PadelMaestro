@@ -14,7 +14,17 @@ const USER_ITEMS: Item[] = [
 
 const ADMIN_ITEM: Item = { href: "/admin", label: "Admin" };
 
-export function TopNav({ isAdmin, name }: { isAdmin: boolean; name: string }) {
+export function TopNav({
+  isAdmin,
+  name,
+  playerId,
+  avatarVersion,
+}: {
+  isAdmin: boolean;
+  name: string;
+  playerId: string;
+  avatarVersion: number;
+}) {
   const pathname = usePathname();
   const items = isAdmin ? [...USER_ITEMS, ADMIN_ITEM] : USER_ITEMS;
 
@@ -40,7 +50,7 @@ export function TopNav({ isAdmin, name }: { isAdmin: boolean; name: string }) {
               </Link>
             );
           })}
-          <UserMenu name={name} />
+          <UserMenu playerId={playerId} name={name} avatarVersion={avatarVersion} />
         </nav>
       </div>
     </header>

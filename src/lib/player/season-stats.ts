@@ -15,7 +15,9 @@ export interface DayTrend {
 const RECENT_DAYS_COUNT = 5;
 
 export interface PartnerStat {
+  playerId: string;
   name: string;
+  avatarVersion: number;
   pointsTogether: number;
   matches: number;
 }
@@ -189,16 +191,23 @@ export async function computePlayerSeasonStats(
   const partnerNames = partnerIds.length
     ? await prisma.player.findMany({
         where: { id: { in: partnerIds }, deletedAt: null },
-        select: { id: true, name: true },
+        select: { id: true, name: true, avatarVersion: true },
       })
     : [];
   const nameById = new Map(partnerNames.map((p) => [p.id, p.name]));
+  const versionById = new Map(partnerNames.map((p) => [p.id, p.avatarVersion]));
   interface PartnerWithId extends PartnerStat {
     id: string;
   }
   const partners: PartnerWithId[] = partnerIds.map((pid) => {
     const stat = partnerTotals.get(pid)!;
-    return { id: pid, name: nameById.get(pid) ?? "Unbekannt", ...stat };
+    return {
+      id: pid,
+      playerId: pid,
+      name: nameById.get(pid) ?? "Unbekannt",
+      avatarVersion: versionById.get(pid) ?? 0,
+      ...stat,
+    };
   });
   const bestSorted = [...partners].sort((a, b) => {
     if (b.pointsTogether !== a.pointsTogether) return b.pointsTogether - a.pointsTogether;

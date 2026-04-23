@@ -13,6 +13,9 @@ model Player {
   email          String    @unique
   username       String?   @unique
   passwordHash   String?
+  avatarData     Bytes?
+  avatarMimeType String?
+  avatarVersion  Int       @default(0)
   telegramId     BigInt?   @unique
   isAdmin        Boolean   @default(false)
   invitedAt      DateTime  @default(now())

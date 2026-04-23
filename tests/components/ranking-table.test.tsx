@@ -8,6 +8,7 @@ function row(overrides: Partial<RankingRow>): RankingRow {
     rank: 1,
     playerId: "p1",
     playerName: "Paul",
+    avatarVersion: 0,
     points: 0,
     pointsPerGame: 0,
     games: 0,

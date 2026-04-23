@@ -8,6 +8,7 @@ import { CreatePlayerDialog } from "./create-player-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 import { EditPlayerDialog, type EditablePlayer } from "./edit-player-dialog";
 import { DeletePlayerDialog } from "./delete-player-dialog";
+import { AvatarDialog } from "./avatar-dialog";
 
 export interface PlayerRow {
   id: string;
@@ -16,6 +17,7 @@ export interface PlayerRow {
   username: string | null;
   isAdmin: boolean;
   hasPassword: boolean;
+  avatarVersion: number;
 }
 
 export function PlayersSection({ players }: { players: PlayerRow[] }) {
@@ -23,6 +25,7 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
   const [resetFor, setResetFor] = useState<PlayerRow | null>(null);
   const [editFor, setEditFor] = useState<EditablePlayer | null>(null);
   const [deleteFor, setDeleteFor] = useState<PlayerRow | null>(null);
+  const [avatarFor, setAvatarFor] = useState<PlayerRow | null>(null);
 
   return (
     <Card>
@@ -70,6 +73,9 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                     Passwort
                   </Button>
                 )}
+                <Button variant="ghost" size="sm" onClick={() => setAvatarFor(p)}>
+                  Avatar
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -101,6 +107,13 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
         playerId={deleteFor?.id ?? null}
         playerName={deleteFor?.name ?? null}
         playerEmail={deleteFor?.email ?? null}
+      />
+      <AvatarDialog
+        open={avatarFor !== null}
+        onClose={() => setAvatarFor(null)}
+        playerId={avatarFor?.id ?? null}
+        playerName={avatarFor?.name ?? null}
+        avatarVersion={avatarFor?.avatarVersion ?? 0}
       />
     </Card>
   );
