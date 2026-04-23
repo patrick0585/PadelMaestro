@@ -45,12 +45,14 @@ export default async function DashboardPage() {
     const total = plannedDay.participants.length;
     const date = plannedDay.date.toISOString();
     const time = formatTime(plannedDay.date.toISOString());
-    const me = plannedDay.participants.find((p) => p.playerId === session.user.id);
-    if (!me) {
+    const meParticipant = plannedDay.participants.find((p) => p.playerId === session.user.id);
+    if (!meParticipant) {
       heroState = { kind: "not-member", gameDayId: plannedDay.id, date, time, confirmed, total };
     } else {
       const attendance =
-        me.attendance === "confirmed" || me.attendance === "declined" ? me.attendance : "pending";
+        meParticipant.attendance === "confirmed" || meParticipant.attendance === "declined"
+          ? meParticipant.attendance
+          : "pending";
       heroState = {
         kind: "member",
         gameDayId: plannedDay.id,
