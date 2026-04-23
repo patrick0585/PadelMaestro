@@ -71,7 +71,17 @@ export default async function ArchivePage() {
                   href={`/archive/${row.id}`}
                   className="block rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  <div className="text-sm font-semibold text-foreground">{formatGameDayDate(row.date)}</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {formatGameDayDate(row.date)}
+                    {row.jokerCount > 0 && (
+                      <span
+                        data-testid="joker-badge"
+                        className="ml-2 inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-warning"
+                      >
+                        Joker {row.jokerCount}
+                      </span>
+                    )}
+                  </div>
                   {row.podium.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-foreground">
                       {row.podium.map((p, i) => (
