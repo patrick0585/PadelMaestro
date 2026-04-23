@@ -99,6 +99,21 @@ describe("changeOwnPassword", () => {
     expect(logs[0].actorId).toBe(me.id);
     expect(logs[0].entityType).toBe("Player");
   });
+
+  it("does not write an audit log entry on wrong-password failure", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    await expect(
+      changeOwnPassword({
+        playerId: me.id,
+        currentPassword: "WRONG",
+        newPassword: "newpass12",
+      }),
+    ).rejects.toBeInstanceOf(WrongCurrentPasswordError);
+    const logs = await prisma.auditLog.findMany({
+      where: { entityId: me.id, action: "player.password_change" },
+    });
+    expect(logs).toHaveLength(0);
+  });
 });
 
 describe("POST /api/profile/password", () => {
@@ -133,5 +148,35 @@ describe("POST /api/profile/password", () => {
     expect(res.status).toBe(204);
     const updated = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
     expect(await verifyPassword("newpass12", updated.passwordHash!)).toBe(true);
+  });
+
+  it("returns 400 when newPassword exceeds 72 bytes and leaves the hash unchanged", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(
+      jsonRequest({ currentPassword: "oldpass12", newPassword: "x".repeat(73) }),
+    );
+    expect(res.status).toBe(400);
+    const stored = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(await verifyPassword("oldpass12", stored.passwordHash!)).toBe(true);
+  });
+
+  it("returns 400 when currentPassword exceeds 72 bytes", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(
+      jsonRequest({ currentPassword: "x".repeat(73), newPassword: "newpass12" }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when the authenticated player has been soft-deleted", async () => {
+    const me = await makePlayer("Me", "oldpass12");
+    await prisma.player.update({ where: { id: me.id }, data: { deletedAt: new Date() } });
+    authMock.mockResolvedValueOnce({ user: { id: me.id } });
+    const res = await POST(
+      jsonRequest({ currentPassword: "oldpass12", newPassword: "newpass12" }),
+    );
+    expect(res.status).toBe(404);
   });
 });
