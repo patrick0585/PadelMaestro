@@ -17,6 +17,13 @@ export class JokerCapExceededError extends Error {
   }
 }
 
+export class JokerNotFoundError extends Error {
+  constructor(message = "No Joker set for this player on this game day") {
+    super(message);
+    this.name = "JokerNotFoundError";
+  }
+}
+
 async function snapshotPpg(playerId: string, seasonId: string): Promise<number> {
   const rows = await prisma.$queryRaw<
     Array<{ games: bigint; points: number | null }>
@@ -91,14 +98,10 @@ export async function recordJokerUse(args: { playerId: string; gameDayId: string
   });
 }
 
-export class JokerNotFoundError extends Error {
-  constructor(message = "No Joker set for this player on this game day") {
-    super(message);
-    this.name = "JokerNotFoundError";
-  }
-}
-
-export async function cancelJokerUse(args: { playerId: string; gameDayId: string }) {
+export async function cancelJokerUse(args: {
+  playerId: string;
+  gameDayId: string;
+}): Promise<void> {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
     select: { id: true, status: true, seasonId: true },
@@ -118,7 +121,7 @@ export async function cancelJokerUse(args: { playerId: string; gameDayId: string
   });
   if (!existing) throw new JokerNotFoundError();
 
-  return prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     await tx.jokerUse.delete({ where: { id: existing.id } });
     await tx.gameDayParticipant.update({
       where: {
@@ -134,8 +137,8 @@ export async function cancelJokerUse(args: { playerId: string; gameDayId: string
         entityId: existing.id,
         payload: {
           gameDayId: args.gameDayId,
-          ppgAtUse: existing.ppgAtUse.toString(),
-          pointsCredited: existing.pointsCredited.toString(),
+          ppgAtUse: Number(existing.ppgAtUse),
+          pointsCredited: Number(existing.pointsCredited),
         },
       },
     });

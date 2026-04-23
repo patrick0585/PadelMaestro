@@ -128,7 +128,6 @@ describe("cancelJokerUse", () => {
 
   it("throws JokerLockedError when the game day is no longer planned", async () => {
     const { player, gameDay } = await setup();
-    await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
     await prisma.gameDay.update({
       where: { id: gameDay.id },
       data: { status: "roster_locked" },
