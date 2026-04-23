@@ -33,7 +33,7 @@ export function UserMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated text-sm font-semibold text-primary border border-border-strong"
+        className="rounded-full"
       >
         <Avatar playerId={playerId} name={name} avatarVersion={avatarVersion} size={40} />
       </button>
