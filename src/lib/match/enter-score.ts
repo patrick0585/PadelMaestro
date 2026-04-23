@@ -16,12 +16,27 @@ export class GameDayFinishedError extends Error {
   }
 }
 
+export class NotAllowedError extends Error {
+  constructor(message = "not allowed") {
+    super(message);
+    this.name = "NotAllowedError";
+  }
+}
+
+export class InvalidScoreError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "InvalidScoreError";
+  }
+}
+
 export interface EnterScoreInput {
   matchId: string;
   team1Score: number;
   team2Score: number;
   scoredBy: string;
   expectedVersion: number;
+  isAdmin?: boolean;
 }
 
 export async function enterScore(input: EnterScoreInput) {
@@ -34,9 +49,19 @@ export async function enterScore(input: EnterScoreInput) {
     throw new GameDayFinishedError(match.gameDayId);
   }
 
+  const participants = [
+    match.team1PlayerAId,
+    match.team1PlayerBId,
+    match.team2PlayerAId,
+    match.team2PlayerBId,
+  ];
+  if (!input.isAdmin && !participants.includes(input.scoredBy)) {
+    throw new NotAllowedError("only match participants or admins can enter a score");
+  }
+
   const format: MatchFormat = match.gameDay.playerCount === 4 ? "tennis-set" : "sum-to-3";
   const v = validateScore(input.team1Score, input.team2Score, format);
-  if (!v.ok) throw new Error(v.reason);
+  if (!v.ok) throw new InvalidScoreError(v.reason);
 
   const result = await prisma.match.updateMany({
     where: { id: input.matchId, version: input.expectedVersion },

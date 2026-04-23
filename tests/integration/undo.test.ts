@@ -29,6 +29,7 @@ async function setupAndEnter() {
     team2Score: 1,
     scoredBy: players[0].id,
     expectedVersion: 0,
+    isAdmin: true,
   });
   return { players, day, matchId: matches[0].id };
 }

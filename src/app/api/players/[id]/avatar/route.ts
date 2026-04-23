@@ -102,6 +102,9 @@ export async function GET(_req: Request, ctx: RouteCtx) {
       "Content-Type": avatar.mimeType,
       "Cache-Control": "private, max-age=31536000, immutable",
       ETag: `"${id}-${avatar.version}"`,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      "Cross-Origin-Resource-Policy": "same-origin",
     },
   });
 }

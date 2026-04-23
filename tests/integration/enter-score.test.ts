@@ -3,7 +3,12 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { lockRoster } from "@/lib/game-day/lock";
-import { enterScore, ScoreConflictError, GameDayFinishedError } from "@/lib/match/enter-score";
+import {
+  enterScore,
+  ScoreConflictError,
+  GameDayFinishedError,
+  NotAllowedError,
+} from "@/lib/match/enter-score";
 import { resetDb } from "../helpers/reset-db";
 
 async function setupFivePlayerGame() {
@@ -38,6 +43,7 @@ describe("enterScore", () => {
       team2Score: 1,
       scoredBy: players[0].id,
       expectedVersion: 0,
+      isAdmin: true,
     });
     expect(updated.team1Score).toBe(2);
     expect(updated.team2Score).toBe(1);
@@ -53,6 +59,7 @@ describe("enterScore", () => {
         team2Score: 1,
         scoredBy: players[0].id,
         expectedVersion: 0,
+        isAdmin: true,
       }),
     ).rejects.toThrow(/sum to 3/i);
   });
@@ -65,6 +72,7 @@ describe("enterScore", () => {
       team2Score: 0,
       scoredBy: players[0].id,
       expectedVersion: 0,
+      isAdmin: true,
     });
     await expect(
       enterScore({
@@ -73,6 +81,7 @@ describe("enterScore", () => {
         team2Score: 3,
         scoredBy: players[1].id,
         expectedVersion: 0,
+        isAdmin: true,
       }),
     ).rejects.toThrow(ScoreConflictError);
   });
@@ -89,6 +98,7 @@ describe("enterScore", () => {
       team2Score: 0,
       scoredBy: players[0].id,
       expectedVersion: 0,
+      isAdmin: true,
     });
 
     const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
@@ -103,6 +113,7 @@ describe("enterScore", () => {
       team2Score: 0,
       scoredBy: players[0].id,
       expectedVersion: 0,
+      isAdmin: true,
     });
     await enterScore({
       matchId: matches[1].id,
@@ -110,6 +121,7 @@ describe("enterScore", () => {
       team2Score: 1,
       scoredBy: players[0].id,
       expectedVersion: 0,
+      isAdmin: true,
     });
 
     const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
@@ -125,6 +137,7 @@ describe("enterScore", () => {
         team2Score: 0,
         scoredBy: players[0].id,
         expectedVersion: 0,
+        isAdmin: true,
       });
     }
 
@@ -141,6 +154,7 @@ describe("enterScore", () => {
         team2Score: 0,
         scoredBy: players[0].id,
         expectedVersion: 0,
+        isAdmin: true,
       });
     }
     await prisma.gameDay.update({ where: { id: day.id }, data: { status: "finished" } });
@@ -152,6 +166,72 @@ describe("enterScore", () => {
         team2Score: 1,
         scoredBy: players[0].id,
         expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(GameDayFinishedError);
+  });
+
+  it("allows a match participant to enter the score", async () => {
+    const { matches } = await setupFivePlayerGame();
+    const match = matches[0];
+
+    const updated = await enterScore({
+      matchId: match.id,
+      team1Score: 2,
+      team2Score: 1,
+      scoredBy: match.team1PlayerAId,
+      expectedVersion: 0,
+    });
+    expect(updated.version).toBe(1);
+  });
+
+  it("rejects a non-participant non-admin with NotAllowedError", async () => {
+    const { matches } = await setupFivePlayerGame();
+    const match = matches[0];
+    const outsider = await prisma.player.create({
+      data: { name: "outsider", email: "o@x", passwordHash: "x" },
+    });
+
+    await expect(
+      enterScore({
+        matchId: match.id,
+        team1Score: 2,
+        team2Score: 1,
+        scoredBy: outsider.id,
+        expectedVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(NotAllowedError);
+  });
+
+  it("allows an admin who is not a match participant to enter the score", async () => {
+    const { matches } = await setupFivePlayerGame();
+    const match = matches[0];
+    const adminOutside = await prisma.player.create({
+      data: { name: "admin2", email: "a2@x", passwordHash: "x", isAdmin: true },
+    });
+
+    const updated = await enterScore({
+      matchId: match.id,
+      team1Score: 2,
+      team2Score: 1,
+      scoredBy: adminOutside.id,
+      expectedVersion: 0,
+      isAdmin: true,
+    });
+    expect(updated.version).toBe(1);
+  });
+
+  it("still blocks admin score entry after day is finished", async () => {
+    const { players, day, matches } = await setupFivePlayerGame();
+    await prisma.gameDay.update({ where: { id: day.id }, data: { status: "finished" } });
+
+    await expect(
+      enterScore({
+        matchId: matches[0].id,
+        team1Score: 2,
+        team2Score: 1,
+        scoredBy: players[0].id,
+        expectedVersion: 0,
+        isAdmin: true,
       }),
     ).rejects.toBeInstanceOf(GameDayFinishedError);
   });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { rateLimitRequest } from "@/lib/rate-limit";
 import {
   changeOwnPassword,
   WrongCurrentPasswordError,
@@ -18,6 +19,17 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const rl = rateLimitRequest(req, `profile-password:${session.user.id}`, {
+    windowMs: 60_000,
+    max: 5,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
   }
 
   const body = await req.json().catch(() => null);

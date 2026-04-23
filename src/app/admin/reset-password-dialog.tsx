@@ -10,11 +10,13 @@ export function ResetPasswordDialog({
   onClose,
   playerId,
   playerName,
+  hasPassword = true,
 }: {
   open: boolean;
   onClose: () => void;
   playerId: string | null;
   playerName: string | null;
+  hasPassword?: boolean;
 }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -48,10 +50,16 @@ export function ResetPasswordDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={`Passwort zurücksetzen — ${playerName ?? ""}`}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={`${hasPassword ? "Passwort zurücksetzen" : "Passwort setzen"} — ${playerName ?? ""}`}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <Label htmlFor="reset-password">Neues Passwort (min. 8 Zeichen)</Label>
+          <Label htmlFor="reset-password">
+            {hasPassword ? "Neues Passwort (min. 8 Zeichen)" : "Passwort (min. 8 Zeichen)"}
+          </Label>
           <Input
             id="reset-password"
             type="text"

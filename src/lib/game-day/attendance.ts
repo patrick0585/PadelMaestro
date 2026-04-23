@@ -22,15 +22,26 @@ export class PlayerNotFoundError extends Error {
   }
 }
 
+export class NotParticipantError extends Error {
+  constructor(gameDayId: string, playerId: string) {
+    super(`player ${playerId} is not a participant of game day ${gameDayId}`);
+    this.name = "NotParticipantError";
+  }
+}
+
 export async function setAttendance(
   gameDayId: string,
   playerId: string,
   attendance: AttendanceStatus,
 ) {
-  const day = await prisma.gameDay.findUniqueOrThrow({ where: { id: gameDayId } });
-  if (day.status !== "planned") {
-    throw new Error("Game day is locked; attendance can no longer be changed");
-  }
+  const day = await prisma.gameDay.findUnique({ where: { id: gameDayId } });
+  if (!day) throw new GameDayNotFoundError(gameDayId);
+  if (day.status !== "planned") throw new GameDayLockedError(gameDayId);
+
+  const participant = await prisma.gameDayParticipant.findUnique({
+    where: { gameDayId_playerId: { gameDayId, playerId } },
+  });
+  if (!participant) throw new NotParticipantError(gameDayId, playerId);
 
   return prisma.gameDayParticipant.update({
     where: { gameDayId_playerId: { gameDayId, playerId } },

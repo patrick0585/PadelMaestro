@@ -68,11 +68,9 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                 >
                   <Pencil className="h-4 w-4" aria-hidden />
                 </Button>
-                {p.hasPassword && (
-                  <Button variant="ghost" size="sm" onClick={() => setResetFor(p)}>
-                    Passwort
-                  </Button>
-                )}
+                <Button variant="ghost" size="sm" onClick={() => setResetFor(p)}>
+                  {p.hasPassword ? "Passwort" : "Passwort setzen"}
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setAvatarFor(p)}>
                   Avatar
                 </Button>
@@ -95,6 +93,7 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
         onClose={() => setResetFor(null)}
         playerId={resetFor?.id ?? null}
         playerName={resetFor?.name ?? null}
+        hasPassword={resetFor?.hasPassword ?? true}
       />
       <EditPlayerDialog
         open={editFor !== null}

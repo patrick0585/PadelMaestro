@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { normaliseUsername } from "@/lib/auth/username";
 
 export class PlayerNotFoundError extends Error {
   constructor(id: string) {
@@ -61,6 +62,10 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
     Object.entries(input.fields).filter(([, v]) => v !== undefined),
   ) as UpdatablePlayerFields;
   if (Object.keys(definedFields).length === 0) throw new NoFieldsError();
+
+  if (typeof definedFields.username === "string") {
+    definedFields.username = normaliseUsername(definedFields.username);
+  }
 
   try {
     return await prisma.$transaction(async (tx) => {
