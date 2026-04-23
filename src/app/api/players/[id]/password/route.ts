@@ -3,7 +3,8 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { resetPlayerPassword, PlayerNotFoundError } from "@/lib/players/reset-password";
 
-const Schema = z.object({ password: z.string().min(8) });
+// Cap at 72 bytes — bcrypt silently truncates longer inputs.
+const Schema = z.object({ password: z.string().min(8).max(72) });
 
 export async function PATCH(
   req: Request,

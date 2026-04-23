@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 
@@ -38,6 +39,14 @@ export function UserMenu({ name }: { name: string }) {
           role="menu"
           className="absolute right-0 mt-2 w-44 rounded-xl border border-border-strong bg-surface-elevated py-1 text-foreground"
         >
+          <Link
+            role="menuitem"
+            href="/profil"
+            onClick={() => setOpen(false)}
+            className="block w-full px-4 py-2 text-left text-sm text-foreground hover:bg-surface-muted"
+          >
+            Profil
+          </Link>
           <button
             role="menuitem"
             onClick={() => signOut({ callbackUrl: "/login" })}
