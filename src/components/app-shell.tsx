@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { TopNav } from "./top-nav";
+import { MobileTopBar } from "./mobile-top-bar";
 import { BottomTabs } from "./bottom-tabs";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <TopNav
         isAdmin={isAdmin}
+        name={name}
+        playerId={session.user.id}
+        avatarVersion={avatarVersion}
+      />
+      <MobileTopBar
         name={name}
         playerId={session.user.id}
         avatarVersion={avatarVersion}
