@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "./user-menu";
+import { PadelLogo } from "./padel-logo";
 
 type Item = { href: string; label: string };
 
@@ -31,8 +32,12 @@ export function TopNav({
   return (
     <header className="hidden md:block sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-6">
-        <Link href="/" className="text-lg font-extrabold tracking-tight text-foreground">
-          Padel Tracker
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-foreground"
+        >
+          <PadelLogo className="h-7 w-7" />
+          Padelmaestro
         </Link>
         <nav aria-label="Hauptnavigation" className="flex items-center gap-5">
           {items.map((i) => {
