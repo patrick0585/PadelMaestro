@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ATTENDANCE_ERROR_MESSAGES,
-  ATTENDANCE_GENERIC_ERROR,
+  genericAttendanceError,
   type AttendanceErrorCode,
 } from "@/lib/game-day/attendance-errors";
 import {
@@ -37,11 +37,18 @@ export function PlannedSection({
   async function setStatus(next: Exclude<MemberAttendance, "joker">) {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/game-days/${gameDayId}/attendance`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: next }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`/api/game-days/${gameDayId}/attendance`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+    } catch {
+      setBusy(false);
+      setError(genericAttendanceError(0));
+      return;
+    }
     setBusy(false);
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { code?: string } | null;
@@ -49,7 +56,7 @@ export function PlannedSection({
       if (code && code in ATTENDANCE_ERROR_MESSAGES) {
         setError(ATTENDANCE_ERROR_MESSAGES[code as AttendanceErrorCode]);
       } else {
-        setError(ATTENDANCE_GENERIC_ERROR);
+        setError(genericAttendanceError(res.status));
       }
       return;
     }

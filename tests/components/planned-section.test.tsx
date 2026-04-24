@@ -55,7 +55,7 @@ describe("<PlannedSection> attendance error handling", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/existiert nicht mehr/i);
   });
 
-  it("shows a generic error for unknown failures", async () => {
+  it("includes the HTTP status in the generic error for a 500", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -66,8 +66,29 @@ describe("<PlannedSection> attendance error handling", () => {
     );
     render(<PlannedSection gameDayId="gd-1" me={me} participants={participants} />);
     await userEvent.click(screen.getByRole("button", { name: "Dabei" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      /Teilnahme konnte nicht gespeichert werden/i,
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/Teilnahme konnte nicht gespeichert werden/i);
+    expect(alert).toHaveTextContent(/500/);
+  });
+
+  it("shows a session-expired message when the server returns 401", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: "unauthenticated" }),
+      }),
     );
+    render(<PlannedSection gameDayId="gd-1" me={me} participants={participants} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Sitzung ist abgelaufen/i);
+  });
+
+  it("shows a connection error when fetch rejects (network drop)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    render(<PlannedSection gameDayId="gd-1" me={me} participants={participants} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Keine Verbindung/i);
   });
 });

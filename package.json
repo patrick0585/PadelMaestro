@@ -20,7 +20,8 @@
     "import:historical": "tsx scripts/import-historical.ts",
     "import:statistik": "tsx scripts/import-statistik.ts",
     "fix:gameday-duplicates": "tsx scripts/fix-gameday-duplicates.ts",
-    "reset:password": "tsx scripts/reset-password.ts"
+    "reset:password": "tsx scripts/reset-password.ts",
+    "diagnose:attendance": "tsx scripts/diagnose-attendance.ts"
   },
   "keywords": [],
   "author": "",
