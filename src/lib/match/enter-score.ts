@@ -49,14 +49,16 @@ export async function enterScore(input: EnterScoreInput) {
     throw new GameDayFinishedError(match.gameDayId);
   }
 
-  const participants = [
-    match.team1PlayerAId,
-    match.team1PlayerBId,
-    match.team2PlayerAId,
-    match.team2PlayerBId,
-  ];
-  if (!input.isAdmin && !participants.includes(input.scoredBy)) {
-    throw new NotAllowedError("only match participants or admins can enter a score");
+  if (!input.isAdmin) {
+    const dayParticipant = await prisma.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId: match.gameDayId, playerId: input.scoredBy } },
+      select: { attendance: true },
+    });
+    const isOnRoster =
+      dayParticipant?.attendance === "confirmed" || dayParticipant?.attendance === "joker";
+    if (!isOnRoster) {
+      throw new NotAllowedError("only confirmed participants or admins can enter a score");
+    }
   }
 
   const format: MatchFormat = match.gameDay.playerCount === 4 ? "tennis-set" : "sum-to-3";
