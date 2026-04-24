@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { JokerConfirmDialog } from "@/components/joker-confirm-dialog";
 import {
   ATTENDANCE_ERROR_MESSAGES,
-  ATTENDANCE_GENERIC_ERROR,
+  genericAttendanceError,
+  genericJokerError,
   type AttendanceErrorCode,
 } from "@/lib/game-day/attendance-errors";
 
@@ -43,8 +44,6 @@ const JOKER_ERROR_MESSAGES: Record<JokerErrorCode, string> = {
   JOKER_CAP_EXCEEDED: "Du hast deine 2 Joker dieser Saison bereits verbraucht.",
   JOKER_NOT_FOUND: "Joker war nicht gesetzt.",
 };
-const JOKER_GENERIC_ERROR =
-  "Joker konnte nicht gespeichert werden. Bitte erneut versuchen.";
 
 async function readErrorCode(res: Response): Promise<string | null> {
   const body = (await res.json().catch(() => null)) as { code?: string } | null;
@@ -66,49 +65,67 @@ export function DashboardHero({ state }: { state: HeroState }) {
   }
 
   async function postAttendance(next: "confirmed" | "declined" | "pending"): Promise<boolean> {
-    const res = await fetch(`/api/game-days/${state.gameDayId}/attendance`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: next }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`/api/game-days/${state.gameDayId}/attendance`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+    } catch {
+      setError(genericAttendanceError(0));
+      return false;
+    }
     if (res.ok) return true;
     const code = await readErrorCode(res);
     if (code && code in ATTENDANCE_ERROR_MESSAGES) {
       setError(ATTENDANCE_ERROR_MESSAGES[code as AttendanceErrorCode]);
     } else {
-      setError(ATTENDANCE_GENERIC_ERROR);
+      setError(genericAttendanceError(res.status));
     }
     return false;
   }
 
   async function deleteJoker(): Promise<boolean> {
-    const res = await fetch("/api/jokers", {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gameDayId: state.gameDayId }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/jokers", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ gameDayId: state.gameDayId }),
+      });
+    } catch {
+      setError(genericJokerError(0));
+      return false;
+    }
     if (res.ok) return true;
     const code = await readErrorCode(res);
     if (code && code in JOKER_ERROR_MESSAGES) {
       setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
     } else {
-      setError(JOKER_GENERIC_ERROR);
+      setError(genericJokerError(res.status));
     }
     return false;
   }
 
   async function postJoker(): Promise<boolean> {
-    const res = await fetch("/api/jokers", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gameDayId: state.gameDayId }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/jokers", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ gameDayId: state.gameDayId }),
+      });
+    } catch {
+      setError(genericJokerError(0));
+      return false;
+    }
     if (res.ok) return true;
     const code = await readErrorCode(res);
     if (code && code in JOKER_ERROR_MESSAGES) {
       setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
     } else {
-      setError(JOKER_GENERIC_ERROR);
+      setError(genericJokerError(res.status));
     }
     return false;
   }

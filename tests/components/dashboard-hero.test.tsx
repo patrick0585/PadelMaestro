@@ -139,7 +139,7 @@ describe("<DashboardHero> (member)", () => {
     );
   });
 
-  it("shows a generic error when the server returns 500", async () => {
+  it("includes the HTTP status in the generic error for a 500", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -150,8 +150,29 @@ describe("<DashboardHero> (member)", () => {
     );
     render(<DashboardHero state={member()} />);
     await userEvent.click(screen.getByRole("button", { name: "Dabei sein" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      /Teilnahme konnte nicht gespeichert werden/i,
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/Teilnahme konnte nicht gespeichert werden/i);
+    expect(alert).toHaveTextContent(/500/);
+  });
+
+  it("shows a session-expired message when the server returns 401", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: "unauthenticated" }),
+      }),
     );
+    render(<DashboardHero state={member()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei sein" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Sitzung ist abgelaufen/i);
+  });
+
+  it("shows a connection error when fetch rejects (network drop)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    render(<DashboardHero state={member()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei sein" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Keine Verbindung/i);
   });
 });
