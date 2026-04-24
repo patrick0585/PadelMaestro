@@ -106,4 +106,52 @@ describe("<DashboardHero> (member)", () => {
     render(<DashboardHero state={member()} />);
     expect(screen.queryByText(/^\d{2}:\d{2}$/)).not.toBeInTheDocument();
   });
+
+  it("shows ATTENDANCE_LOCKED message when the server returns 409 with that code", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ code: "ATTENDANCE_LOCKED" }),
+      }),
+    );
+    render(<DashboardHero state={member()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei sein" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /Spieltag ist bereits gestartet/i,
+    );
+  });
+
+  it("shows ATTENDANCE_NOT_PARTICIPANT message when the server returns 403", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ code: "ATTENDANCE_NOT_PARTICIPANT" }),
+      }),
+    );
+    render(<DashboardHero state={member()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Nicht dabei" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /nicht Teilnehmer/i,
+    );
+  });
+
+  it("shows a generic error when the server returns 500", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      }),
+    );
+    render(<DashboardHero state={member()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei sein" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /Teilnahme konnte nicht gespeichert werden/i,
+    );
+  });
 });
