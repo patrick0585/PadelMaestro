@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Stepper } from "@/components/ui/stepper";
 import { determineWinner } from "@/lib/game-day/match-display";
+import { formatScoredBy } from "@/lib/match/scored-by";
 
 export interface MatchRow {
   id: string;
@@ -14,6 +15,8 @@ export interface MatchRow {
   team1Score: number | null;
   team2Score: number | null;
   version: number;
+  scoredByName: string | null;
+  scoredAt: string | null;
 }
 
 export function MatchInlineCard({
@@ -32,6 +35,9 @@ export function MatchInlineCard({
   const [error, setError] = useState<string | null>(null);
 
   const winner = editing ? null : determineWinner(match.team1Score, match.team2Score);
+  const scoredByHint = editing
+    ? null
+    : formatScoredBy(match.scoredByName, match.scoredAt);
 
   function startEdit() {
     setT1(match.team1Score ?? 0);
@@ -125,11 +131,16 @@ export function MatchInlineCard({
           </button>
         </div>
       ) : (
-        <div className="mt-2 text-right">
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {scoredByHint ? (
+            <span className="truncate text-[0.65rem] text-foreground-muted">{scoredByHint}</span>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
             onClick={startEdit}
-            className="text-[0.72rem] font-semibold text-primary hover:underline"
+            className="shrink-0 text-[0.72rem] font-semibold text-primary hover:underline"
           >
             {hasScore ? "✎ bearbeiten" : "Tap zum Eintragen"}
           </button>

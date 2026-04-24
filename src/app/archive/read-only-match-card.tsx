@@ -1,4 +1,5 @@
 import { determineWinner } from "@/lib/game-day/match-display";
+import { formatScoredBy } from "@/lib/match/scored-by";
 
 export interface ReadOnlyMatch {
   matchNumber: number;
@@ -8,11 +9,14 @@ export interface ReadOnlyMatch {
   team2B: string;
   team1Score: number | null;
   team2Score: number | null;
+  scoredByName: string | null;
+  scoredAt: string | null;
 }
 
 export function ReadOnlyMatchCard({ match }: { match: ReadOnlyMatch }) {
   const hasScore = match.team1Score !== null && match.team2Score !== null;
   const winner = determineWinner(match.team1Score, match.team2Score);
+  const scoredByHint = formatScoredBy(match.scoredByName, match.scoredAt);
 
   return (
     <article
@@ -52,6 +56,10 @@ export function ReadOnlyMatchCard({ match }: { match: ReadOnlyMatch }) {
           <div className="text-[0.65rem] text-foreground-dim">Team B</div>
         </div>
       </div>
+
+      {scoredByHint && (
+        <div className="mt-2 truncate text-[0.65rem] text-foreground-muted">{scoredByHint}</div>
+      )}
     </article>
   );
 }

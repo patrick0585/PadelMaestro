@@ -184,6 +184,48 @@ describe("enterScore", () => {
     expect(updated.version).toBe(1);
   });
 
+  it("allows a confirmed day participant who is not playing this match", async () => {
+    const { players, matches } = await setupFivePlayerGame();
+    const match = matches[0];
+    const onCourt = new Set([
+      match.team1PlayerAId,
+      match.team1PlayerBId,
+      match.team2PlayerAId,
+      match.team2PlayerBId,
+    ]);
+    const bench = players.find((p) => !onCourt.has(p.id) && !p.isAdmin);
+    if (!bench) throw new Error("no bench player available");
+
+    const updated = await enterScore({
+      matchId: match.id,
+      team1Score: 2,
+      team2Score: 1,
+      scoredBy: bench.id,
+      expectedVersion: 0,
+    });
+    expect(updated.version).toBe(1);
+    expect(updated.scoredById).toBe(bench.id);
+  });
+
+  it("rejects a day participant whose attendance is declined", async () => {
+    const { players, day, matches } = await setupFivePlayerGame();
+    const nonAdmin = players.find((p) => !p.isAdmin)!;
+    await prisma.gameDayParticipant.update({
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: nonAdmin.id } },
+      data: { attendance: "declined" },
+    });
+
+    await expect(
+      enterScore({
+        matchId: matches[0].id,
+        team1Score: 2,
+        team2Score: 1,
+        scoredBy: nonAdmin.id,
+        expectedVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(NotAllowedError);
+  });
+
   it("rejects a non-participant non-admin with NotAllowedError", async () => {
     const { matches } = await setupFivePlayerGame();
     const match = matches[0];
