@@ -60,14 +60,14 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
     WHERE p."deletedAt" IS NULL
       AND (played.points IS NOT NULL OR j.jokers_used IS NOT NULL)
     GROUP BY p.id, p.name, p."avatarVersion", j.games_credited, j.points_credited, j.jokers_used
-    ORDER BY (
+    ORDER BY points DESC,
+    (
       (COALESCE(SUM(played.points), 0)::float + COALESCE(j.points_credited, 0)::float)
       / NULLIF(
           COALESCE(COUNT(played.points), 0)::float + COALESCE(j.games_credited, 0)::float,
           0
         )
-    ) DESC NULLS LAST,
-    points DESC
+    ) DESC NULLS LAST
   `;
 
   return rows.map((r, i) => {
