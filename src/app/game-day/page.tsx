@@ -32,6 +32,7 @@ export default async function GameDayPage() {
         team1PlayerB: { select: { name: true } },
         team2PlayerA: { select: { name: true } },
         team2PlayerB: { select: { name: true } },
+        scoredBy: { select: { name: true } },
       },
     },
   };
@@ -135,6 +136,8 @@ export default async function GameDayPage() {
                   team1Score: m.team1Score,
                   team2Score: m.team2Score,
                   version: m.version,
+                  scoredByName: m.scoredBy?.name ?? null,
+                  scoredAt: m.scoredAt?.toISOString() ?? null,
                 }}
               />
             ))}

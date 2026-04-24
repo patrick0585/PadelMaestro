@@ -32,6 +32,7 @@ export default async function ArchiveDetailPage({
           team1PlayerB: { select: { name: true } },
           team2PlayerA: { select: { name: true } },
           team2PlayerB: { select: { name: true } },
+          scoredBy: { select: { name: true } },
         },
       },
     },
@@ -83,6 +84,8 @@ export default async function ArchiveDetailPage({
                   team2B: m.team2PlayerB.name,
                   team1Score: m.team1Score,
                   team2Score: m.team2Score,
+                  scoredByName: m.scoredBy?.name ?? null,
+                  scoredAt: m.scoredAt?.toISOString() ?? null,
                 }}
               />
             ))}
