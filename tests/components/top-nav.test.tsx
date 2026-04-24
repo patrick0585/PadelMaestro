@@ -12,7 +12,7 @@ describe("<TopNav>", () => {
   it("renders the brand, user-visible links, and user menu", () => {
     currentPath = "/ranking";
     render(<TopNav isAdmin={false} name="Patrick Koch" playerId="player-1" avatarVersion={0} />);
-    expect(screen.getByText("Padel Tracker")).toBeInTheDocument();
+    expect(screen.getByText("Padelmaestro")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /rangliste/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /spieltag/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();

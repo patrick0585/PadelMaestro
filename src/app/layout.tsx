@@ -3,7 +3,7 @@ import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 
 export const metadata: Metadata = {
-  title: "Padel Tracker",
+  title: "Padelmaestro",
   description: "Paarungen und Rangliste für unsere Padel-Gruppe",
 };
 
