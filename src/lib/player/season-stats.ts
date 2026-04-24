@@ -8,8 +8,13 @@ export type TrendDelta = "up" | "down" | "flat";
 
 export interface DayTrend {
   gameDayId: string;
+  date: Date;
   ppg: number;
   delta: TrendDelta;
+  points: number;
+  matches: number;
+  placement: number;
+  totalPlayers: number;
 }
 
 const RECENT_DAYS_COUNT = 5;
@@ -127,9 +132,11 @@ export async function computePlayerSeasonStats(
   const summaries = await Promise.all(
     [...attendedDays].map((id) => computeGameDaySummary(id)),
   );
+  const summaryById = new Map(
+    summaries.filter((s): s is NonNullable<typeof s> => s !== null).map((s) => [s.gameDayId, s]),
+  );
   const medals = { gold: 0, silver: 0, bronze: 0 };
-  for (const s of summaries) {
-    if (!s) continue;
+  for (const s of summaryById.values()) {
     const podium = s.podium;
     if (podium[0]?.playerId === playerId) medals.gold += 1;
     if (podium[1]?.playerId === playerId) medals.silver += 1;
@@ -158,25 +165,43 @@ export async function computePlayerSeasonStats(
   const dayPpgList = [...perDay.entries()].map(([gameDayId, v]) => ({
     gameDayId,
     ppg: v.points / v.matches,
+    points: v.points,
+    matches: v.matches,
   }));
   // Compare deltas at display precision (1 decimal) so two days that render
   // the same PPG on the chip are treated as "flat" rather than up/down due to
   // floating-point jitter in the integer-division quotient.
   const toDisplayPpg = (ppg: number) => Math.round(ppg * 10) / 10;
-  const recentDays: DayTrend[] = dayPpgList.slice(0, RECENT_DAYS_COUNT).map((d, i, arr) => {
-    const prev = arr[i + 1];
-    const cur = toDisplayPpg(d.ppg);
-    const prevRounded = prev ? toDisplayPpg(prev.ppg) : null;
-    const delta: TrendDelta =
-      prevRounded === null
-        ? "flat"
-        : cur > prevRounded
-          ? "up"
-          : cur < prevRounded
-            ? "down"
-            : "flat";
-    return { gameDayId: d.gameDayId, ppg: d.ppg, delta };
-  });
+  const recentDays: DayTrend[] = dayPpgList
+    .slice(0, RECENT_DAYS_COUNT)
+    .map((d, i, arr): DayTrend | null => {
+      const prev = arr[i + 1];
+      const cur = toDisplayPpg(d.ppg);
+      const prevRounded = prev ? toDisplayPpg(prev.ppg) : null;
+      const delta: TrendDelta =
+        prevRounded === null
+          ? "flat"
+          : cur > prevRounded
+            ? "up"
+            : cur < prevRounded
+              ? "down"
+              : "flat";
+      const summary = summaryById.get(d.gameDayId);
+      if (!summary) return null;
+      const idx = summary.rows.findIndex((r) => r.playerId === playerId);
+      if (idx < 0) return null;
+      return {
+        gameDayId: d.gameDayId,
+        date: summary.date,
+        ppg: d.ppg,
+        delta,
+        points: d.points,
+        matches: d.matches,
+        placement: idx + 1,
+        totalPlayers: summary.rows.length,
+      };
+    })
+    .filter((d): d is DayTrend => d !== null);
 
   const partnerTotals = new Map<string, { pointsTogether: number; matches: number }>();
   for (const r of rows) {
