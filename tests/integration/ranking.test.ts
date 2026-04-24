@@ -63,6 +63,53 @@ describe("computeRanking", () => {
     expect(thomas.points).toBe(1);
   });
 
+  it("sorts by total points with points-per-game as tiebreaker", async () => {
+    const year = new Date().getFullYear();
+    const season = await prisma.season.create({
+      data: {
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    });
+    const [highPpg, highTotal] = await Promise.all(
+      ["HighPpg", "HighTotal"].map((n) =>
+        prisma.player.create({ data: { name: n, email: `${n}@x`, passwordHash: "x" } }),
+      ),
+    );
+    const gd = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-04-24"), playerCount: 5 },
+    });
+    // HighPpg: 1 game, 5 points → Ø 5, total 5
+    await prisma.jokerUse.create({
+      data: {
+        playerId: highPpg.id,
+        seasonId: season.id,
+        gameDayId: gd.id,
+        ppgAtUse: "5",
+        gamesCredited: 1,
+        pointsCredited: "5.00",
+      },
+    });
+    // HighTotal: 3 games, 9 points → Ø 3, total 9
+    await prisma.jokerUse.create({
+      data: {
+        playerId: highTotal.id,
+        seasonId: season.id,
+        gameDayId: gd.id,
+        ppgAtUse: "3",
+        gamesCredited: 3,
+        pointsCredited: "9.00",
+      },
+    });
+
+    const ranking = await computeRanking(season.id);
+    expect(ranking.map((r) => r.playerName)).toEqual(["HighTotal", "HighPpg"]);
+    expect(ranking[0].rank).toBe(1);
+    expect(ranking[1].rank).toBe(2);
+  });
+
   it("includes joker uses in ranking totals", async () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
