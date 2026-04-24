@@ -4,6 +4,11 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  ATTENDANCE_ERROR_MESSAGES,
+  ATTENDANCE_GENERIC_ERROR,
+  type AttendanceErrorCode,
+} from "@/lib/game-day/attendance-errors";
+import {
   RosterChips,
   type RosterAttendance,
   type RosterParticipant,
@@ -39,7 +44,13 @@ export function PlannedSection({
     });
     setBusy(false);
     if (!res.ok) {
-      setError("Konnte Status nicht speichern");
+      const body = (await res.json().catch(() => null)) as { code?: string } | null;
+      const code = body?.code;
+      if (code && code in ATTENDANCE_ERROR_MESSAGES) {
+        setError(ATTENDANCE_ERROR_MESSAGES[code as AttendanceErrorCode]);
+      } else {
+        setError(ATTENDANCE_GENERIC_ERROR);
+      }
       return;
     }
     router.refresh();
@@ -104,7 +115,7 @@ export function PlannedSection({
       )}
 
       {error && (
-        <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p>
+        <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <RosterChips participants={participants} />

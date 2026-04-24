@@ -4,6 +4,11 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { JokerConfirmDialog } from "@/components/joker-confirm-dialog";
+import {
+  ATTENDANCE_ERROR_MESSAGES,
+  ATTENDANCE_GENERIC_ERROR,
+  type AttendanceErrorCode,
+} from "@/lib/game-day/attendance-errors";
 
 export type HeroState =
   | {
@@ -32,12 +37,19 @@ function formatDate(iso: string): string {
   });
 }
 
-type ErrorCode = "JOKER_LOCKED" | "JOKER_CAP_EXCEEDED" | "JOKER_NOT_FOUND";
-const ERROR_MESSAGES: Record<ErrorCode, string> = {
+type JokerErrorCode = "JOKER_LOCKED" | "JOKER_CAP_EXCEEDED" | "JOKER_NOT_FOUND";
+const JOKER_ERROR_MESSAGES: Record<JokerErrorCode, string> = {
   JOKER_LOCKED: "Spieltag ist bereits gestartet — Änderungen nicht mehr möglich.",
   JOKER_CAP_EXCEEDED: "Du hast deine 2 Joker dieser Saison bereits verbraucht.",
   JOKER_NOT_FOUND: "Joker war nicht gesetzt.",
 };
+const JOKER_GENERIC_ERROR =
+  "Joker konnte nicht gespeichert werden. Bitte erneut versuchen.";
+
+async function readErrorCode(res: Response): Promise<string | null> {
+  const body = (await res.json().catch(() => null)) as { code?: string } | null;
+  return body?.code ?? null;
+}
 
 export function DashboardHero({ state }: { state: HeroState }) {
   const router = useRouter();
@@ -60,9 +72,11 @@ export function DashboardHero({ state }: { state: HeroState }) {
       body: JSON.stringify({ status: next }),
     });
     if (res.ok) return true;
-    if (res.status === 409) {
-      const body = (await res.json().catch(() => null)) as { code?: ErrorCode } | null;
-      if (body?.code) setError(ERROR_MESSAGES[body.code]);
+    const code = await readErrorCode(res);
+    if (code && code in ATTENDANCE_ERROR_MESSAGES) {
+      setError(ATTENDANCE_ERROR_MESSAGES[code as AttendanceErrorCode]);
+    } else {
+      setError(ATTENDANCE_GENERIC_ERROR);
     }
     return false;
   }
@@ -74,9 +88,11 @@ export function DashboardHero({ state }: { state: HeroState }) {
       body: JSON.stringify({ gameDayId: state.gameDayId }),
     });
     if (res.ok) return true;
-    if (res.status === 409) {
-      const body = (await res.json().catch(() => null)) as { code?: ErrorCode } | null;
-      if (body?.code) setError(ERROR_MESSAGES[body.code]);
+    const code = await readErrorCode(res);
+    if (code && code in JOKER_ERROR_MESSAGES) {
+      setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
+    } else {
+      setError(JOKER_GENERIC_ERROR);
     }
     return false;
   }
@@ -88,9 +104,11 @@ export function DashboardHero({ state }: { state: HeroState }) {
       body: JSON.stringify({ gameDayId: state.gameDayId }),
     });
     if (res.ok) return true;
-    if (res.status === 409) {
-      const body = (await res.json().catch(() => null)) as { code?: ErrorCode } | null;
-      if (body?.code) setError(ERROR_MESSAGES[body.code]);
+    const code = await readErrorCode(res);
+    if (code && code in JOKER_ERROR_MESSAGES) {
+      setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
+    } else {
+      setError(JOKER_GENERIC_ERROR);
     }
     return false;
   }

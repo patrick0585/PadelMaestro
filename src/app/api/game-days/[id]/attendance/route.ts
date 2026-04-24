@@ -26,13 +26,13 @@ export async function POST(
     return NextResponse.json({ participant: updated });
   } catch (err) {
     if (err instanceof GameDayNotFoundError) {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
+      return NextResponse.json({ code: "ATTENDANCE_GAME_DAY_NOT_FOUND" }, { status: 404 });
     }
     if (err instanceof GameDayLockedError) {
-      return NextResponse.json({ error: "locked" }, { status: 409 });
+      return NextResponse.json({ code: "ATTENDANCE_LOCKED" }, { status: 409 });
     }
     if (err instanceof NotParticipantError) {
-      return NextResponse.json({ error: "not_participant" }, { status: 403 });
+      return NextResponse.json({ code: "ATTENDANCE_NOT_PARTICIPANT" }, { status: 403 });
     }
     throw err;
   }
