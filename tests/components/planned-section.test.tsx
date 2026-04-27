@@ -55,7 +55,7 @@ describe("<PlannedSection> attendance error handling", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/existiert nicht mehr/i);
   });
 
-  it("includes the HTTP status in the generic error for a 500", async () => {
+  it("includes the HTTP status and re-login hint in the generic error for a 500", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -69,6 +69,23 @@ describe("<PlannedSection> attendance error handling", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/Teilnahme konnte nicht gespeichert werden/i);
     expect(alert).toHaveTextContent(/500/);
+    expect(alert).toHaveTextContent(/abmelden und neu anmelden/i);
+  });
+
+  it("suggests re-login on a bare 403 with no error code (CSRF/session)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({}),
+      }),
+    );
+    render(<PlannedSection gameDayId="gd-1" me={me} participants={participants} />);
+    await userEvent.click(screen.getByRole("button", { name: "Dabei" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/403/);
+    expect(alert).toHaveTextContent(/abmelden und neu anmelden/i);
   });
 
   it("shows a session-expired message when the server returns 401", async () => {
