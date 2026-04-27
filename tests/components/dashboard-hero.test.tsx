@@ -139,7 +139,7 @@ describe("<DashboardHero> (member)", () => {
     );
   });
 
-  it("includes the HTTP status in the generic error for a 500", async () => {
+  it("includes the HTTP status and re-login hint in the generic error for a 500", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -153,6 +153,7 @@ describe("<DashboardHero> (member)", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/Teilnahme konnte nicht gespeichert werden/i);
     expect(alert).toHaveTextContent(/500/);
+    expect(alert).toHaveTextContent(/abmelden und neu anmelden/i);
   });
 
   it("shows a session-expired message when the server returns 401", async () => {

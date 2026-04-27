@@ -13,26 +13,27 @@ export const ATTENDANCE_ERROR_MESSAGES: Record<AttendanceErrorCode, string> = {
 };
 
 // Shown when the server returns an HTTP status we don't have a specific message
-// for (e.g. 401 session expired, 500 server error) or when the request fails
-// before reaching the server (network drop). Mobile browsers drop the session
-// cookie silently; surfacing the status lets the user act (re-login) instead of
-// retrying blindly.
+// for (e.g. 401 session expired, 403 CSRF mismatch, 500 server error) or when
+// the request fails before reaching the server (network drop). Mobile browsers
+// drop the session cookie silently; the actionable advice for the user is
+// almost always "log out and log back in" — retrying alone won't refresh a
+// stale session.
 export function genericAttendanceError(status: number): string {
-  if (status === 401) {
-    return "Deine Sitzung ist abgelaufen. Bitte einmal ausloggen und neu einloggen.";
-  }
   if (status === 0) {
-    return "Keine Verbindung. Bitte Internetverbindung prüfen und erneut versuchen.";
+    return "Keine Verbindung. Bitte Internetverbindung prüfen.";
   }
-  return `Teilnahme konnte nicht gespeichert werden (Fehler ${status}). Bitte erneut versuchen.`;
+  if (status === 401) {
+    return "Sitzung ist abgelaufen. Bitte einmal abmelden und neu anmelden.";
+  }
+  return `Teilnahme konnte nicht gespeichert werden (Fehler ${status}). Bitte einmal abmelden und neu anmelden.`;
 }
 
 export function genericJokerError(status: number): string {
-  if (status === 401) {
-    return "Deine Sitzung ist abgelaufen. Bitte einmal ausloggen und neu einloggen.";
-  }
   if (status === 0) {
-    return "Keine Verbindung. Bitte Internetverbindung prüfen und erneut versuchen.";
+    return "Keine Verbindung. Bitte Internetverbindung prüfen.";
   }
-  return `Joker konnte nicht gespeichert werden (Fehler ${status}). Bitte erneut versuchen.`;
+  if (status === 401) {
+    return "Sitzung ist abgelaufen. Bitte einmal abmelden und neu anmelden.";
+  }
+  return `Joker konnte nicht gespeichert werden (Fehler ${status}). Bitte einmal abmelden und neu anmelden.`;
 }
