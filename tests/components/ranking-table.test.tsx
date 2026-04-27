@@ -13,6 +13,7 @@ function row(overrides: Partial<RankingRow>): RankingRow {
     pointsPerGame: 0,
     games: 0,
     jokersUsed: 0,
+    medals: { gold: 0, silver: 0, bronze: 0 },
     ...overrides,
   };
 }
@@ -108,5 +109,63 @@ describe("<RankingTable>", () => {
   it("renders the Joker column header", () => {
     render(<RankingTable ranking={[row({})]} />);
     expect(screen.getByText("Jkr")).toBeInTheDocument();
+  });
+
+  it("renders a medal subline under the player name when medals exist", () => {
+    render(
+      <RankingTable
+        ranking={[
+          row({
+            rank: 1,
+            playerId: "p1",
+            playerName: "Paul",
+            medals: { gold: 5, silver: 2, bronze: 1 },
+          }),
+        ]}
+      />,
+    );
+    const scoped = scopeTo("Paul");
+    expect(scoped.getByLabelText("5 Gold, 2 Silber, 1 Bronze")).toBeInTheDocument();
+    expect(scoped.getByText(/🥇5/)).toBeInTheDocument();
+    expect(scoped.getByText(/🥈2/)).toBeInTheDocument();
+    expect(scoped.getByText(/🥉1/)).toBeInTheDocument();
+  });
+
+  it("omits the medal subline when the player has no medals", () => {
+    render(
+      <RankingTable
+        ranking={[
+          row({
+            rank: 5,
+            playerId: "p5",
+            playerName: "Rene",
+            medals: { gold: 0, silver: 0, bronze: 0 },
+          }),
+        ]}
+      />,
+    );
+    const scoped = scopeTo("Rene");
+    expect(scoped.queryByText(/🥇/)).toBeNull();
+    expect(scoped.queryByText(/🥈/)).toBeNull();
+    expect(scoped.queryByText(/🥉/)).toBeNull();
+  });
+
+  it("hides medal types the player has zero of", () => {
+    render(
+      <RankingTable
+        ranking={[
+          row({
+            rank: 4,
+            playerId: "p4",
+            playerName: "Thomas",
+            medals: { gold: 0, silver: 1, bronze: 0 },
+          }),
+        ]}
+      />,
+    );
+    const scoped = scopeTo("Thomas");
+    expect(scoped.getByText(/🥈1/)).toBeInTheDocument();
+    expect(scoped.queryByText(/🥇/)).toBeNull();
+    expect(scoped.queryByText(/🥉/)).toBeNull();
   });
 });
