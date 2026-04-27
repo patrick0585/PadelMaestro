@@ -26,31 +26,55 @@ export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
         <span className="text-right">Jkr</span>
       </div>
       <ul className="divide-y divide-border">
-        {ranking.map((r) => (
-          <li key={r.playerId} className={`${GRID} px-3 py-3`}>
-            <span className="text-center tabular-nums">
-              {MEDALS[r.rank] ? (
-                <span aria-label={`Platz ${r.rank}`} className="text-lg" role="img">
-                  {MEDALS[r.rank]}
-                </span>
-              ) : (
-                <span className="text-sm font-extrabold text-primary">{r.rank}</span>
-              )}
-            </span>
-            <Avatar playerId={r.playerId} name={r.playerName} avatarVersion={r.avatarVersion} size={32} />
-            <span className="truncate text-sm font-semibold text-foreground">{r.playerName}</span>
-            <span className="text-right text-sm font-semibold tabular-nums text-foreground">
-              {r.points.toFixed(0)}
-            </span>
-            <span className="text-right text-sm font-semibold tabular-nums text-foreground-muted">
-              {r.pointsPerGame.toFixed(2)}
-            </span>
-            <span className="text-right text-xs tabular-nums text-foreground-muted">{r.games}</span>
-            <span className="text-right text-xs tabular-nums text-foreground-muted">
-              {r.jokersUsed}
-            </span>
-          </li>
-        ))}
+        {ranking.map((r) => {
+          const totalMedals = r.medals.gold + r.medals.silver + r.medals.bronze;
+          return (
+            <li key={r.playerId} className={`${GRID} px-3 py-3`}>
+              <span className="text-center tabular-nums">
+                {MEDALS[r.rank] ? (
+                  <span aria-label={`Platz ${r.rank}`} className="text-lg" role="img">
+                    {MEDALS[r.rank]}
+                  </span>
+                ) : (
+                  <span className="text-sm font-extrabold text-primary">{r.rank}</span>
+                )}
+              </span>
+              <Avatar
+                playerId={r.playerId}
+                name={r.playerName}
+                avatarVersion={r.avatarVersion}
+                size={32}
+              />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-foreground">
+                  {r.playerName}
+                </div>
+                {totalMedals > 0 && (
+                  <div
+                    className="mt-0.5 text-[0.65rem] tabular-nums text-foreground-muted"
+                    aria-label={`${r.medals.gold} Gold, ${r.medals.silver} Silber, ${r.medals.bronze} Bronze`}
+                  >
+                    {r.medals.gold > 0 && <span className="mr-1.5">🥇{r.medals.gold}</span>}
+                    {r.medals.silver > 0 && <span className="mr-1.5">🥈{r.medals.silver}</span>}
+                    {r.medals.bronze > 0 && <span>🥉{r.medals.bronze}</span>}
+                  </div>
+                )}
+              </div>
+              <span className="text-right text-sm font-semibold tabular-nums text-foreground">
+                {r.points.toFixed(0)}
+              </span>
+              <span className="text-right text-sm font-semibold tabular-nums text-foreground-muted">
+                {r.pointsPerGame.toFixed(2)}
+              </span>
+              <span className="text-right text-xs tabular-nums text-foreground-muted">
+                {r.games}
+              </span>
+              <span className="text-right text-xs tabular-nums text-foreground-muted">
+                {r.jokersUsed}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

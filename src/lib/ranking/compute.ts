@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { computeGameDaySummary } from "@/lib/game-day/summary";
 
 export interface RankingRow {
   rank: number;
@@ -9,19 +10,52 @@ export interface RankingRow {
   points: number;
   pointsPerGame: number;
   jokersUsed: number;
+  medals: { gold: number; silver: number; bronze: number };
+}
+
+type MedalKind = "gold" | "silver" | "bronze";
+type MedalCounts = { gold: number; silver: number; bronze: number };
+
+// Reuses computeGameDaySummary so medal counts always match the per-player
+// season stats path — both share the same de-locale-aware tie-breaker on the
+// podium.
+async function computeMedalsBySeason(
+  seasonId: string,
+): Promise<Map<string, MedalCounts>> {
+  const finishedDays = await prisma.gameDay.findMany({
+    where: { seasonId, status: "finished" },
+    select: { id: true },
+  });
+  const summaries = await Promise.all(
+    finishedDays.map((d) => computeGameDaySummary(d.id)),
+  );
+  const medalsByPlayer = new Map<string, MedalCounts>();
+  const bump = (playerId: string, kind: MedalKind) => {
+    const cur = medalsByPlayer.get(playerId) ?? { gold: 0, silver: 0, bronze: 0 };
+    cur[kind] += 1;
+    medalsByPlayer.set(playerId, cur);
+  };
+  for (const s of summaries) {
+    if (!s) continue;
+    if (s.podium[0]) bump(s.podium[0].playerId, "gold");
+    if (s.podium[1]) bump(s.podium[1].playerId, "silver");
+    if (s.podium[2]) bump(s.podium[2].playerId, "bronze");
+  }
+  return medalsByPlayer;
 }
 
 export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
-  const rows = await prisma.$queryRaw<
-    Array<{
-      player_id: string;
-      player_name: string;
-      avatar_version: number;
-      games: bigint;
-      points: number;
-      jokers_used: bigint;
-    }>
-  >`
+  const [rows, medalsByPlayer] = await Promise.all([
+    prisma.$queryRaw<
+      Array<{
+        player_id: string;
+        player_name: string;
+        avatar_version: number;
+        games: bigint;
+        points: number;
+        jokers_used: bigint;
+      }>
+    >`
     WITH played AS (
       SELECT p.id AS player_id, p.name AS player_name,
         CASE
@@ -68,7 +102,9 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
           0
         )
     ) DESC NULLS LAST
-  `;
+  `,
+    computeMedalsBySeason(seasonId),
+  ]);
 
   return rows.map((r, i) => {
     const games = Number(r.games);
@@ -82,6 +118,7 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
       points,
       pointsPerGame: games === 0 ? 0 : points / games,
       jokersUsed: Number(r.jokers_used),
+      medals: medalsByPlayer.get(r.player_id) ?? { gold: 0, silver: 0, bronze: 0 },
     };
   });
 }
