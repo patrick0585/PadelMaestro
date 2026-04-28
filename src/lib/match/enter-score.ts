@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { validateScore } from "./validate";
 import type { MatchFormat } from "@/lib/pairings/types";
+import { publishGameDayUpdate } from "@/lib/game-day/live-broadcast";
 
 export class ScoreConflictError extends Error {
   constructor(message: string) {
@@ -84,6 +85,8 @@ export async function enterScore(input: EnterScoreInput) {
     where: { id: match.gameDayId, status: "roster_locked" },
     data: { status: "in_progress" },
   });
+
+  publishGameDayUpdate(match.gameDayId);
 
   return prisma.match.findUniqueOrThrow({ where: { id: input.matchId } });
 }
