@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
@@ -90,9 +91,20 @@ export default async function GameDayPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
-        <h1 className="text-2xl font-bold text-foreground">{dateText}</h1>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
+          <h1 className="text-2xl font-bold text-foreground">{dateText}</h1>
+        </div>
+        {session.user.isAdmin &&
+          (day.status === "roster_locked" || day.status === "in_progress") && (
+            <Link
+              href="/game-day/print"
+              className="shrink-0 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground"
+            >
+              🖨 Drucken
+            </Link>
+          )}
       </header>
       <Timeline steps={steps} />
 

@@ -22,7 +22,7 @@ export function BottomTabs({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="sticky bottom-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="sticky bottom-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
     >
       {tabs.map((t) => {
         const active = t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
