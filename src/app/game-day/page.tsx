@@ -11,6 +11,8 @@ import { RosterChips, type RosterAttendance } from "./roster-chips";
 import { AddExtraMatchButton } from "./add-extra-match-button";
 import { FinishBanner } from "./finish-banner";
 import { FinishedSummary } from "./finished-summary";
+import { DayLiveBanner } from "./day-live-banner";
+import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +91,9 @@ export default async function GameDayPage() {
     attendance: normalizeAttendance(p.attendance),
   }));
 
+  const liveStandings =
+    day.status === "in_progress" ? await computeDayLiveStandings(day.id) : null;
+
   return (
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-3">
@@ -107,6 +112,15 @@ export default async function GameDayPage() {
           )}
       </header>
       <Timeline steps={steps} />
+
+      {liveStandings && (
+        <DayLiveBanner
+          rows={liveStandings.rows}
+          scoredMatchCount={liveStandings.scoredMatchCount}
+          totalMatchCount={liveStandings.totalMatchCount}
+          hasPreviousState={liveStandings.hasPreviousState}
+        />
+      )}
 
       {day.status === "planned" && (
         <PlannedSection
