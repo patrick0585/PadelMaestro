@@ -30,7 +30,7 @@ export function TopNav({
   const items = isAdmin ? [...USER_ITEMS, ADMIN_ITEM] : USER_ITEMS;
 
   return (
-    <header className="hidden md:block sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur">
+    <header className="hidden md:block sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur print:hidden">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-6">
         <Link
           href="/"
