@@ -347,6 +347,47 @@ gunzip -c /var/backups/padel/dump-YYYY-MM-DD.sql.gz \
 
 ---
 
+## 9.3 Keep Postgres out of unattended-upgrades
+
+Ubuntu's `unattended-upgrades` will silently update `postgresql-*` packages overnight, which restarts Postgres and severs every active connection (`E57P01: terminating connection due to administrator command`). Symptom in the app: every JWT renewal that happens during the restart fails, and users get logged out.
+
+Two steps. First, confirm whether this is what's happening:
+
+```bash
+sudo journalctl -u postgresql --since '7 days ago' | grep -iE 'restart|stopped|received'
+sudo journalctl -u unattended-upgrades --since '7 days ago' | grep -i postgres
+```
+
+If you see Postgres receiving a stop signal followed by an unattended-upgrades log line for a `postgresql-*` package, blacklist it:
+
+```bash
+# Both keys are written: "Package-Blacklist" is the historic name (Ubuntu
+# 20.04 and earlier), "Package-Block-List" is the renamed key on 22.04+.
+# Either one is silently ignored by the version that doesn't recognise it,
+# so writing both is safe and keeps the file portable across releases.
+sudo tee /etc/apt/apt.conf.d/52padel-blacklist > /dev/null <<'APT'
+Unattended-Upgrade::Package-Blacklist {
+    "postgresql";
+    "postgresql-.*";
+};
+Unattended-Upgrade::Package-Block-List {
+    "postgresql";
+    "postgresql-.*";
+};
+APT
+sudo unattended-upgrade --dry-run --debug 2>&1 | grep -iE 'postgresql|skip' | head
+```
+
+The dry-run should now print `Skipping … postgresql…` for every Postgres package. From this point onward, Postgres updates need to be applied manually with a maintenance window:
+
+```bash
+sudo apt-get update
+sudo apt-get install --only-upgrade postgresql postgresql-16
+sudo systemctl restart padel   # reconnect the app to the freshly-restarted Postgres
+```
+
+---
+
 ## 10. Operations cheat sheet
 
 | Task | Command |

@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { authorizeCredentials } from "@/lib/auth/authorize";
+import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 import { prisma } from "@/lib/db";
 
 const DEV_PLACEHOLDERS = new Set([
@@ -36,30 +37,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    ...authConfig.callbacks,
+    // Forward only the session callback explicitly. Avoid `...authConfig.callbacks`
+    // so a future addition to auth.config.ts cannot silently shadow or duplicate
+    // the jwt callback below — that drift was a real bug we just removed.
+    session: authConfig.callbacks.session,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
         token.username = (user as { username?: string | null }).username ?? null;
+        (token as { refreshedAt?: number }).refreshedAt = Date.now();
         return token;
       }
 
-      const id = (token as { id?: string }).id;
-      if (!id) return token;
-
-      const player = await prisma.player.findUnique({
-        where: { id },
-        select: { isAdmin: true, deletedAt: true, username: true },
+      const result = await refreshTokenFromPlayer(token, {
+        findUnique: (id) =>
+          prisma.player.findUnique({
+            where: { id },
+            select: { isAdmin: true, deletedAt: true, username: true },
+          }),
       });
-
-      if (!player || player.deletedAt) {
-        return null;
-      }
-
-      token.isAdmin = player.isAdmin;
-      token.username = player.username;
-      return token;
+      return result.kind === "ok" ? result.token : null;
     },
   },
 });
