@@ -13,6 +13,7 @@ import { FinishBanner } from "./finish-banner";
 import { FinishedSummary } from "./finished-summary";
 import { DayLiveBanner } from "./day-live-banner";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
+import { GameDayLiveUpdates } from "./live-updates";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,7 @@ export default async function GameDayPage() {
 
   return (
     <div className="space-y-4">
+      {day.status === "in_progress" && <GameDayLiveUpdates gameDayId={day.id} />}
       <header className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
