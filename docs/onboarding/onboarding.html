@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Padelmaestro – Willkommen</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --fg: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #22d3ee;
+      --accent-strong: #06b6d4;
+      --border: #1e293b;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 32px 64px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header svg {
+      width: 72px;
+      height: 72px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin: 12px 0 4px;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 15px;
+      margin: 0;
+    }
+    .step {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      color: var(--bg);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .step-body h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 4px 0 8px;
+    }
+    .step-body p {
+      margin: 0 0 8px;
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .step-body code {
+      background: #1e293b;
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    .screenshot {
+      margin-top: 12px;
+      padding: 16px;
+      background: #111827;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .screenshot img {
+      max-width: 100%;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto;
+    }
+    .os {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    footer strong {
+      color: var(--fg);
+    }
+    @media print {
+      html, body { background: white; color: #0b1220; }
+      .screenshot { background: #f3f4f6; border-color: #cbd5e1; color: #64748b; }
+      .step-body code { background: #e2e8f0; color: #0b1220; }
+      footer { border-color: #cbd5e1; color: #64748b; }
+      .step-num { color: white; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#06b6d4"/>
+            <stop offset="100%" stop-color="#22d3ee"/>
+          </linearGradient>
+        </defs>
+        <g transform="rotate(-22 32 32)">
+          <path d="M32 6 C 22 6, 14 14, 14 23 L 14 33 C 14 39, 18 43, 24 43 L 40 43 C 46 43, 50 39, 50 33 L 50 23 C 50 14, 42 6, 32 6 Z" fill="url(#g)"/>
+          <circle cx="23" cy="17" r="1.6" fill="#0b1220"/>
+          <circle cx="32" cy="17" r="1.6" fill="#0b1220"/>
+          <circle cx="41" cy="17" r="1.6" fill="#0b1220"/>
+          <circle cx="23" cy="25" r="1.6" fill="#0b1220"/>
+          <circle cx="32" cy="25" r="1.6" fill="#0b1220"/>
+          <circle cx="41" cy="25" r="1.6" fill="#0b1220"/>
+          <circle cx="23" cy="33" r="1.6" fill="#0b1220"/>
+          <circle cx="32" cy="33" r="1.6" fill="#0b1220"/>
+          <circle cx="41" cy="33" r="1.6" fill="#0b1220"/>
+          <circle cx="27" cy="40" r="1.6" fill="#0b1220"/>
+          <circle cx="37" cy="40" r="1.6" fill="#0b1220"/>
+          <rect x="30" y="43" width="4" height="4" fill="url(#g)"/>
+          <rect x="28.5" y="47" width="7" height="13" rx="2.5" fill="#0b1220" stroke="url(#g)" stroke-width="1.5"/>
+        </g>
+        <circle cx="52" cy="50" r="5.5" fill="#fde047"/>
+      </svg>
+      <h1>Willkommen bei Padelmaestro</h1>
+      <p>So startest du in vier Schritten.</p>
+    </header>
+
+    <section class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h2>Seite im Browser öffnen</h2>
+        <p>Tippe im Handy-Browser (Safari auf iPhone, Chrome auf Android) in die Adresszeile:</p>
+        <p><code>padelmaestro.de</code></p>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h2>Zum Home-Bildschirm hinzufügen</h2>
+        <p>Damit du die App wie eine echte App nutzen kannst, leg sie auf deinen Startbildschirm:</p>
+
+        <div class="screenshot">
+          <div class="os">iPhone (Safari)</div>
+          Teilen-Symbol <strong>(Quadrat mit Pfeil nach oben)</strong> unten antippen
+          → „Zum Home-Bildschirm“ → „Hinzufügen“.
+          <!-- <img src="ios-share.png" alt="iOS Teilen-Menü" /> -->
+        </div>
+
+        <div class="screenshot">
+          <div class="os">Android (Chrome)</div>
+          Drei-Punkte-Menü oben rechts antippen → „App installieren“ oder
+          „Zum Startbildschirm hinzufügen“.
+          <!-- <img src="android-share.png" alt="Android Chrome-Menü" /> -->
+        </div>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h2>Einloggen</h2>
+        <p>Dein <strong>Benutzername</strong> und dein <strong>Start-Passwort</strong>
+        kommen per WhatsApp von Patrick. Öffne die App vom Startbildschirm aus und
+        melde dich damit an.</p>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h2>Passwort ändern</h2>
+        <p>Direkt nach dem ersten Login wirst du aufgefordert, ein eigenes Passwort
+        zu setzen. Nimm etwas, das du dir gut merken kannst — es muss mindestens
+        <strong>8 Zeichen</strong> lang sein.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>Viel Spaß beim Padeln. <strong>Bei Fragen: einfach Patrick fragen.</strong></p>
+    </footer>
+  </main>
+</body>
+</html>
