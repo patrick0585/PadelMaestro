@@ -170,8 +170,10 @@ export default async function GameDayPage() {
               />
             ))}
           </div>
-          {session.user.isAdmin &&
-            (day.status === "roster_locked" || day.status === "in_progress") && (
+          {(day.status === "roster_locked" || day.status === "in_progress") &&
+            (session.user.isAdmin ||
+              me?.attendance === "confirmed" ||
+              me?.attendance === "joker") && (
               <AddExtraMatchButton gameDayId={day.id} />
             )}
         </section>

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { loadTemplate } from "@/lib/pairings/load";
 import { generateSeed, seededShuffle } from "@/lib/pairings/shuffle";
+import { publishGameDayUpdate } from "./live-broadcast";
 import { GameDayNotFoundError } from "./attendance";
 
 export class GameDayNotActiveError extends Error {
@@ -11,7 +12,7 @@ export class GameDayNotActiveError extends Error {
 }
 
 export async function addExtraMatch(gameDayId: string, actorId: string) {
-  return prisma.$transaction(async (tx) => {
+  const match = await prisma.$transaction(async (tx) => {
     const day = await tx.gameDay.findUnique({
       where: { id: gameDayId },
       include: {
@@ -65,4 +66,7 @@ export async function addExtraMatch(gameDayId: string, actorId: string) {
 
     return match;
   });
+
+  publishGameDayUpdate(gameDayId);
+  return match;
 }
