@@ -69,12 +69,12 @@ describe("POST /api/game-days/[id]/attendance", () => {
     expect(body).toEqual({ code: "ATTENDANCE_NOT_PARTICIPANT" });
   });
 
-  it("returns 409 with code ATTENDANCE_LOCKED when the day is roster_locked", async () => {
+  it("returns 409 with code ATTENDANCE_LOCKED when the day is in_progress", async () => {
     const { player, gameDay } = await setup();
     await prisma.gameDayParticipant.create({
       data: { gameDayId: gameDay.id, playerId: player.id, attendance: "pending" },
     });
-    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "roster_locked" } });
+    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
     authMock.mockResolvedValue({ user: { id: player.id } });
     const res = await POST(req(gameDay.id, { status: "confirmed" }), ctx(gameDay.id));
     expect(res.status).toBe(409);

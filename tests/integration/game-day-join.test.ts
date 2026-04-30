@@ -114,7 +114,7 @@ describe("POST /api/game-days/[id]/join", () => {
     const { admin, day } = await setup();
     await prisma.gameDay.update({
       where: { id: day.id },
-      data: { status: "roster_locked" },
+      data: { status: "in_progress" },
     });
     authMock.mockResolvedValue({
       user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },

@@ -12,7 +12,9 @@ export async function deleteGameDay(gameDayId: string, actorId: string) {
   return prisma.$transaction(async (tx) => {
     const day = await tx.gameDay.findUnique({ where: { id: gameDayId } });
     if (!day) throw new GameDayNotFoundError(gameDayId);
-    if (day.status !== "planned" && day.status !== "roster_locked") {
+    // Once Spielbetrieb starts (in_progress), the admin must finish
+    // the day rather than delete it. Only planned days are deletable.
+    if (day.status !== "planned") {
       throw new GameDayNotDeletableError(day.status);
     }
 

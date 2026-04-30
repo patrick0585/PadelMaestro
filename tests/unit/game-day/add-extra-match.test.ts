@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
-import { lockRoster } from "@/lib/game-day/lock";
+import { startGameDay } from "@/lib/game-day/start";
 import {
   addExtraMatch,
   GameDayNotActiveError,
@@ -21,14 +21,14 @@ async function setupFive() {
   }
   const day = await createGameDay(new Date("2026-04-21"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
-  await lockRoster(day.id, players[0].id);
+  await startGameDay(day.id, players[0].id);
   return { players, day };
 }
 
 describe("addExtraMatch", () => {
   beforeEach(resetDb);
 
-  it("creates a 16th match in roster_locked and writes audit log", async () => {
+  it("creates a 16th match in in_progress and writes audit log", async () => {
     const { players, day } = await setupFive();
     const match = await addExtraMatch(day.id, players[0].id);
 

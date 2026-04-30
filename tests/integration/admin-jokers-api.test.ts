@@ -91,9 +91,9 @@ describe("/api/game-days/[id]/participants/[playerId]/joker", () => {
     expect(await prisma.jokerUse.count()).toBe(0);
   });
 
-  it("POST returns 409 JOKER_LOCKED when game day is roster_locked", async () => {
+  it("POST returns 409 JOKER_LOCKED when game day is in_progress", async () => {
     const { admin, player, gameDay } = await setup();
-    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "roster_locked" } });
+    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
     authMock.mockResolvedValue({
       user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
     });

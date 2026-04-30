@@ -51,7 +51,7 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
       where: {
         playerId: target.id,
         attendance: { in: ["confirmed", "joker"] },
-        gameDay: { status: { in: ["planned", "roster_locked", "in_progress"] } },
+        gameDay: { status: { in: ["planned", "in_progress"] } },
       },
       select: { id: true },
     });

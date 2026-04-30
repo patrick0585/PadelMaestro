@@ -134,7 +134,7 @@ async function adminCreateAndStartDay(adminPage) {
   await adminPage.waitForLoadState("domcontentloaded");
 
   // If a day is already in_progress, /game-day shows it but /admin only shows
-  // planned/roster_locked days. We may already have a manageable day.
+  // planned/in_progress days. We may already have a manageable day.
   const hasOpen = await adminPage.getByText("Offener Spieltag", { exact: false }).count();
   const hasRunning = await adminPage.getByText("Spieltag läuft", { exact: false }).count();
   const hasManageable = hasOpen + hasRunning > 0;
@@ -382,7 +382,7 @@ async function main() {
     let sseSuccesses = 0;
     // For M1 (the very first score), check ALL non-scorer users to see if
     // anyone receives the live update — this exposes the
-    // roster_locked → in_progress subscription gap.
+    // in_progress → in_progress subscription gap.
     const m1ObserverState = { checked: false, observers: {} };
     for (let i = 0; i < matches.length; i++) {
       const m = matches[i];
@@ -471,7 +471,7 @@ async function main() {
           observed: m1ObserverState.observers,
           missing: observersWithoutScore,
           hypothesis:
-            "GameDayLiveUpdates only mounts when day.status === 'in_progress'. The very first score is what flips status from roster_locked to in_progress. Until then, no client has subscribed to the SSE stream, so the publish for the first score is delivered to zero subscribers. Subsequent scores work because router.refresh() on the scorer remounts <GameDayLiveUpdates/>, but other users only re-subscribe once they themselves trigger a navigation/refresh.",
+            "GameDayLiveUpdates only mounts when day.status === 'in_progress'. The very first score is what flips status from in_progress to in_progress. Until then, no client has subscribed to the SSE stream, so the publish for the first score is delivered to zero subscribers. Subsequent scores work because router.refresh() on the scorer remounts <GameDayLiveUpdates/>, but other users only re-subscribe once they themselves trigger a navigation/refresh.",
         });
       }
     }

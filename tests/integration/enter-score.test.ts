@@ -2,11 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
-import { lockRoster } from "@/lib/game-day/lock";
+import { startGameDay } from "@/lib/game-day/start";
 import {
   enterScore,
   ScoreConflictError,
   GameDayFinishedError,
+  GameDayNotStartedError,
   NotAllowedError,
 } from "@/lib/match/enter-score";
 import {
@@ -26,7 +27,7 @@ async function setupFivePlayerGame() {
   }
   const day = await createGameDay(new Date("2026-04-21"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
-  await lockRoster(day.id, players[0].id);
+  await startGameDay(day.id, players[0].id);
   const matches = await prisma.match.findMany({
     where: { gameDayId: day.id },
     orderBy: { matchNumber: "asc" },
@@ -90,29 +91,25 @@ describe("enterScore", () => {
     ).rejects.toThrow(ScoreConflictError);
   });
 
-  it("advances status from roster_locked to in_progress on first score", async () => {
+  it("rejects enterScore on a game day that has not been started yet", async () => {
+    // Build the in_progress setup, then flip the status BACK to planned
+    // so the matches still exist but the game day is no longer "live".
     const { players, day, matches } = await setupFivePlayerGame();
-    expect((await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } })).status).toBe(
-      "roster_locked",
-    );
+    await prisma.gameDay.update({ where: { id: day.id }, data: { status: "planned" } });
 
-    await enterScore({
-      matchId: matches[0].id,
-      team1Score: 3,
-      team2Score: 0,
-      scoredBy: players[0].id,
-      expectedVersion: 0,
-      isAdmin: true,
-    });
-
-    const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
-    expect(after.status).toBe("in_progress");
+    await expect(
+      enterScore({
+        matchId: matches[0].id,
+        team1Score: 3,
+        team2Score: 0,
+        scoredBy: players[0].id,
+        expectedVersion: 0,
+        isAdmin: true,
+      }),
+    ).rejects.toBeInstanceOf(GameDayNotStartedError);
   });
 
-  // Regression guard for the M1 broadcast gap: clients that subscribed
-  // while the day was still roster_locked must receive the very first
-  // score update, even though enterScore flips status in the same call.
-  it("delivers the first score to subscribers that joined before the status flip", async () => {
+  it("publishes a live update on every score (subscriber receives it)", async () => {
     __resetLiveBroadcastForTests();
     const { players, day, matches } = await setupFivePlayerGame();
 

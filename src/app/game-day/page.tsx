@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
 import { MatchInlineCard } from "./match-inline-card";
+import { MatchPreviewCard } from "./match-preview-card";
 import { Timeline } from "@/components/ui/timeline";
 import { timelineForStatus, shouldSubscribeToLiveUpdates, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
@@ -12,8 +13,11 @@ import { AddExtraMatchButton } from "./add-extra-match-button";
 import { FinishBanner } from "./finish-banner";
 import { FinishedSummary } from "./finished-summary";
 import { DayLiveBanner } from "./day-live-banner";
+import { StartGameDayButton } from "./start-game-day-button";
+import { ShufflePreviewButton } from "./shuffle-preview-button";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { GameDayLiveUpdates } from "./live-updates";
+import { assignPlayersToTemplate } from "@/lib/pairings/assign";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +46,7 @@ export default async function GameDayPage() {
   };
 
   const activeDay = await prisma.gameDay.findFirst({
-    where: { status: { in: ["planned", "roster_locked", "in_progress"] } },
+    where: { status: { in: ["planned", "in_progress"] } },
     orderBy: { date: "desc" },
     include: dayInclude,
   });
@@ -95,6 +99,25 @@ export default async function GameDayPage() {
   const liveStandings =
     day.status === "in_progress" ? await computeDayLiveStandings(day.id) : null;
 
+  // Planned-mode preview: as soon as 4–6 players are confirmed we
+  // build a stable on-the-fly match plan keyed by the gameDay.id, so
+  // the preview only shifts when the roster itself changes.
+  const confirmedPlayers = participants.filter((p) => p.attendance === "confirmed");
+  const showPreview =
+    day.status === "planned" &&
+    confirmedPlayers.length >= 4 &&
+    confirmedPlayers.length <= 6;
+  // Seed precedence: any seed already on the row (which means the
+  // admin pressed "Reihenfolge mischen" and we want to keep that
+  // ordering) otherwise the gameDay.id as a stable per-day fallback.
+  const previewSeed = day.seed ?? day.id;
+  const previewPlans = showPreview
+    ? assignPlayersToTemplate(
+        confirmedPlayers.map((p) => ({ id: p.playerId, name: p.name })),
+        previewSeed,
+      )
+    : [];
+
   return (
     <div className="space-y-4">
       {shouldSubscribeToLiveUpdates(day.status as GameDayStatus) && (
@@ -105,15 +128,14 @@ export default async function GameDayPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
           <h1 className="text-2xl font-bold text-foreground">{dateText}</h1>
         </div>
-        {session.user.isAdmin &&
-          (day.status === "roster_locked" || day.status === "in_progress") && (
-            <Link
-              href="/game-day/print"
-              className="shrink-0 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground"
-            >
-              🖨 Drucken
-            </Link>
-          )}
+        {session.user.isAdmin && day.status === "in_progress" && (
+          <Link
+            href="/game-day/print"
+            className="shrink-0 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground"
+          >
+            🖨 Drucken
+          </Link>
+        )}
       </header>
       <Timeline steps={steps} />
 
@@ -142,11 +164,47 @@ export default async function GameDayPage() {
         />
       )}
 
-      {(day.status === "roster_locked" || day.status === "in_progress") && (
-        <RosterChips participants={participants} />
+      {showPreview && (
+        <section className="space-y-2">
+          <div className="rounded-xl border border-primary/40 bg-primary/5 px-3 py-2">
+            <p className="text-xs text-foreground-muted">
+              <span className="font-semibold text-foreground">Vorschau:</span>{" "}
+              {confirmedPlayers.length} Spieler bestätigt — so würden die Paarungen aussehen.
+              Sie können sich noch ändern, bis der Admin den Spielbetrieb startet.
+            </p>
+          </div>
+          <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            Geplante Paarungen
+          </h2>
+          <div className="space-y-2">
+            {previewPlans.map((m) => (
+              <MatchPreviewCard
+                key={m.matchNumber}
+                match={{
+                  matchNumber: m.matchNumber,
+                  team1A: m.team1[0].name,
+                  team1B: m.team1[1].name,
+                  team2A: m.team2[0].name,
+                  team2B: m.team2[1].name,
+                }}
+              />
+            ))}
+          </div>
+          {session.user.isAdmin && (
+            <div className="space-y-2">
+              <ShufflePreviewButton gameDayId={day.id} />
+              <StartGameDayButton
+                gameDayId={day.id}
+                confirmedCount={confirmedPlayers.length}
+              />
+            </div>
+          )}
+        </section>
       )}
 
-      {day.matches.length > 0 && (day.status === "roster_locked" || day.status === "in_progress" || day.status === "finished") && (
+      {day.status === "in_progress" && <RosterChips participants={participants} />}
+
+      {day.matches.length > 0 && (day.status === "in_progress" || day.status === "finished") && (
         <section className="space-y-2">
           <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
             Matches
@@ -172,7 +230,7 @@ export default async function GameDayPage() {
               />
             ))}
           </div>
-          {(day.status === "roster_locked" || day.status === "in_progress") &&
+          {day.status === "in_progress" &&
             (session.user.isAdmin ||
               me?.attendance === "confirmed" ||
               me?.attendance === "joker") && (

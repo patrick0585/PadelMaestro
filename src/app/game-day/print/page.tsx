@@ -11,7 +11,7 @@ export default async function GameDayPrintPage() {
   if (!session.user.isAdmin) redirect("/game-day");
 
   const day = await prisma.gameDay.findFirst({
-    where: { status: { in: ["planned", "roster_locked", "in_progress"] } },
+    where: { status: { in: ["planned", "in_progress"] } },
     orderBy: { date: "desc" },
     include: {
       participants: {

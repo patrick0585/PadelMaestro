@@ -8,7 +8,7 @@ import { GameDayNotActiveError } from "@/lib/game-day/add-extra-match";
 import { GameDayNotFoundError } from "@/lib/game-day/attendance";
 import { resetDb } from "../../helpers/reset-db";
 
-async function makeDay(status: "planned" | "roster_locked" | "in_progress" | "finished") {
+async function makeDay(status: "planned" | "in_progress" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
     data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
   });
@@ -45,11 +45,6 @@ describe("finishGameDay", () => {
 
   it("throws GameDayNotActiveError on planned", async () => {
     const { admin, day } = await makeDay("planned");
-    await expect(finishGameDay(day.id, admin.id)).rejects.toBeInstanceOf(GameDayNotActiveError);
-  });
-
-  it("throws GameDayNotActiveError on roster_locked", async () => {
-    const { admin, day } = await makeDay("roster_locked");
     await expect(finishGameDay(day.id, admin.id)).rejects.toBeInstanceOf(GameDayNotActiveError);
   });
 

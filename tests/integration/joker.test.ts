@@ -95,7 +95,7 @@ describe("recordJokerUse", () => {
     const { player, gameDay } = await setup();
     await prisma.gameDay.update({
       where: { id: gameDay.id },
-      data: { status: "roster_locked" },
+      data: { status: "in_progress" },
     });
     await expect(recordJokerUse({ playerId: player.id, gameDayId: gameDay.id })).rejects.toThrow(
       /locked/i,
@@ -167,7 +167,7 @@ describe("cancelJokerUse", () => {
     const { player, gameDay } = await setup();
     await prisma.gameDay.update({
       where: { id: gameDay.id },
-      data: { status: "roster_locked" },
+      data: { status: "in_progress" },
     });
     await expect(
       cancelJokerUse({ playerId: player.id, gameDayId: gameDay.id }),

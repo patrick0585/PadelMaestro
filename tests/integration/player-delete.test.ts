@@ -21,7 +21,7 @@ async function makeUser(i = 1) {
 }
 let dayCounter = 0;
 async function makeSeasonAndDay(
-  status: "planned" | "roster_locked" | "in_progress" | "finished",
+  status: "planned" | "in_progress" | "in_progress" | "finished",
 ) {
   const year = new Date().getFullYear();
   const season =

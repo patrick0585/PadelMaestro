@@ -80,7 +80,7 @@ describe("DELETE /api/jokers", () => {
   it("returns 409 JOKER_LOCKED when the day is no longer planned", async () => {
     const { player, gameDay } = await setup();
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
-    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "roster_locked" } });
+    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
     authMock.mockResolvedValue({
       user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
     });
@@ -103,9 +103,9 @@ describe("POST /api/jokers", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 409 JOKER_LOCKED when the game day is roster_locked", async () => {
+  it("returns 409 JOKER_LOCKED when the game day is in_progress", async () => {
     const { player, gameDay } = await setup();
-    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "roster_locked" } });
+    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
     authMock.mockResolvedValue({
       user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
     });
