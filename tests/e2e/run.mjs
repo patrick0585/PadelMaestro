@@ -380,9 +380,9 @@ async function main() {
     const scorers = [annaPage, benPage, claraPage, danielPage, evaPage].filter(Boolean);
     let sseFailures = 0;
     let sseSuccesses = 0;
-    // For M1 (the very first score), check ALL non-scorer users to see if
-    // anyone receives the live update — this exposes the
-    // in_progress → in_progress subscription gap.
+    // For M1 (the very first score), check ALL non-scorer users to see
+    // if anyone receives the live update — this is the historical
+    // M1-broadcast regression guard.
     const m1ObserverState = { checked: false, observers: {} };
     for (let i = 0; i < matches.length; i++) {
       const m = matches[i];

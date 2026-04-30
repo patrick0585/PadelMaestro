@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { startGameDay } from "@/lib/game-day/start";
+import { assignPlayersToTemplate } from "@/lib/pairings/assign";
 import { resetDb } from "../helpers/reset-db";
 
 async function seedSixPlayers() {
@@ -91,5 +92,47 @@ describe("startGameDay", () => {
 
     const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
     expect(after.seed).toBe(presetSeed);
+  });
+
+  // Preview = reality end-to-end check: the matches that get persisted
+  // must be byte-for-byte the matches that assignPlayersToTemplate
+  // produces against the same (players, seed) input that the page uses
+  // for the preview. A regression where the seed precedence diverged
+  // between page and lib would surface here, not silently ship.
+  it("persists exactly the matches the preview would have shown", async () => {
+    const all = await seedSixPlayers();
+    const day = await createGameDay(new Date("2026-04-21"), all[0].id);
+    for (let i = 0; i < 5; i++) {
+      await setAttendance(day.id, all[i].id, "confirmed");
+    }
+    const presetSeed = "preview-seed-x";
+    await prisma.gameDay.update({
+      where: { id: day.id },
+      data: { seed: presetSeed },
+    });
+
+    // Build the preview the same way the page does: only confirmed
+    // players, ordered by name (sortedRoster equivalent — see
+    // assignPlayersToTemplate). The page does no extra sorting; we
+    // pass the same shape it does.
+    const previewPlayers = all
+      .slice(0, 5)
+      .map((p) => ({ id: p.id, name: p.name }));
+    const previewPlans = assignPlayersToTemplate(previewPlayers, presetSeed);
+
+    await startGameDay(day.id, all[0].id);
+
+    const persisted = await prisma.match.findMany({
+      where: { gameDayId: day.id },
+      orderBy: { matchNumber: "asc" },
+    });
+    expect(persisted).toHaveLength(previewPlans.length);
+    for (let i = 0; i < previewPlans.length; i++) {
+      expect(persisted[i].matchNumber).toBe(previewPlans[i].matchNumber);
+      expect(persisted[i].team1PlayerAId).toBe(previewPlans[i].team1[0].id);
+      expect(persisted[i].team1PlayerBId).toBe(previewPlans[i].team1[1].id);
+      expect(persisted[i].team2PlayerAId).toBe(previewPlans[i].team2[0].id);
+      expect(persisted[i].team2PlayerBId).toBe(previewPlans[i].team2[1].id);
+    }
   });
 });

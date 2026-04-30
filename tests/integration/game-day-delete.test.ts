@@ -7,7 +7,7 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
-async function setup(status: "planned" | "in_progress" | "in_progress" | "finished") {
+async function setup(status: "planned" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
     data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
   });

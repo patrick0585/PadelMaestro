@@ -4,7 +4,7 @@ import { deleteGameDay, GameDayNotDeletableError } from "@/lib/game-day/delete";
 import { GameDayNotFoundError } from "@/lib/game-day/attendance";
 import { resetDb } from "../../helpers/reset-db";
 
-async function makeDay(status: "planned" | "in_progress" | "in_progress" | "finished") {
+async function makeDay(status: "planned" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
     data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
   });
