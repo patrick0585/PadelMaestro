@@ -7,6 +7,15 @@
 // No arg → defaults to today (UTC midnight).
 import { PrismaClient } from "@prisma/client";
 
+// Safety: refuse to run against anything that doesn't look like a local
+// dev database. Override with E2E_ALLOW_NONLOCAL=1 if you really mean it.
+const dbUrl = process.env.DATABASE_URL ?? "";
+const looksLocal = /@(localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]/.test(dbUrl);
+if (!looksLocal && process.env.E2E_ALLOW_NONLOCAL !== "1") {
+  console.error("Refusing to run: DATABASE_URL does not target a local host.");
+  process.exit(2);
+}
+
 const arg = process.argv[2];
 const cutoff = arg
   ? new Date(`${arg}T00:00:00.000Z`)

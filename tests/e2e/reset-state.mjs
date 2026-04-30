@@ -2,6 +2,16 @@
 // Deletes ANY non-finished game-days (planned, roster_locked, in_progress).
 import { PrismaClient } from "@prisma/client";
 
+// Safety: refuse to run against anything that doesn't look like a local
+// dev database, to avoid wiping production if DATABASE_URL is misset.
+const dbUrl = process.env.DATABASE_URL ?? "";
+const looksLocal = /@(localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]/.test(dbUrl);
+if (!looksLocal) {
+  console.error("Refusing to run: DATABASE_URL does not target a local host.");
+  console.error("Set a local DATABASE_URL or add E2E_ALLOW_NONLOCAL=1 to override.");
+  if (process.env.E2E_ALLOW_NONLOCAL !== "1") process.exit(2);
+}
+
 const prisma = new PrismaClient();
 try {
   const days = await prisma.gameDay.findMany({

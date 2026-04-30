@@ -250,10 +250,8 @@ async function enterScore(page, matchNumber, scoreA, scoreB) {
   await editBtn.click();
   await page.waitForTimeout(150);
 
-  // Now there are two steppers; first is Team A, second Team B
-  const aPlus = card.locator('button[aria-label="Team A Score erhöhen"], button:has-text("+")').first();
-  // Fallback: stepper "+" buttons. Check stepper.tsx
-  // We need explicit targeting. Look for aria labels.
+  // Two steppers in the card — first Team A, second Team B. We try
+  // explicit aria targeting first, with a positional fallback below.
   const t1Inc = card.locator('[aria-label*="Team A"][aria-label*="erhöhen"], [aria-label*="Team A"][aria-label*="ncrease"]');
   const t1Dec = card.locator('[aria-label*="Team A"][aria-label*="verringern"], [aria-label*="Team A"][aria-label*="decrease"]');
   const t2Inc = card.locator('[aria-label*="Team B"][aria-label*="erhöhen"], [aria-label*="Team B"][aria-label*="ncrease"]');
@@ -592,7 +590,7 @@ async function main() {
       }
     }
 
-    // 11. Optimistic-locking probe: Eva and Daniel try to edit the same match
+    // 10. Optimistic-locking probe: Eva and Daniel try to edit the same match
     if (evaPage && danielPage) {
       log("Optimistic-locking probe: Eva and Daniel both edit a scored match");
       const ms2 = await getMatches(evaPage);
@@ -657,13 +655,13 @@ async function main() {
       }
     }
 
-    // 12. Score edge cases: try to enter both 0:0 (should that be allowed?)
+    // 11. Score edge cases: try to enter both 0:0 (should that be allowed?)
     // The Stepper min=0 max=12, so technically allowed. Skip — just note.
     record("info", "score-edge-case-validation", {
       note: "Stepper enforces 0..maxScore; no UI prevents 0:0 ties. Verify backend rules match expectations.",
     });
 
-    // 13. Fill any remaining unscored matches so we can finish the day
+    // 12. Fill any remaining unscored matches so we can finish the day
     log("Filling all remaining unscored matches via admin");
     const allMatches = await getMatches(adminPage);
     for (const m of allMatches) {
@@ -676,7 +674,7 @@ async function main() {
     await adminPage.waitForLoadState("domcontentloaded");
     await adminPage.waitForTimeout(500);
 
-    // 14. Finish game day
+    // 13. Finish game day
     log("Admin finishing game day");
     const finishBtn = adminPage.locator('button:has-text("Spieltag abschließen")').first();
     let finishedOk = false;
@@ -705,7 +703,7 @@ async function main() {
       await shot(adminPage, "admin-after-finish");
     }
 
-    // 15. Verify other users see finished state and ranking
+    // 14. Verify other users see finished state and ranking
     if (finishedOk) {
       log("Verifying ranking + archive across users");
       await Promise.all(
@@ -721,7 +719,7 @@ async function main() {
       await shot(adminPage, "archive-list");
     }
 
-    // 16. Logout / re-login cycle for Eva
+    // 15. Logout / re-login cycle for Eva
     if (evaPage) {
       log("Logout/re-login cycle for Eva");
       // Logout lives in the avatar dropdown ("Benutzermenü").
@@ -759,8 +757,9 @@ async function main() {
         // Re-login. The login form does window.location.assign("/") which
         // can race with our wait — be defensive.
         try {
-          await evaPage.locator("#identifier").fill("eva@demo.local");
-          await evaPage.locator("#password").fill(DEMO_PASSWORD);
+          const evaUser = USERS.find((u) => u.key === "eva");
+          await evaPage.locator("#identifier").fill(evaUser.email);
+          await evaPage.locator("#password").fill(evaUser.password);
           await evaPage.locator('button[type="submit"]').click();
           await evaPage.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 15000 });
           await evaPage.waitForTimeout(800);
@@ -781,7 +780,7 @@ async function main() {
       }
     }
 
-    // 17. InstallHint check on iPhone-sized contexts (Ben, Eva)
+    // 16. InstallHint check on iPhone-sized contexts (Ben, Eva)
     for (const key of ["ben", "eva"]) {
       const userp = userPages[key];
       if (!userp) continue;
@@ -809,7 +808,7 @@ async function main() {
       }
     }
 
-    // 18. Console errors flush
+    // 17. Console errors flush
     for (const [k, errs] of consoleErrors.entries()) {
       if (errs.length > 0) {
         record("nit", "console-issues", { user: k, count: errs.length, sample: errs.slice(0, 5) });
