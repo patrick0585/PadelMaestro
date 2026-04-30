@@ -18,7 +18,11 @@ export function GameDayLiveUpdates({ gameDayId }: { gameDayId: string }) {
       source.removeEventListener("update", onUpdate);
       source.close();
     };
-  }, [gameDayId, router]);
+    // router is stable across renders in App Router; depending on it
+    // would mean a future framework change could tear down the SSE
+    // connection on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameDayId]);
 
   return null;
 }

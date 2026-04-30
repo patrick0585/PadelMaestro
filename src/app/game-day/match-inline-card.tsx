@@ -19,6 +19,18 @@ export interface MatchRow {
   scoredAt: string | null;
 }
 
+// Map the English server-side validate.ts reasons to localized copy.
+// We match by substring so wording tweaks on the server don't silently
+// fall back to the generic message. Exported for direct testing.
+export function germanInvalidReason(serverError: string): string {
+  if (/tie/i.test(serverError)) return "Unentschieden ist nicht erlaubt.";
+  if (/sum to 3/i.test(serverError)) return "Summe muss 3 ergeben (z. B. 3:0, 2:1, 1:2, 0:3).";
+  if (/non-negative integers/i.test(serverError)) return "Nur ganze Zahlen ≥ 0 erlaubt.";
+  if (/winner must reach at least 6/i.test(serverError)) return "Der Sieger muss mindestens 6 erreichen.";
+  if (/2-game lead/i.test(serverError)) return "Mindestens 2 Spiele Vorsprung nötig.";
+  return "Ungültiges Ergebnis.";
+}
+
 export function MatchInlineCard({
   match,
   maxScore,
@@ -39,6 +51,11 @@ export function MatchInlineCard({
     ? null
     : formatScoredBy(match.scoredByName, match.scoredAt);
 
+  // Block save client-side on a tie (incl. 0:0) so the user gets
+  // immediate feedback instead of a network round-trip + generic error.
+  const isTie = t1 === t2;
+  const saveDisabled = busy || isTie;
+
   function startEdit() {
     setT1(match.team1Score ?? 0);
     setT2(match.team2Score ?? 0);
@@ -56,7 +73,16 @@ export function MatchInlineCard({
     });
     setBusy(false);
     if (!res.ok) {
-      setError(res.status === 409 ? "Zwischenzeitlich geändert – Seite neu laden" : "Konnte Score nicht speichern");
+      if (res.status === 409) {
+        setError("Zwischenzeitlich geändert – Seite neu laden.");
+      } else if (res.status === 400) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ? germanInvalidReason(body.error) : "Ungültiges Ergebnis.");
+      } else if (res.status === 403) {
+        setError("Du darfst diesen Score nicht eintragen.");
+      } else {
+        setError("Konnte Score nicht speichern.");
+      }
       return;
     }
     setEditing(false);
@@ -123,8 +149,9 @@ export function MatchInlineCard({
           </button>
           <button
             type="button"
-            disabled={busy}
+            disabled={saveDisabled}
             onClick={save}
+            title={isTie ? "Unentschieden ist nicht erlaubt" : undefined}
             className="rounded-lg bg-[image:var(--cta-gradient)] px-2 py-1.5 text-xs font-extrabold text-background disabled:opacity-40"
           >
             Speichern
