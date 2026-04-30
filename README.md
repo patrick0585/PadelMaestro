@@ -35,39 +35,21 @@ A live game-day flow for 4–6 players. The admin opens a session, players confi
 
 ## Screenshots
 
-<table>
-<tr>
-  <td align="center" width="50%">
-    <img src="docs/screenshots/dashboard-desktop.png" alt="Dashboard" /><br/>
-    <sub><b>Dashboard</b> — next game day, your attendance, the season-progress card</sub>
-  </td>
-  <td align="center" width="50%">
-    <img src="docs/screenshots/game-day-in-progress-desktop.png" alt="Game day in progress" /><br/>
-    <sub><b>Game day in progress</b> — live tagesranking banner, match cards with inline score entry</sub>
-  </td>
-</tr>
-<tr>
-  <td align="center" width="50%">
-    <img src="docs/screenshots/finished-day-desktop.png" alt="Finished game day" /><br/>
-    <sub><b>Finished day</b> — podium, full leaderboard, partner-frequency bars, every match</sub>
-  </td>
-  <td align="center" width="50%">
-    <img src="docs/screenshots/ranking-desktop.png" alt="Season ranking" /><br/>
-    <sub><b>Season ranking</b> — points-per-game leaderboard with medals and Joker hints</sub>
-  </td>
-</tr>
-</table>
+### Game day in progress
 
-### On mobile
+The live **Tagesranking** updates the moment a score lands on any phone — no manual reload. Match cards underneath let any confirmed participant tap in a result.
 
-<table>
-<tr>
-  <td align="center"><img src="docs/screenshots/dashboard-mobile.png" alt="Dashboard mobile" width="240" /></td>
-  <td align="center"><img src="docs/screenshots/game-day-in-progress-mobile.png" alt="Game day mobile" width="240" /></td>
-  <td align="center"><img src="docs/screenshots/finished-day-mobile.png" alt="Finished day mobile" width="240" /></td>
-  <td align="center"><img src="docs/screenshots/ranking-mobile.png" alt="Ranking mobile" width="240" /></td>
-</tr>
-</table>
+<p align="center">
+  <img src="docs/screenshots/live-game-day.png" alt="Live game day" width="720" />
+</p>
+
+### Finished day
+
+After the day, the podium and full leaderboard sit on top, then the **Paarungen-an-diesem-Tag** view shows how often each pair partnered. Pairs that never partnered are kept on the list with a muted bar — the unevenness is the whole point.
+
+<p align="center">
+  <img src="docs/screenshots/finished-day.png" alt="Finished game day with partner-frequency view" width="720" />
+</p>
 
 ## Tech stack
 
