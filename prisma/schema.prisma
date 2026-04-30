@@ -53,7 +53,6 @@ model Season {
 
 enum GameDayStatus {
   planned
-  roster_locked
   in_progress
   finished
 }

@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/db";
 import { assignPlayersToTemplate } from "@/lib/pairings/assign";
-import { generateSeed } from "@/lib/pairings/shuffle";
 
-export class GameDayAlreadyLockedError extends Error {
+export class GameDayAlreadyStartedError extends Error {
   constructor() {
-    super("game day is already locked or finished");
-    this.name = "GameDayAlreadyLockedError";
+    super("game day is already started or finished");
+    this.name = "GameDayAlreadyStartedError";
   }
 }
 
@@ -23,14 +22,17 @@ export class TooManyPlayersError extends Error {
   }
 }
 
-export async function lockRoster(gameDayId: string, actorId: string) {
+// Atomically generates the match plan, persists it, and flips the game
+// day from planned → in_progress. Replaces the old lockRoster +
+// implicit auto-start sequence with a single explicit step.
+export async function startGameDay(gameDayId: string, actorId: string) {
   const day = await prisma.gameDay.findUniqueOrThrow({
     where: { id: gameDayId },
     include: { participants: { include: { player: true } } },
   });
 
   if (day.status !== "planned") {
-    throw new GameDayAlreadyLockedError();
+    throw new GameDayAlreadyStartedError();
   }
 
   const confirmed = day.participants.filter((p) => p.attendance === "confirmed");
@@ -38,14 +40,17 @@ export async function lockRoster(gameDayId: string, actorId: string) {
   if (confirmed.length > 6) throw new TooManyPlayersError();
 
   const players = confirmed.map((p) => ({ id: p.player.id, name: p.player.name }));
-  const seed = generateSeed();
+  // Reuse the seed the preview ran on (set either when the admin
+  // pressed "Reihenfolge mischen" or, by default, falling back to the
+  // gameDay.id below). That keeps preview = reality.
+  const seed = day.seed ?? day.id;
   const plans = assignPlayersToTemplate(players, seed);
 
   return prisma.$transaction(async (tx) => {
     await tx.gameDay.update({
       where: { id: gameDayId },
       data: {
-        status: "roster_locked",
+        status: "in_progress",
         playerCount: players.length,
         seed,
       },
@@ -67,7 +72,7 @@ export async function lockRoster(gameDayId: string, actorId: string) {
     await tx.auditLog.create({
       data: {
         actorId,
-        action: "game_day.lock",
+        action: "game_day.start",
         entityType: "GameDay",
         entityId: gameDayId,
         payload: { playerCount: players.length, seed, matches: plans.length },
