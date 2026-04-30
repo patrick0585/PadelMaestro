@@ -9,6 +9,10 @@ import {
   GameDayFinishedError,
   NotAllowedError,
 } from "@/lib/match/enter-score";
+import {
+  subscribeToGameDay,
+  __resetLiveBroadcastForTests,
+} from "@/lib/game-day/live-broadcast";
 import { resetDb } from "../helpers/reset-db";
 
 async function setupFivePlayerGame() {
@@ -103,6 +107,31 @@ describe("enterScore", () => {
 
     const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
     expect(after.status).toBe("in_progress");
+  });
+
+  // Regression guard for the M1 broadcast gap: clients that subscribed
+  // while the day was still roster_locked must receive the very first
+  // score update, even though enterScore flips status in the same call.
+  it("delivers the first score to subscribers that joined before the status flip", async () => {
+    __resetLiveBroadcastForTests();
+    const { players, day, matches } = await setupFivePlayerGame();
+
+    let calls = 0;
+    const off = subscribeToGameDay(day.id, () => {
+      calls++;
+    });
+
+    await enterScore({
+      matchId: matches[0].id,
+      team1Score: 3,
+      team2Score: 0,
+      scoredBy: players[0].id,
+      expectedVersion: 0,
+      isAdmin: true,
+    });
+
+    expect(calls).toBe(1);
+    off();
   });
 
   it("keeps status in_progress while matches remain unscored", async () => {

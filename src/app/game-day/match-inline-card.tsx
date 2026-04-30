@@ -21,8 +21,8 @@ export interface MatchRow {
 
 // Map the English server-side validate.ts reasons to localized copy.
 // We match by substring so wording tweaks on the server don't silently
-// fall back to the generic message.
-function germanInvalidReason(serverError: string): string {
+// fall back to the generic message. Exported for direct testing.
+export function germanInvalidReason(serverError: string): string {
   if (/tie/i.test(serverError)) return "Unentschieden ist nicht erlaubt.";
   if (/sum to 3/i.test(serverError)) return "Summe muss 3 ergeben (z. B. 3:0, 2:1, 1:2, 0:3).";
   if (/non-negative integers/i.test(serverError)) return "Nur ganze Zahlen ≥ 0 erlaubt.";
@@ -64,10 +64,6 @@ export function MatchInlineCard({
   }
 
   async function save() {
-    if (isTie) {
-      setError("Unentschieden ist nicht erlaubt.");
-      return;
-    }
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/matches/${match.id}`, {
