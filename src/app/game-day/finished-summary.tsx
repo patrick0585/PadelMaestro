@@ -2,6 +2,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { listJokersForGameDay } from "@/lib/joker/list";
 import { JokerBlock } from "./joker-block";
+import { PartnershipCounts } from "./partnership-counts";
 
 const PODIUM_STYLES = [
   { medal: "🥇", rankLabel: "Platz 1", badge: "bg-warning/15" },
@@ -117,6 +118,7 @@ export async function FinishedSummary({
           </tbody>
         </table>
       </section>
+      <PartnershipCounts gameDayId={gameDayId} />
       <JokerBlock jokers={jokers} />
     </>
   );
