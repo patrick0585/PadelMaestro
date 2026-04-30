@@ -31,3 +31,11 @@ export function timelineForStatus(status: GameDayStatus): TimelineStep[] {
     return { id: step.id, label: step.label, status: stepStatus };
   });
 }
+
+// Subscribe to live updates already in roster_locked. Otherwise the
+// first score (which itself flips status to in_progress) is broadcast
+// before any client has subscribed, and every observer except the
+// scorer misses the M1 update until they manually reload.
+export function shouldSubscribeToLiveUpdates(status: GameDayStatus): boolean {
+  return status === "roster_locked" || status === "in_progress";
+}

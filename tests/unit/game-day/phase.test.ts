@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { timelineForStatus } from "@/app/game-day/phase";
+import { shouldSubscribeToLiveUpdates, timelineForStatus } from "@/app/game-day/phase";
 
 describe("timelineForStatus", () => {
   it("returns exactly 3 steps labelled Geplant / Matches / Fertig", () => {
@@ -27,5 +27,26 @@ describe("timelineForStatus", () => {
   it("marks everything done with Fertig current when finished", () => {
     const steps = timelineForStatus("finished");
     expect(steps.map((s) => s.status)).toEqual(["done", "done", "current"]);
+  });
+});
+
+describe("shouldSubscribeToLiveUpdates", () => {
+  // The first score also flips status from roster_locked -> in_progress
+  // and broadcasts in the same transaction. If we only subscribe at
+  // in_progress we miss the very first update for every observer.
+  it("subscribes already at roster_locked so the M1 broadcast is delivered", () => {
+    expect(shouldSubscribeToLiveUpdates("roster_locked")).toBe(true);
+  });
+
+  it("subscribes during in_progress", () => {
+    expect(shouldSubscribeToLiveUpdates("in_progress")).toBe(true);
+  });
+
+  it("does not subscribe during planned (no scores possible yet)", () => {
+    expect(shouldSubscribeToLiveUpdates("planned")).toBe(false);
+  });
+
+  it("does not subscribe once finished", () => {
+    expect(shouldSubscribeToLiveUpdates("finished")).toBe(false);
   });
 });

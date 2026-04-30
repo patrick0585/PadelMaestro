@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
 import { MatchInlineCard } from "./match-inline-card";
 import { Timeline } from "@/components/ui/timeline";
-import { timelineForStatus, type GameDayStatus } from "./phase";
+import { timelineForStatus, shouldSubscribeToLiveUpdates, type GameDayStatus } from "./phase";
 import { PlannedSection } from "./planned-section";
 import { RosterChips, type RosterAttendance } from "./roster-chips";
 import { AddExtraMatchButton } from "./add-extra-match-button";
@@ -97,7 +97,9 @@ export default async function GameDayPage() {
 
   return (
     <div className="space-y-4">
-      {day.status === "in_progress" && <GameDayLiveUpdates gameDayId={day.id} />}
+      {shouldSubscribeToLiveUpdates(day.status as GameDayStatus) && (
+        <GameDayLiveUpdates gameDayId={day.id} />
+      )}
       <header className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
