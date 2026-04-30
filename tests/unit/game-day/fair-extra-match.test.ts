@@ -50,8 +50,21 @@ function playerCounts(matches: FairExtraMatchHistoryRow[], players: FairExtraMat
   return c;
 }
 
-function pairCounts(matches: FairExtraMatchHistoryRow[]) {
+function pairCounts(
+  matches: FairExtraMatchHistoryRow[],
+  players: FairExtraMatchPlayer[],
+) {
+  // Pre-fill every possible unordered pair with 0 so a pair the greedy
+  // never picks still shows up in the spread calculation. Without this,
+  // a pathological case where one pair is starved would silently pass.
   const c = new Map<string, number>();
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+      const a = players[i].id;
+      const b = players[j].id;
+      c.set(a < b ? `${a}|${b}` : `${b}|${a}`, 0);
+    }
+  }
   const inc = (a: string, b: string) => {
     const k = a < b ? `${a}|${b}` : `${b}|${a}`;
     c.set(k, (c.get(k) ?? 0) + 1);
@@ -124,39 +137,59 @@ describe("pickFairExtraMatch", () => {
     expect(isStalePair(t2)).toBe(false);
   });
 
+  // Spread out the seeds across the Mulberry32 state space rather than
+  // walking consecutive integers (which share most of their lower
+  // bits). Primes far apart keep the trials independent.
+  const TRIAL_SEEDS = [17, 4099, 65537, 1048583, 16777259, 99999989, 2147483647, 7];
+
   // Property-based: simulating many extra-matches in a row keeps the
   // spread of player match counts ≤ 1. This is the headline guarantee.
-  it("keeps player match-count spread ≤ 1 over many consecutive picks", () => {
-    for (let trial = 0; trial < 8; trial++) {
-      const rng = seeded(1000 + trial);
+  it("keeps player match-count spread ≤ 1 over many consecutive picks (5 players)", () => {
+    for (const seed of TRIAL_SEEDS) {
+      const rng = seeded(seed);
       let matches: FairExtraMatchHistoryRow[] = [];
       for (let i = 0; i < 20; i++) {
         const pick = pickFairExtraMatch({ matches, confirmedPlayers: PLAYERS }, rng);
         matches = applyPick(matches, pick);
         const counts = [...playerCounts(matches, PLAYERS).values()];
         const spread = Math.max(...counts) - Math.min(...counts);
-        expect(spread, `spread after match ${i + 1} of trial ${trial}`).toBeLessThanOrEqual(1);
+        expect(spread, `spread after match ${i + 1} (seed ${seed})`).toBeLessThanOrEqual(1);
       }
     }
   });
 
-  // Property-based: after many picks, no pair should be more than 1
-  // ahead of the rarest pair on the court. (Stronger version would be
-  // exact uniform — for a greedy that's too strict; ≤ 1 spread is the
-  // right ceiling for a 4-of-N picker.)
-  it("keeps pair-count spread small over many consecutive picks", () => {
-    const rng = seeded(2024);
-    let matches: FairExtraMatchHistoryRow[] = [];
-    for (let i = 0; i < 30; i++) {
-      const pick = pickFairExtraMatch({ matches, confirmedPlayers: PLAYERS }, rng);
-      matches = applyPick(matches, pick);
+  // Property-based: same invariant on the realistic 6-player roster
+  // over a longer 25-pick run.
+  it("keeps player match-count spread ≤ 1 over many consecutive picks (6 players)", () => {
+    const six = [...PLAYERS, { id: "p6", name: "Felix" }];
+    for (const seed of TRIAL_SEEDS.slice(0, 4)) {
+      const rng = seeded(seed);
+      let matches: FairExtraMatchHistoryRow[] = [];
+      for (let i = 0; i < 25; i++) {
+        const pick = pickFairExtraMatch({ matches, confirmedPlayers: six }, rng);
+        matches = applyPick(matches, pick);
+        const counts = [...playerCounts(matches, six).values()];
+        const spread = Math.max(...counts) - Math.min(...counts);
+        expect(spread, `6p spread after match ${i + 1} (seed ${seed})`).toBeLessThanOrEqual(1);
+      }
     }
-    const pc = pairCounts(matches);
-    // 5 players → 10 possible pairs. After 30 matches we have 60 team
-    // slots → expected ~6 per pair. Spread should be tight.
-    const counts = [...pc.values()];
-    const spread = Math.max(...counts) - Math.min(...counts);
-    expect(spread).toBeLessThanOrEqual(2);
+  });
+
+  // Property-based: pair-count spread is measured against ALL possible
+  // pairs (incl. never-picked pairs at 0) so a starved pair would
+  // surface here, not silently pass.
+  it("keeps pair-count spread small over many consecutive picks", () => {
+    for (const seed of TRIAL_SEEDS.slice(0, 4)) {
+      const rng = seeded(seed);
+      let matches: FairExtraMatchHistoryRow[] = [];
+      for (let i = 0; i < 30; i++) {
+        const pick = pickFairExtraMatch({ matches, confirmedPlayers: PLAYERS }, rng);
+        matches = applyPick(matches, pick);
+      }
+      const counts = [...pairCounts(matches, PLAYERS).values()];
+      const spread = Math.max(...counts) - Math.min(...counts);
+      expect(spread, `pair spread (seed ${seed})`).toBeLessThanOrEqual(2);
+    }
   });
 
   it("works for the 4-player case (no benching needed)", () => {
@@ -171,16 +204,4 @@ describe("pickFairExtraMatch", () => {
     expect(ids.size).toBe(4);
   });
 
-  it("works for 6 confirmed players", () => {
-    const six = [...PLAYERS, { id: "p6", name: "Felix" }];
-    const rng = seeded(2025);
-    let matches: FairExtraMatchHistoryRow[] = [];
-    for (let i = 0; i < 12; i++) {
-      const pick = pickFairExtraMatch({ matches, confirmedPlayers: six }, rng);
-      matches = applyPick(matches, pick);
-    }
-    const counts = [...playerCounts(matches, six).values()];
-    const spread = Math.max(...counts) - Math.min(...counts);
-    expect(spread).toBeLessThanOrEqual(1);
-  });
 });
