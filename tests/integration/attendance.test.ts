@@ -33,7 +33,7 @@ describe("setAttendance", () => {
       data: { name: "A", email: "a@x", isAdmin: true, passwordHash: "x" },
     });
     const day = await createGameDay(new Date("2026-04-21"), admin.id);
-    await prisma.gameDay.update({ where: { id: day.id }, data: { status: "roster_locked" } });
+    await prisma.gameDay.update({ where: { id: day.id }, data: { status: "in_progress" } });
 
     await expect(setAttendance(day.id, admin.id, "confirmed")).rejects.toThrow(/locked/i);
   });
@@ -109,7 +109,7 @@ describe("setAttendanceAsAdmin", () => {
     const { admin, other, day } = await setup();
     await prisma.gameDay.update({
       where: { id: day.id },
-      data: { status: "roster_locked" },
+      data: { status: "in_progress" },
     });
     await expect(
       setAttendanceAsAdmin(day.id, other.id, "confirmed", admin.id),

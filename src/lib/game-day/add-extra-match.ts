@@ -28,7 +28,7 @@ export async function addExtraMatch(gameDayId: string, actorId: string) {
       },
     });
     if (!day) throw new GameDayNotFoundError(gameDayId);
-    if (day.status !== "roster_locked" && day.status !== "in_progress") {
+    if (day.status !== "in_progress") {
       throw new GameDayNotActiveError(day.status);
     }
 

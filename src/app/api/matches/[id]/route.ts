@@ -5,6 +5,7 @@ import {
   enterScore,
   ScoreConflictError,
   GameDayFinishedError,
+  GameDayNotStartedError,
   NotAllowedError,
   InvalidScoreError,
 } from "@/lib/match/enter-score";
@@ -45,6 +46,9 @@ export async function PUT(
     }
     if (err instanceof GameDayFinishedError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    if (err instanceof GameDayNotStartedError) {
+      return NextResponse.json({ error: "game_day_not_started" }, { status: 409 });
     }
     if (err instanceof InvalidScoreError) {
       return NextResponse.json({ error: err.message }, { status: 400 });

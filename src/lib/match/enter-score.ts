@@ -40,6 +40,13 @@ export interface EnterScoreInput {
   isAdmin?: boolean;
 }
 
+export class GameDayNotStartedError extends Error {
+  constructor(gameDayId: string) {
+    super(`game day ${gameDayId} has not been started yet`);
+    this.name = "GameDayNotStartedError";
+  }
+}
+
 export async function enterScore(input: EnterScoreInput) {
   const match = await prisma.match.findUniqueOrThrow({
     where: { id: input.matchId },
@@ -48,6 +55,9 @@ export async function enterScore(input: EnterScoreInput) {
 
   if (match.gameDay.status === "finished") {
     throw new GameDayFinishedError(match.gameDayId);
+  }
+  if (match.gameDay.status !== "in_progress") {
+    throw new GameDayNotStartedError(match.gameDayId);
   }
 
   if (!input.isAdmin) {
@@ -80,11 +90,6 @@ export async function enterScore(input: EnterScoreInput) {
   if (result.count === 0) {
     throw new ScoreConflictError(`Match ${input.matchId} was already updated by someone else`);
   }
-
-  await prisma.gameDay.updateMany({
-    where: { id: match.gameDayId, status: "roster_locked" },
-    data: { status: "in_progress" },
-  });
 
   publishGameDayUpdate(match.gameDayId);
 

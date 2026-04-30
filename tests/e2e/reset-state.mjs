@@ -15,7 +15,7 @@ if (!looksLocal) {
 const prisma = new PrismaClient();
 try {
   const days = await prisma.gameDay.findMany({
-    where: { status: { in: ["planned", "roster_locked", "in_progress"] } },
+    where: { status: { in: ["planned", "in_progress"] } },
     select: { id: true, date: true, status: true },
   });
   console.log("Non-finished game-days:", days);

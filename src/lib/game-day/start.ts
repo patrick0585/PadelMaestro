@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/db";
 import { assignPlayersToTemplate } from "@/lib/pairings/assign";
-import { generateSeed } from "@/lib/pairings/shuffle";
 
-export class GameDayAlreadyLockedError extends Error {
+export class GameDayAlreadyStartedError extends Error {
   constructor() {
-    super("game day is already locked or finished");
-    this.name = "GameDayAlreadyLockedError";
+    super("game day is already started or finished");
+    this.name = "GameDayAlreadyStartedError";
   }
 }
 
@@ -23,14 +22,17 @@ export class TooManyPlayersError extends Error {
   }
 }
 
-export async function lockRoster(gameDayId: string, actorId: string) {
+// Atomically generates the match plan, persists it, and flips the game
+// day from planned → in_progress. Replaces the old lockRoster +
+// implicit auto-start sequence with a single explicit step.
+export async function startGameDay(gameDayId: string, actorId: string) {
   const day = await prisma.gameDay.findUniqueOrThrow({
     where: { id: gameDayId },
     include: { participants: { include: { player: true } } },
   });
 
   if (day.status !== "planned") {
-    throw new GameDayAlreadyLockedError();
+    throw new GameDayAlreadyStartedError();
   }
 
   const confirmed = day.participants.filter((p) => p.attendance === "confirmed");
@@ -38,18 +40,37 @@ export async function lockRoster(gameDayId: string, actorId: string) {
   if (confirmed.length > 6) throw new TooManyPlayersError();
 
   const players = confirmed.map((p) => ({ id: p.player.id, name: p.player.name }));
-  const seed = generateSeed();
-  const plans = assignPlayersToTemplate(players, seed);
 
   return prisma.$transaction(async (tx) => {
-    await tx.gameDay.update({
+    // Re-read inside the transaction so a concurrent
+    // shuffle-preview that landed between the outer read and this
+    // moment is observed. Seed precedence: any persisted seed
+    // (from a shuffle) wins, otherwise day.id is the stable
+    // fallback so preview = reality even without a shuffle.
+    const inTx = await tx.gameDay.findUniqueOrThrow({
       where: { id: gameDayId },
+      select: { status: true, seed: true },
+    });
+    if (inTx.status !== "planned") {
+      throw new GameDayAlreadyStartedError();
+    }
+    const seed = inTx.seed ?? gameDayId;
+    const plans = assignPlayersToTemplate(players, seed);
+
+    // Optimistic lock: only flip if status AND seed are still what
+    // we just observed. A concurrent shuffle would have moved seed,
+    // and updateMany.count = 0 surfaces the race cleanly.
+    const flipped = await tx.gameDay.updateMany({
+      where: { id: gameDayId, status: "planned", seed: inTx.seed },
       data: {
-        status: "roster_locked",
+        status: "in_progress",
         playerCount: players.length,
         seed,
       },
     });
+    if (flipped.count === 0) {
+      throw new GameDayAlreadyStartedError();
+    }
 
     for (const plan of plans) {
       await tx.match.create({
@@ -67,7 +88,7 @@ export async function lockRoster(gameDayId: string, actorId: string) {
     await tx.auditLog.create({
       data: {
         actorId,
-        action: "game_day.lock",
+        action: "game_day.start",
         entityType: "GameDay",
         entityId: gameDayId,
         payload: { playerCount: players.length, seed, matches: plans.length },

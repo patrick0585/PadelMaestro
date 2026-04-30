@@ -236,7 +236,7 @@ describe("listArchivedGameDays", () => {
       data: { seasonId: season.id, date: new Date("2026-04-19"), playerCount: 4, status: "in_progress" },
     });
     const rosterLockedDay = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-20"), playerCount: 4, status: "roster_locked" },
+      data: { seasonId: season.id, date: new Date("2026-04-20"), playerCount: 4, status: "in_progress" },
     });
     for (const d of [plannedDay, inProgressDay, rosterLockedDay]) {
       await prisma.match.create({

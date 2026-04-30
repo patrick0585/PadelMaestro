@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
-  lockRoster,
-  GameDayAlreadyLockedError,
+  startGameDay,
+  GameDayAlreadyStartedError,
   InsufficientPlayersError,
   TooManyPlayersError,
-} from "@/lib/game-day/lock";
+} from "@/lib/game-day/start";
 
 export async function POST(
   _req: Request,
@@ -17,11 +17,11 @@ export async function POST(
 
   const { id } = await ctx.params;
   try {
-    const day = await lockRoster(id, session.user.id);
+    const day = await startGameDay(id, session.user.id);
     return NextResponse.json({ gameDay: day });
   } catch (err) {
-    if (err instanceof GameDayAlreadyLockedError) {
-      return NextResponse.json({ error: "already_locked" }, { status: 409 });
+    if (err instanceof GameDayAlreadyStartedError) {
+      return NextResponse.json({ error: "already_started" }, { status: 409 });
     }
     if (err instanceof InsufficientPlayersError) {
       return NextResponse.json({ error: "too_few_players" }, { status: 409 });

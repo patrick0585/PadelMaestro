@@ -7,7 +7,7 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
-async function setup(status: "planned" | "roster_locked" | "in_progress" | "finished") {
+async function setup(status: "planned" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
     data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
   });
@@ -42,52 +42,6 @@ describe("DELETE /api/game-days/[id]", () => {
     const res = await call(day.id);
     expect(res.status).toBe(204);
     expect(await prisma.gameDay.findUnique({ where: { id: day.id } })).toBeNull();
-  });
-
-  it("deletes a roster_locked day and cascades Match, GameDayParticipant, and JokerUse", async () => {
-    const { admin, day } = await setup("roster_locked");
-    authMock.mockResolvedValue({
-      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
-    });
-
-    // Create three additional players for the four-player match slots
-    const [p2, p3, p4] = await Promise.all([
-      prisma.player.create({ data: { name: "P2", email: "p2@example.com", passwordHash: "x" } }),
-      prisma.player.create({ data: { name: "P3", email: "p3@example.com", passwordHash: "x" } }),
-      prisma.player.create({ data: { name: "P4", email: "p4@example.com", passwordHash: "x" } }),
-    ]);
-
-    await prisma.gameDayParticipant.create({
-      data: { gameDayId: day.id, playerId: admin.id, attendance: "confirmed" },
-    });
-
-    await prisma.match.create({
-      data: {
-        gameDayId: day.id,
-        matchNumber: 1,
-        team1PlayerAId: admin.id,
-        team1PlayerBId: p2.id,
-        team2PlayerAId: p3.id,
-        team2PlayerBId: p4.id,
-      },
-    });
-
-    await prisma.jokerUse.create({
-      data: {
-        playerId: admin.id,
-        seasonId: day.seasonId,
-        gameDayId: day.id,
-        ppgAtUse: "0",
-        gamesCredited: 10,
-        pointsCredited: "0",
-      },
-    });
-
-    const res = await call(day.id);
-    expect(res.status).toBe(204);
-    expect(await prisma.match.count({ where: { gameDayId: day.id } })).toBe(0);
-    expect(await prisma.gameDayParticipant.count({ where: { gameDayId: day.id } })).toBe(0);
-    expect(await prisma.jokerUse.count({ where: { gameDayId: day.id } })).toBe(0);
   });
 
   it("returns 409 for in_progress", async () => {

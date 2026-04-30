@@ -67,7 +67,7 @@ export default async function AdminPage() {
     },
   });
   const manageableDay = await prisma.gameDay.findFirst({
-    where: { status: { in: ["planned", "roster_locked"] } },
+    where: { status: "planned" },
     orderBy: { date: "desc" },
     include: {
       participants: {
@@ -130,7 +130,6 @@ export default async function AdminPage() {
                   <DeleteGameDayButton
                     gameDayId={manageableDay.id}
                     dateLabel={new Date(manageableDay.date).toLocaleDateString("de-DE")}
-                    status={manageableDay.status as "planned" | "roster_locked"}
                   />
                 </div>
               </div>

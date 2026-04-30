@@ -4,7 +4,7 @@ import { deleteGameDay, GameDayNotDeletableError } from "@/lib/game-day/delete";
 import { GameDayNotFoundError } from "@/lib/game-day/attendance";
 import { resetDb } from "../../helpers/reset-db";
 
-async function makeDay(status: "planned" | "roster_locked" | "in_progress" | "finished") {
+async function makeDay(status: "planned" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
     data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
   });
@@ -32,13 +32,7 @@ describe("deleteGameDay", () => {
     expect(entries).toHaveLength(1);
   });
 
-  it("deletes a roster_locked day", async () => {
-    const { admin, day } = await makeDay("roster_locked");
-    await deleteGameDay(day.id, admin.id);
-    expect(await prisma.gameDay.findUnique({ where: { id: day.id } })).toBeNull();
-  });
-
-  it("rejects in_progress with GameDayNotDeletableError", async () => {
+  it("rejects an in_progress day with GameDayNotDeletableError", async () => {
     const { admin, day } = await makeDay("in_progress");
     await expect(deleteGameDay(day.id, admin.id)).rejects.toBeInstanceOf(GameDayNotDeletableError);
   });

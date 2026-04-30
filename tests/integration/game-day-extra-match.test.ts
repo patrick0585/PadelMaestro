@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { POST } from "@/app/api/game-days/[id]/matches/route";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
-import { lockRoster } from "@/lib/game-day/lock";
+import { startGameDay } from "@/lib/game-day/start";
 import { resetDb } from "../helpers/reset-db";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -21,7 +21,7 @@ async function setupFive() {
   }
   const day = await createGameDay(new Date("2026-04-21"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
-  await lockRoster(day.id, players[0].id);
+  await startGameDay(day.id, players[0].id);
   return { players, day };
 }
 
@@ -38,7 +38,7 @@ describe("POST /api/game-days/[id]/matches", () => {
     await resetDb();
   });
 
-  it("creates match #16 in roster_locked", async () => {
+  it("creates match #16 in in_progress", async () => {
     const { players, day } = await setupFive();
     authMock.mockResolvedValue({
       user: { id: players[0].id, isAdmin: true, email: players[0].email, name: players[0].name },

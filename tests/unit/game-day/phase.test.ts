@@ -14,12 +14,7 @@ describe("timelineForStatus", () => {
     expect(steps.map((s) => s.status)).toEqual(["current", "upcoming", "upcoming"]);
   });
 
-  it("marks Matches as current when status=roster_locked", () => {
-    const steps = timelineForStatus("roster_locked");
-    expect(steps.map((s) => s.status)).toEqual(["done", "current", "upcoming"]);
-  });
-
-  it("marks Matches as current when status=in_progress (same as roster_locked)", () => {
+  it("marks Matches as current when status=in_progress", () => {
     const steps = timelineForStatus("in_progress");
     expect(steps.map((s) => s.status)).toEqual(["done", "current", "upcoming"]);
   });
@@ -31,18 +26,11 @@ describe("timelineForStatus", () => {
 });
 
 describe("shouldSubscribeToLiveUpdates", () => {
-  // The first score also flips status from roster_locked -> in_progress
-  // and broadcasts in the same transaction. If we only subscribe at
-  // in_progress we miss the very first update for every observer.
-  it("subscribes already at roster_locked so the M1 broadcast is delivered", () => {
-    expect(shouldSubscribeToLiveUpdates("roster_locked")).toBe(true);
-  });
-
   it("subscribes during in_progress", () => {
     expect(shouldSubscribeToLiveUpdates("in_progress")).toBe(true);
   });
 
-  it("does not subscribe during planned (no scores possible yet)", () => {
+  it("does not subscribe during planned", () => {
     expect(shouldSubscribeToLiveUpdates("planned")).toBe(false);
   });
 

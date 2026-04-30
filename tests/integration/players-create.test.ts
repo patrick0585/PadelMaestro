@@ -101,7 +101,7 @@ describe("POST /api/players", () => {
     const day = await createGameDay(new Date("2026-04-21"), admin.id);
     await prisma.gameDay.update({
       where: { id: day.id },
-      data: { status: "roster_locked" },
+      data: { status: "in_progress" },
     });
     asAdmin(admin.id);
     const req = new Request("http://localhost/api/players", {

@@ -8,10 +8,9 @@ import { Dialog } from "@/components/ui/dialog";
 interface Props {
   gameDayId: string;
   dateLabel: string;
-  status: "planned" | "roster_locked";
 }
 
-export function DeleteGameDayButton({ gameDayId, dateLabel, status }: Props) {
+export function DeleteGameDayButton({ gameDayId, dateLabel }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,10 +33,9 @@ export function DeleteGameDayButton({ gameDayId, dateLabel, status }: Props) {
     router.refresh();
   }
 
-  const message =
-    status === "roster_locked"
-      ? `Spieltag ${dateLabel} löschen? Generierte Matches gehen verloren — Scores sind noch keine vorhanden.`
-      : `Spieltag ${dateLabel} löschen?`;
+  // Only planned days can be deleted now — once Spielbetrieb starts,
+  // the day moves to in_progress and the admin must finish it instead.
+  const message = `Spieltag ${dateLabel} löschen?`;
 
   return (
     <>
