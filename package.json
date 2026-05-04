@@ -23,7 +23,8 @@
     "import:statistik": "tsx scripts/import-statistik.ts",
     "fix:gameday-duplicates": "tsx scripts/fix-gameday-duplicates.ts",
     "reset:password": "tsx scripts/reset-password.ts",
-    "diagnose:attendance": "tsx scripts/diagnose-attendance.ts"
+    "diagnose:attendance": "tsx scripts/diagnose-attendance.ts",
+    "diagnose:medals": "tsx scripts/diagnose-medals.ts"
   },
   "keywords": [],
   "author": "",
