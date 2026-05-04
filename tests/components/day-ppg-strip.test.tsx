@@ -18,7 +18,7 @@ function day(overrides: Partial<DayTrend> = {}): DayTrend {
 }
 
 describe("<DayPpgStrip>", () => {
-  it("renders one tile per day in oldest-first order", () => {
+  it("renders one tile per day in newest-first order", () => {
     render(
       <DayPpgStrip
         days={[
@@ -30,8 +30,8 @@ describe("<DayPpgStrip>", () => {
     );
     const tiles = screen.getAllByRole("listitem");
     expect(tiles).toHaveLength(3);
-    expect(tiles[0]).toHaveTextContent("6.");
-    expect(tiles[2]).toHaveTextContent("1.");
+    expect(tiles[0]).toHaveTextContent("1.");
+    expect(tiles[2]).toHaveTextContent("6.");
   });
 
   it("renders placement, points, matches, PPG and date on every tile", () => {
@@ -72,8 +72,8 @@ describe("<DayPpgStrip>", () => {
       />,
     );
     const tiles = screen.getAllByRole("listitem");
-    // oldest-first = fourth, podium, first
-    const [fourth, podium, first] = tiles;
+    // newest-first = first, podium, fourth (input order)
+    const [first, podium, fourth] = tiles;
     expect(first.innerHTML).toContain("bg-primary-soft");
     expect(podium.innerHTML).toContain("bg-success-soft");
     expect(fourth.innerHTML).toContain("bg-surface-muted");
