@@ -29,14 +29,13 @@ function Stat({ value, unit }: { value: number; unit: string }) {
 
 export function DayPpgStrip({ days }: { days: DayTrend[] }) {
   if (days.length === 0) return null;
-  const oldestFirst = [...days].reverse();
   return (
     <ul
       aria-label="Letzte Spieltage"
       className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="list"
     >
-      {oldestFirst.map((d) => {
+      {days.map((d) => {
         const trend = TREND[d.delta];
         const place = placementTone(d.placement, d.totalPlayers);
         const ppgDisplay = d.ppg.toFixed(1);
