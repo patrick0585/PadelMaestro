@@ -73,15 +73,20 @@ export function MatchInlineCard({
     });
     setBusy(false);
     if (!res.ok) {
+      // Temporary: surface the HTTP status alongside the copy so the
+      // 2026-05-05 score-entry failures (where the only signal is a
+      // user screenshot) can be classified — 401 vs 403 vs 409 vs 500
+      // each implies a different root cause.
+      const suffix = ` [HTTP ${res.status}]`;
       if (res.status === 409) {
-        setError("Zwischenzeitlich geändert – Seite neu laden.");
+        setError("Zwischenzeitlich geändert – Seite neu laden." + suffix);
       } else if (res.status === 400) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ? germanInvalidReason(body.error) : "Ungültiges Ergebnis.");
+        setError((body?.error ? germanInvalidReason(body.error) : "Ungültiges Ergebnis.") + suffix);
       } else if (res.status === 403) {
-        setError("Du darfst diesen Score nicht eintragen.");
+        setError("Du darfst diesen Score nicht eintragen." + suffix);
       } else {
-        setError("Konnte Score nicht speichern.");
+        setError("Konnte Score nicht speichern." + suffix);
       }
       return;
     }

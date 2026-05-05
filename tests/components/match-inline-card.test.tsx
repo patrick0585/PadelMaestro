@@ -157,7 +157,19 @@ describe("<MatchInlineCard> tie/save guard", () => {
     await userEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
     await bumpTeamA();
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText("Ungültiges Ergebnis.")).toBeInTheDocument();
+    expect(await screen.findByText(/Ungültiges Ergebnis\./)).toBeInTheDocument();
+    fetchSpy.mockRestore();
+  });
+
+  it("appends the HTTP status to the error message (diagnostics for 2026-05-05 incident)", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response("{}", { status: 401 }),
+    );
+    render(<MatchInlineCard maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
+    await userEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
+    await bumpTeamA();
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText(/Konnte Score nicht speichern\.\s*\[HTTP 401\]/)).toBeInTheDocument();
     fetchSpy.mockRestore();
   });
 });
