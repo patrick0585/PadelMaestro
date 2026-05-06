@@ -17,6 +17,7 @@ import { StartGameDayButton } from "./start-game-day-button";
 import { ShufflePreviewButton } from "./shuffle-preview-button";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { GameDayLiveUpdates } from "./live-updates";
+import { RefreshButton } from "./refresh-button";
 import { assignPlayersToTemplate } from "@/lib/pairings/assign";
 
 export const dynamic = "force-dynamic";
@@ -128,14 +129,17 @@ export default async function GameDayPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Spieltag</p>
           <h1 className="text-2xl font-bold text-foreground">{dateText}</h1>
         </div>
-        {session.user.isAdmin && day.status === "in_progress" && (
-          <Link
-            href="/game-day/print"
-            className="shrink-0 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground"
-          >
-            🖨 Drucken
-          </Link>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <RefreshButton />
+          {session.user.isAdmin && day.status === "in_progress" && (
+            <Link
+              href="/game-day/print"
+              className="rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground"
+            >
+              🖨 Drucken
+            </Link>
+          )}
+        </div>
       </header>
       <Timeline steps={steps} />
 
