@@ -33,15 +33,15 @@ export default async function RankingPage() {
         <CardBody>
           <div className="mb-2">
             <h2 className="text-sm font-semibold text-foreground">Saison-Verlauf</h2>
-            <p className="text-xs text-foreground-muted">Platzierung pro Spieltag.</p>
+            <p className="text-xs text-foreground-muted">
+              Tabellenstand nach jedem Spieltag.
+            </p>
           </div>
           <SeasonTrendChart
             data={{
-              days: trend.days.map((d) => ({
-                date: d.date.toISOString(),
-                totalPlayers: d.totalPlayers,
-              })),
+              days: trend.days.map((d) => ({ date: d.date.toISOString() })),
               players: trend.players,
+              totalPlayers: trend.totalPlayers,
             }}
             currentPlayerId={session.user.id}
           />

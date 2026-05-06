@@ -27,8 +27,9 @@ function colorForPlayer(playerId: string): string {
 }
 
 export interface SeasonTrendChartData {
-  days: { date: string; totalPlayers: number }[]; // ISO date strings (server-passed)
+  days: { date: string }[]; // ISO date strings (server-passed)
   players: { playerId: string; name: string; values: (number | null)[] }[];
+  totalPlayers: number; // distinct active players in the season — Y-axis bound
 }
 
 export function SeasonTrendChart({
@@ -49,9 +50,10 @@ export function SeasonTrendChart({
   const xLabels = data.days.map((d) =>
     new Date(d.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
   );
-  // Y-axis must reach the largest roster of any single day so the
-  // worst placement is visible (e.g., 8th-of-8 must fit on screen).
-  const yMax = Math.max(...data.days.map((d) => d.totalPlayers), 1);
+  // Y-axis spans 1..totalPlayers so the cumulative-rank scale stays
+  // consistent across the season (a player at rank 5 on day 2 sits at
+  // the same screen position as rank 5 on day 12).
+  const yMax = Math.max(data.totalPlayers, 1);
 
   const series: ChartSeries[] = data.players.map((p) => {
     const isMe = p.playerId === currentPlayerId;
