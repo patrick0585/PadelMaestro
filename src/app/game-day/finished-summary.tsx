@@ -2,6 +2,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { listJokersForGameDay } from "@/lib/joker/list";
 import { JokerBlock } from "./joker-block";
+import { mergeJokersIntoRows } from "./joker-summary-merge";
 import { PartnershipCounts } from "./partnership-counts";
 
 const PODIUM_STYLES = [
@@ -11,6 +12,10 @@ const PODIUM_STYLES = [
 ] as const;
 
 const RANK_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+function JokerBadge() {
+  return <span role="img" aria-label="Joker eingesetzt">🃏</span>;
+}
 
 export async function FinishedSummary({
   gameDayId,
@@ -26,7 +31,10 @@ export async function FinishedSummary({
     listJokersForGameDay(gameDayId),
   ]);
 
-  if (!summary || summary.rows.length === 0) {
+  const displayRows = mergeJokersIntoRows(summary?.rows ?? [], jokers);
+  const displayPodium = displayRows.slice(0, 3);
+
+  if (!summary || displayRows.length === 0) {
     return (
       <>
         <div className="rounded-2xl border border-border bg-surface p-4">
@@ -55,7 +63,7 @@ export async function FinishedSummary({
         </div>
 
         <ol aria-label="Podium" className="grid gap-2 sm:grid-cols-3">
-          {summary.podium.map((row, i) => {
+          {displayPodium.map((row, i) => {
             const style = PODIUM_STYLES[i];
             return (
               <li
@@ -67,7 +75,10 @@ export async function FinishedSummary({
                 </span>
                 <Avatar playerId={row.playerId} name={row.playerName} avatarVersion={row.avatarVersion} size={40} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-foreground">{row.playerName}</div>
+                  <div className="flex items-center gap-1.5 truncate text-sm font-semibold text-foreground">
+                    {row.jokerUsed && <JokerBadge />}
+                    <span className="truncate">{row.playerName}</span>
+                  </div>
                   <div className="text-[0.7rem] text-foreground-muted">
                     {row.matches} {row.matches === 1 ? "Match" : "Matches"}
                   </div>
@@ -88,7 +99,7 @@ export async function FinishedSummary({
             </tr>
           </thead>
           <tbody>
-            {summary.rows.map((row, i) => {
+            {displayRows.map((row, i) => {
               const rank = i + 1;
               const medal = RANK_MEDALS[rank];
               return (
@@ -105,6 +116,7 @@ export async function FinishedSummary({
                 <td className="py-1.5 pr-2 text-foreground">
                   <span className="flex items-center gap-2">
                     <Avatar playerId={row.playerId} name={row.playerName} avatarVersion={row.avatarVersion} size={32} />
+                    {row.jokerUsed && <JokerBadge />}
                     <span className="block truncate">{row.playerName}</span>
                   </span>
                 </td>
