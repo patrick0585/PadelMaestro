@@ -1,5 +1,30 @@
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// The apex host and its `www.` sibling are the same site. Caddy serves
+// both padelmaestro.de and www.padelmaestro.de, but AUTH_URL names only
+// the apex — without this, a phone that landed on the www host sent
+// `Origin: https://www.…` and was rejected on every mutation. Only the
+// exact www/non-www pair is added (same scheme + port); arbitrary
+// subdomains stay cross-origin. Assumes `expected` is an apex or a single
+// `www.`-prefixed host (the only shapes AUTH_URL realistically takes).
+function allowedOrigins(expectedOrigin: string): Set<string> {
+  const origins = new Set<string>([expectedOrigin.toLowerCase()]);
+  try {
+    const u = new URL(expectedOrigin);
+    const sibling = u.hostname.startsWith("www.")
+      ? u.hostname.slice(4)
+      : `www.${u.hostname}`;
+    // Guard the degenerate `www.` → "" case and any no-op.
+    if (sibling && sibling !== u.hostname) {
+      u.hostname = sibling;
+      origins.add(u.origin.toLowerCase());
+    }
+  } catch {
+    // expectedOrigin was not a parseable URL — keep it as the sole entry.
+  }
+  return origins;
+}
+
 export function isSameOriginMutation(
   method: string,
   pathname: string,
@@ -22,11 +47,15 @@ export function isSameOriginMutation(
     expectedOrigin = expected;
   }
 
-  if (headers.origin) return headers.origin === expectedOrigin;
+  const allowed = allowedOrigins(expectedOrigin);
+
+  // Origin/host are case-insensitive per the URL spec; normalise so a
+  // proxy that uppercases the header cannot trip a false CSRF rejection.
+  if (headers.origin) return allowed.has(headers.origin.toLowerCase());
 
   if (headers.referer) {
     try {
-      return new URL(headers.referer).origin === expectedOrigin;
+      return allowed.has(new URL(headers.referer).origin.toLowerCase());
     } catch {
       return false;
     }

@@ -76,4 +76,94 @@ describe("isSameOriginMutation", () => {
       ),
     ).toBe(false);
   });
+
+  // www vs non-www: Caddy serves both padelmaestro.de and
+  // www.padelmaestro.de, but AUTH_URL is only the apex. A phone that lands
+  // on the www host sent Origin: https://www.… and got a 403 on every
+  // mutation. The apex and its www sibling are the same site.
+  describe("www / non-www are treated as the same site", () => {
+    it("accepts the www origin when expected is the apex", () => {
+      expect(
+        isSameOriginMutation(
+          "PUT",
+          "/api/matches/abc",
+          url,
+          { origin: "https://www.padel.example.com", referer: null },
+          expected,
+        ),
+      ).toBe(true);
+    });
+
+    it("accepts the apex origin when expected is the www host", () => {
+      expect(
+        isSameOriginMutation(
+          "PUT",
+          "/api/matches/abc",
+          url,
+          { origin: "https://padel.example.com", referer: null },
+          "https://www.padel.example.com",
+        ),
+      ).toBe(true);
+    });
+
+    it("accepts a www referer when origin is missing", () => {
+      expect(
+        isSameOriginMutation(
+          "POST",
+          "/api/matches/abc",
+          url,
+          { origin: null, referer: "https://www.padel.example.com/game-day" },
+          expected,
+        ),
+      ).toBe(true);
+    });
+
+    it("still rejects an unrelated subdomain", () => {
+      expect(
+        isSameOriginMutation(
+          "POST",
+          "/api/matches/abc",
+          url,
+          { origin: "https://evil.padel.example.com", referer: null },
+          expected,
+        ),
+      ).toBe(false);
+    });
+
+    it("still rejects a look-alike host without the dotted www prefix", () => {
+      expect(
+        isSameOriginMutation(
+          "POST",
+          "/api/matches/abc",
+          url,
+          { origin: "https://wwwpadel.example.com", referer: null },
+          expected,
+        ),
+      ).toBe(false);
+    });
+
+    it("accepts an uppercased Origin header (case-insensitive host)", () => {
+      expect(
+        isSameOriginMutation(
+          "PUT",
+          "/api/matches/abc",
+          url,
+          { origin: "HTTPS://WWW.PADEL.EXAMPLE.COM", referer: null },
+          expected,
+        ),
+      ).toBe(true);
+    });
+
+    it("does not cross scheme when toggling www", () => {
+      expect(
+        isSameOriginMutation(
+          "POST",
+          "/api/matches/abc",
+          url,
+          { origin: "http://www.padel.example.com", referer: null },
+          expected,
+        ),
+      ).toBe(false);
+    });
+  });
 });
