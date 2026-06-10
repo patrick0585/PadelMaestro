@@ -19,6 +19,7 @@ import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { GameDayLiveUpdates } from "./live-updates";
 import { RefreshButton } from "./refresh-button";
 import { assignPlayersToTemplate } from "@/lib/pairings/assign";
+import { loadTemplate } from "@/lib/pairings/load";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,13 @@ export default async function GameDayPage() {
     day.status === "in_progress" &&
     day.matches.length > 0 &&
     day.matches.every((m) => m.team1Score !== null && m.team2Score !== null);
+
+  // Matches beyond the template count are admin-added extras and may be
+  // removed (only while in_progress). Template matches stay fixed.
+  const templateTotal = day.playerCount
+    ? loadTemplate(day.playerCount).totalMatches
+    : Number.POSITIVE_INFINITY;
+  const canRemoveMatches = session.user.isAdmin && day.status === "in_progress";
 
   const participants = day.participants.map((p) => ({
     playerId: p.playerId,
@@ -218,6 +226,8 @@ export default async function GameDayPage() {
               <MatchInlineCard
                 key={m.id}
                 maxScore={day.playerCount === 4 ? 12 : 3}
+                gameDayId={day.id}
+                removable={canRemoveMatches && m.matchNumber > templateTotal}
                 match={{
                   id: m.id,
                   matchNumber: m.matchNumber,

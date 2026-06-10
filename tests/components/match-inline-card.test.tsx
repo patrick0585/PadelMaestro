@@ -32,6 +32,7 @@ describe("<MatchInlineCard> scoredBy hint", () => {
   it("renders the hint when scoredByName and scoredAt are provided", () => {
     render(
       <MatchInlineCard
+        gameDayId="gd-1"
         maxScore={12}
         match={{
           ...baseMatch,
@@ -44,13 +45,14 @@ describe("<MatchInlineCard> scoredBy hint", () => {
   });
 
   it("does not render the hint when scoredByName is missing", () => {
-    render(<MatchInlineCard maxScore={12} match={baseMatch} />);
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={12} match={baseMatch} />);
     expect(screen.queryByText(/eingetragen von/)).not.toBeInTheDocument();
   });
 
   it("hides the hint while editing", async () => {
     render(
       <MatchInlineCard
+        gameDayId="gd-1"
         maxScore={12}
         match={{
           ...baseMatch,
@@ -69,6 +71,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
   it("disables Speichern when both scores are 0 (initial state)", async () => {
     render(
       <MatchInlineCard
+        gameDayId="gd-1"
         maxScore={3}
         match={{ ...baseMatch, team1Score: null, team2Score: null }}
       />,
@@ -80,6 +83,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
   it("re-enables Speichern as soon as the scores diverge", async () => {
     render(
       <MatchInlineCard
+        gameDayId="gd-1"
         maxScore={3}
         match={{ ...baseMatch, team1Score: null, team2Score: null }}
       />,
@@ -101,6 +105,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
     );
     render(
       <MatchInlineCard
+        gameDayId="gd-1"
         maxScore={3}
         match={{ ...baseMatch, team1Score: null, team2Score: null }}
       />,
@@ -117,7 +122,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response("{}", { status: 409 }),
     );
-    render(<MatchInlineCard maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
     await userEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
     await bumpTeamA();
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -126,7 +131,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
   });
 
   it("re-disables Speichern when both scores collide again after a bump", async () => {
-    render(<MatchInlineCard maxScore={3} match={{ ...baseMatch, team1Score: null, team2Score: null }} />);
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={{ ...baseMatch, team1Score: null, team2Score: null }} />);
     await userEvent.click(screen.getByRole("button", { name: /eintragen/i }));
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toBeDisabled();
@@ -141,7 +146,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response("{}", { status: 403 }),
     );
-    render(<MatchInlineCard maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
     await userEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
     await bumpTeamA();
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -153,7 +158,7 @@ describe("<MatchInlineCard> tie/save guard", () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response("upstream went sideways", { status: 400 }),
     );
-    render(<MatchInlineCard maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
     await userEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
     await bumpTeamA();
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -165,11 +170,70 @@ describe("<MatchInlineCard> tie/save guard", () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response("{}", { status: 401 }),
     );
-    render(<MatchInlineCard maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={{ ...baseMatch, team1Score: 1, team2Score: 0 }} />);
     await userEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
     await bumpTeamA();
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(await screen.findByText(/Konnte Score nicht speichern\.\s*\[HTTP 401\]/)).toBeInTheDocument();
+    fetchSpy.mockRestore();
+  });
+});
+
+describe("<MatchInlineCard> remove flow", () => {
+  it("does not show the remove link when not removable", () => {
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={baseMatch} />);
+    expect(screen.queryByRole("button", { name: /entfernen/i })).not.toBeInTheDocument();
+  });
+
+  it("asks for confirmation before removing and cancels cleanly", async () => {
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={baseMatch} removable />);
+    await userEvent.click(screen.getByRole("button", { name: "entfernen" }));
+    expect(screen.getByText(/Match 1 entfernen\?/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(screen.queryByText(/Match 1 entfernen\?/)).not.toBeInTheDocument();
+  });
+
+  it("warns that removing a scored match changes the standings", async () => {
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={baseMatch} removable />);
+    await userEvent.click(screen.getByRole("button", { name: "entfernen" }));
+    expect(screen.getByText(/Verändert die Tageswertung/)).toBeInTheDocument();
+  });
+
+  it("does not warn about standings for an unscored match", async () => {
+    render(
+      <MatchInlineCard
+        gameDayId="gd-1"
+        maxScore={3}
+        match={{ ...baseMatch, team1Score: null, team2Score: null }}
+        removable
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "entfernen" }));
+    expect(screen.queryByText(/Verändert die Tageswertung/)).not.toBeInTheDocument();
+  });
+
+  it("sends a DELETE to the game-day match endpoint on confirm", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    render(<MatchInlineCard gameDayId="gd-9" maxScore={3} match={baseMatch} removable />);
+    await userEvent.click(screen.getByRole("button", { name: "entfernen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/game-days/gd-9/matches/m-1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it("shows the template-match copy on a 422 response", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 422 }));
+    render(<MatchInlineCard gameDayId="gd-1" maxScore={3} match={baseMatch} removable />);
+    await userEvent.click(screen.getByRole("button", { name: "entfernen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+    expect(await screen.findByText(/festen Spielplan/)).toBeInTheDocument();
     fetchSpy.mockRestore();
   });
 });
