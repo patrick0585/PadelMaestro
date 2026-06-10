@@ -34,9 +34,13 @@ export function germanInvalidReason(serverError: string): string {
 export function MatchInlineCard({
   match,
   maxScore,
+  gameDayId,
+  removable = false,
 }: {
   match: MatchRow;
   maxScore: number;
+  gameDayId: string;
+  removable?: boolean;
 }) {
   const router = useRouter();
   const hasScore = match.team1Score !== null && match.team2Score !== null;
@@ -45,6 +49,9 @@ export function MatchInlineCard({
   const [t2, setT2] = useState(match.team2Score ?? 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const winner = editing ? null : determineWinner(match.team1Score, match.team2Score);
   const scoredByHint = editing
@@ -60,7 +67,39 @@ export function MatchInlineCard({
     setT1(match.team1Score ?? 0);
     setT2(match.team2Score ?? 0);
     setError(null);
+    setConfirmingRemove(false);
     setEditing(true);
+  }
+
+  async function remove() {
+    setRemoving(true);
+    setRemoveError(null);
+    let res: Response;
+    try {
+      res = await fetch(`/api/game-days/${gameDayId}/matches/${match.id}`, {
+        method: "DELETE",
+      });
+    } catch {
+      // Network failure — re-enable the button so the user can retry.
+      setRemoving(false);
+      setRemoveError("Netzwerkfehler – bitte erneut versuchen.");
+      return;
+    }
+    setRemoving(false);
+    if (!res.ok) {
+      if (res.status === 409) {
+        setRemoveError("Spieltag ist nicht mehr aktiv – Seite neu laden.");
+      } else if (res.status === 422) {
+        setRemoveError("Dieses Match gehört zum festen Spielplan und kann nicht entfernt werden.");
+      } else if (res.status === 403) {
+        setRemoveError("Nur Admins dürfen Matches entfernen.");
+      } else {
+        setRemoveError("Konnte Match nicht entfernen.");
+      }
+      return;
+    }
+    setConfirmingRemove(false);
+    router.refresh();
   }
 
   async function save() {
@@ -163,20 +202,77 @@ export function MatchInlineCard({
           </button>
         </div>
       ) : (
-        <div className="mt-2 flex items-center justify-between gap-2">
-          {scoredByHint ? (
-            <span className="truncate text-[0.65rem] text-foreground-muted">{scoredByHint}</span>
-          ) : (
-            <span />
+        <>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            {scoredByHint ? (
+              <span className="truncate text-[0.65rem] text-foreground-muted">{scoredByHint}</span>
+            ) : (
+              <span />
+            )}
+            <div className="flex shrink-0 items-center gap-3">
+              {removable && !confirmingRemove && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRemoveError(null);
+                    setConfirmingRemove(true);
+                  }}
+                  className="-my-1 py-1 text-[0.72rem] font-semibold text-destructive hover:underline"
+                >
+                  <span aria-hidden="true">🗑</span> entfernen
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={startEdit}
+                className="-my-1 py-1 text-[0.72rem] font-semibold text-primary hover:underline"
+              >
+                {hasScore ? (
+                  <>
+                    <span aria-hidden="true">✎</span> bearbeiten
+                  </>
+                ) : (
+                  "Tap zum Eintragen"
+                )}
+              </button>
+            </div>
+          </div>
+
+          {confirmingRemove && (
+            <div
+              role="alert"
+              className="mt-3 rounded-lg border border-destructive/40 bg-destructive-soft p-2"
+            >
+              <p className="text-xs text-foreground">
+                Match {match.matchNumber} entfernen?
+                {hasScore && (
+                  <span className="mt-0.5 block font-semibold text-destructive">
+                    <span aria-hidden="true">⚠ </span>Verändert die Tageswertung.
+                  </span>
+                )}
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={removing}
+                  onClick={() => setConfirmingRemove(false)}
+                  className="rounded-lg border border-border-strong px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-muted disabled:opacity-40"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  disabled={removing}
+                  onClick={remove}
+                  className="rounded-lg bg-destructive px-2 py-1.5 text-xs font-extrabold text-background hover:bg-destructive/90 disabled:opacity-40"
+                >
+                  Ja, entfernen
+                </button>
+              </div>
+              {removeError && <p className="mt-2 text-xs text-destructive">{removeError}</p>}
+            </div>
           )}
-          <button
-            type="button"
-            onClick={startEdit}
-            className="shrink-0 text-[0.72rem] font-semibold text-primary hover:underline"
-          >
-            {hasScore ? "✎ bearbeiten" : "Tap zum Eintragen"}
-          </button>
-        </div>
+        </>
       )}
 
       {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
