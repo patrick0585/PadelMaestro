@@ -4,19 +4,37 @@ import Link from "next/link";
 import { Archive } from "lucide-react";
 import { listArchivedGameDays, type ArchivedGameDayRow } from "@/lib/archive/list";
 import { formatGameDayDate } from "@/lib/archive/format";
+import { computeRanking, type RankingRow } from "@/lib/ranking/compute";
+import { RankingTable } from "@/components/ranking-table";
+import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
-function groupBySeason(rows: ArchivedGameDayRow[]): Map<number, ArchivedGameDayRow[]> {
-  const grouped = new Map<number, ArchivedGameDayRow[]>();
+interface SeasonSection {
+  seasonId: string;
+  seasonName: string;
+  seasonIsActive: boolean;
+  rows: ArchivedGameDayRow[];
+}
+
+// rows kommen nach Datum absteigend sortiert — die Insertion-Order der
+// Sections entspricht damit „neueste Saison zuerst".
+function groupBySeason(rows: ArchivedGameDayRow[]): SeasonSection[] {
+  const sections = new Map<string, SeasonSection>();
   for (const row of rows) {
-    const bucket = grouped.get(row.seasonYear);
-    if (bucket) bucket.push(row);
-    else grouped.set(row.seasonYear, [row]);
+    const section = sections.get(row.seasonId);
+    if (section) section.rows.push(row);
+    else
+      sections.set(row.seasonId, {
+        seasonId: row.seasonId,
+        seasonName: row.seasonName,
+        seasonIsActive: row.seasonIsActive,
+        rows: [row],
+      });
   }
-  return grouped;
+  return [...sections.values()];
 }
 
 export default async function ArchivePage() {
@@ -47,8 +65,13 @@ export default async function ArchivePage() {
     );
   }
 
-  const grouped = groupBySeason(rows);
-  const years = [...grouped.keys()].sort((a, b) => b - a);
+  const sections = groupBySeason(rows);
+  const finalTables = new Map<string, RankingRow[]>();
+  for (const section of sections) {
+    if (!section.seasonIsActive) {
+      finalTables.set(section.seasonId, await computeRanking(section.seasonId));
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -59,13 +82,17 @@ export default async function ArchivePage() {
         <h1 className="text-2xl font-bold text-foreground">Archiv</h1>
       </header>
 
-      {years.map((year) => (
-        <section key={year} className="space-y-2">
-          <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            {year}
+      {sections.map((section) => (
+        <section key={section.seasonId} className="space-y-2">
+          <h2 className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+            {section.seasonName}
+            {section.seasonIsActive && <Badge variant="neutral">laufend</Badge>}
           </h2>
+          {!section.seasonIsActive && (
+            <RankingTable ranking={finalTables.get(section.seasonId) ?? []} />
+          )}
           <ul className="space-y-2">
-            {(grouped.get(year) ?? []).map((row) => (
+            {section.rows.map((row) => (
               <li key={row.id}>
                 <Link
                   href={`/archive/${row.id}`}

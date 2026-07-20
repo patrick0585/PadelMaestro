@@ -9,7 +9,9 @@ export interface ArchivePodiumEntry {
 export interface ArchivedGameDayRow {
   id: string;
   date: Date;
-  seasonYear: number;
+  seasonId: string;
+  seasonName: string;
+  seasonIsActive: boolean;
   matchCount: number;
   playerCount: number;
   jokerCount: number;
@@ -26,6 +28,7 @@ export async function listArchivedGameDays(
     select: {
       id: true,
       date: true,
+      season: { select: { id: true, name: true, isActive: true } },
       _count: {
         select: {
           matches: { where: { team1Score: { not: null }, team2Score: { not: null } } },
@@ -64,8 +67,9 @@ export async function listArchivedGameDays(
     rows.push({
       id: day.id,
       date: day.date,
-      // GameDay.date is a Prisma @db.Date stored at midnight UTC; format.ts uses UTC too.
-      seasonYear: day.date.getUTCFullYear(),
+      seasonId: day.season.id,
+      seasonName: day.season.name,
+      seasonIsActive: day.season.isActive,
       matchCount: day._count.matches,
       playerCount: rowsFromSummary.length,
       jokerCount: jokerByDay.get(day.id) ?? 0,
