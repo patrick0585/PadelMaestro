@@ -23,7 +23,7 @@ export default async function RankingPage() {
     <div className="space-y-5">
       <header>
         <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-          Saison {season.year}
+          {season.name}
         </p>
         <h1 className="text-2xl font-bold text-foreground">Rangliste</h1>
       </header>

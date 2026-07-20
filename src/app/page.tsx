@@ -89,7 +89,7 @@ export default async function DashboardPage() {
     subtitleParts.push(`${stats.jokers.remaining} Joker`);
   }
   const subtitle =
-    subtitleParts.length > 0 ? subtitleParts.join(" · ") : `Saison ${season.year}`;
+    subtitleParts.length > 0 ? subtitleParts.join(" · ") : season.name;
 
   return (
     <div className="space-y-4">
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
 
       <div className="rounded-2xl border border-border bg-surface p-4">
         <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-          Medaillen Saison {season.year}
+          Medaillen {season.name}
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2 text-center">
           <div>
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
       <div className="rounded-2xl border border-border bg-surface p-4">
         <div className="flex items-center justify-between">
           <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Joker Saison {season.year}
+            Joker {season.name}
           </span>
           <span className="text-[0.7rem] font-semibold text-foreground-muted">
             {stats.jokers.used} / {stats.jokers.total} eingesetzt
