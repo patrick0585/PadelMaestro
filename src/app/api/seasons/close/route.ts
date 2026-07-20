@@ -9,7 +9,10 @@ import {
   SeasonNameConflictError,
 } from "@/lib/season";
 
-const CloseSchema = z.object({ closedName: z.string(), nextName: z.string() });
+const CloseSchema = z.object({
+  closedName: z.string().max(40),
+  nextName: z.string().max(40),
+});
 
 export async function POST(req: Request) {
   const session = await auth();

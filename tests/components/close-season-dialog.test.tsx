@@ -27,8 +27,10 @@ describe("<CloseSeasonDialog>", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<CloseSeasonDialog currentName="Saison 2026" />);
+    render(<CloseSeasonDialog currentName="Saison 2026" maxJokers={2} />);
     await userEvent.click(screen.getByRole("button", { name: /Saison abschließen/ }));
+
+    expect(screen.getByText(/wieder 2 Joker/)).toBeInTheDocument();
 
     const closedInput = screen.getByLabelText("Name im Archiv");
     expect(closedInput).toHaveValue("Saison 2026");
@@ -53,12 +55,12 @@ describe("<CloseSeasonDialog>", () => {
       vi.fn(() => jsonResponse(409, { error: "open_game_days", days: ["2026-07-21"] })),
     );
 
-    render(<CloseSeasonDialog currentName="Saison 2026" />);
+    render(<CloseSeasonDialog currentName="Saison 2026" maxJokers={2} />);
     await userEvent.click(screen.getByRole("button", { name: /Saison abschließen/ }));
     await userEvent.type(screen.getByLabelText("Name der neuen Saison"), "Rückrunde 2026");
     await userEvent.click(screen.getByRole("button", { name: "Abschließen" }));
 
-    expect(await screen.findByText(/offene Spieltage/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/offene Spieltage/);
     expect(screen.getByText(/21\.07\.2026/)).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -66,7 +68,7 @@ describe("<CloseSeasonDialog>", () => {
   it("maps name_conflict to a German message", async () => {
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse(409, { error: "name_conflict" })));
 
-    render(<CloseSeasonDialog currentName="Saison 2026" />);
+    render(<CloseSeasonDialog currentName="Saison 2026" maxJokers={2} />);
     await userEvent.click(screen.getByRole("button", { name: /Saison abschließen/ }));
     await userEvent.type(screen.getByLabelText("Name der neuen Saison"), "Saison 2026 B");
     await userEvent.click(screen.getByRole("button", { name: "Abschließen" }));
@@ -80,7 +82,7 @@ describe("<CloseSeasonDialog>", () => {
       vi.fn(() => Promise.reject(new Error("network"))),
     );
 
-    render(<CloseSeasonDialog currentName="Saison 2026" />);
+    render(<CloseSeasonDialog currentName="Saison 2026" maxJokers={2} />);
     await userEvent.click(screen.getByRole("button", { name: /Saison abschließen/ }));
     await userEvent.type(screen.getByLabelText("Name der neuen Saison"), "Rückrunde 2026");
     await userEvent.click(screen.getByRole("button", { name: "Abschließen" }));

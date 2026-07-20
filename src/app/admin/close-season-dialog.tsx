@@ -11,7 +11,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   no_active_season: "Keine aktive Saison gefunden.",
 };
 
-export function CloseSeasonDialog({ currentName }: { currentName: string }) {
+export function CloseSeasonDialog({
+  currentName,
+  maxJokers,
+}: {
+  currentName: string;
+  maxJokers: number;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [closedName, setClosedName] = useState(currentName);
@@ -71,14 +77,14 @@ export function CloseSeasonDialog({ currentName }: { currentName: string }) {
 
   return (
     <>
-      <Button type="button" variant="destructive" onClick={() => setOpen(true)}>
+      <Button type="button" variant="primary" onClick={() => setOpen(true)}>
         Saison abschließen
       </Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Saison abschließen">
         <form onSubmit={onSubmit} className="space-y-3">
           <p className="text-sm text-foreground">
             Die aktuelle Tabelle wandert unter dem Archiv-Namen ins Archiv. Danach
-            startet die neue Saison bei 0 Punkten und jeder hat wieder 2 Joker.
+            startet die neue Saison bei 0 Punkten und jeder hat wieder {maxJokers} Joker.
           </p>
           <div>
             <Label htmlFor="close-season-closed-name">Name im Archiv</Label>
@@ -86,6 +92,7 @@ export function CloseSeasonDialog({ currentName }: { currentName: string }) {
               id="close-season-closed-name"
               value={closedName}
               onChange={(e) => setClosedName(e.target.value)}
+              maxLength={40}
               required
             />
           </div>
@@ -96,11 +103,12 @@ export function CloseSeasonDialog({ currentName }: { currentName: string }) {
               value={nextName}
               onChange={(e) => setNextName(e.target.value)}
               placeholder="z. B. Rückrunde 2026"
+              maxLength={40}
               required
             />
           </div>
           {error && (
-            <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
+            <p role="alert" className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           )}
@@ -108,7 +116,7 @@ export function CloseSeasonDialog({ currentName }: { currentName: string }) {
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
               Abbrechen
             </Button>
-            <Button type="submit" variant="destructive" loading={loading}>
+            <Button type="submit" variant="primary" loading={loading}>
               Abschließen
             </Button>
           </div>

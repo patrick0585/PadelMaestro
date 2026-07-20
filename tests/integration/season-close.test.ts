@@ -44,6 +44,7 @@ describe("closeSeasonAndStartNext", () => {
     const log = await prisma.auditLog.findFirst({ where: { action: "season.close" } });
     expect(log?.entityId).toBe(season.id);
     expect(log?.actorId).toBe(admin.id);
+    expect((log?.payload as { previousName?: string } | null)?.previousName).toBe(season.name);
   });
 
   it("starts the new season with an empty ranking and a fresh joker budget", async () => {

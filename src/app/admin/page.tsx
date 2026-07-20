@@ -129,7 +129,7 @@ export default async function AdminPage() {
                 {finishedCount} {finishedCount === 1 ? "Spieltag" : "Spieltage"} gespielt
               </div>
             </div>
-            <CloseSeasonDialog currentName={season.name} />
+            <CloseSeasonDialog currentName={season.name} maxJokers={MAX_JOKERS_PER_SEASON} />
           </div>
         </CardBody>
       </Card>

@@ -84,9 +84,13 @@ export default async function ArchivePage() {
 
       {sections.map((section) => (
         <section key={section.seasonId} className="space-y-2">
-          <h2 className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
+          <h2 className="text-sm font-semibold text-foreground">
             {section.seasonName}
-            {section.seasonIsActive && <Badge variant="neutral">laufend</Badge>}
+            {section.seasonIsActive && (
+              <Badge variant="neutral" className="ml-2 align-middle">
+                laufend
+              </Badge>
+            )}
           </h2>
           {!section.seasonIsActive && (
             <RankingTable ranking={finalTables.get(section.seasonId) ?? []} />

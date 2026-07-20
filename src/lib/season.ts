@@ -77,15 +77,17 @@ export async function closeSeasonAndStartNext(args: {
 
     const now = new Date();
     const year = now.getFullYear();
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const previousName = active.name;
     const closedSeason = await tx.season.update({
       where: { id: active.id },
-      data: { name: closedName, isActive: false, endDate: now },
+      data: { name: closedName, isActive: false, endDate: today },
     });
     const newSeason = await tx.season.create({
       data: {
         name: nextName,
         year,
-        startDate: now,
+        startDate: today,
         endDate: new Date(year, 11, 31),
         isActive: true,
       },
@@ -96,7 +98,7 @@ export async function closeSeasonAndStartNext(args: {
         action: "season.close",
         entityType: "Season",
         entityId: closedSeason.id,
-        payload: { closedName, nextName, newSeasonId: newSeason.id },
+        payload: { previousName, closedName, nextName, newSeasonId: newSeason.id },
       },
     });
     return { closedSeason, newSeason };
