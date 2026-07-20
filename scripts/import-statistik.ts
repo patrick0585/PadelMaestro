@@ -202,7 +202,7 @@ async function wipeAll() {
 }
 
 async function getOrCreateSeasonByYear(year: number, activeYear: number) {
-  const existing = await prisma.season.findFirst({ where: { year } });
+  const existing = await prisma.season.findFirst({ where: { year }, orderBy: { createdAt: "asc" } });
   if (existing) return existing;
   return prisma.season.create({
     data: {
@@ -328,7 +328,7 @@ async function main() {
     );
   }
 
-  const seasonActive = await prisma.season.findFirst({ where: { year: activeYear } });
+  const seasonActive = await prisma.season.findFirst({ where: { year: activeYear }, orderBy: { createdAt: "asc" } });
   if (seasonActive && !seasonActive.isActive) {
     await prisma.season.updateMany({ where: { isActive: true }, data: { isActive: false } });
     await prisma.season.update({ where: { id: seasonActive.id }, data: { isActive: true } });
