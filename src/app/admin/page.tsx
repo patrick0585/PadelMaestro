@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
+import { CloseSeasonDialog } from "./close-season-dialog";
 import { StartGameDayButton } from "./start-game-day-button";
 import { DeleteGameDayButton } from "./delete-game-day-button";
 import { PlayersSection } from "./players-section";
@@ -87,6 +88,9 @@ export default async function AdminPage() {
   const jokersRemaining = new Map<string, number>(
     players.map((p) => [p.id, Math.max(0, MAX_JOKERS_PER_SEASON - (jokerCountById.get(p.id) ?? 0))]),
   );
+  const finishedCount = await prisma.gameDay.count({
+    where: { seasonId: season.id, status: "finished" },
+  });
 
   const playersForUi = players.map((p) => ({
     id: p.id,
@@ -106,6 +110,22 @@ export default async function AdminPage() {
       </header>
 
       <PlayersSection players={playersForUi} />
+
+      <Card>
+        <CardBody className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">Saison</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm">
+              <div className="font-medium text-foreground">{season.name}</div>
+              <div className="text-xs text-foreground-muted">
+                seit {new Date(season.startDate).toLocaleDateString("de-DE", { timeZone: "UTC" })} ·{" "}
+                {finishedCount} {finishedCount === 1 ? "Spieltag" : "Spieltage"} gespielt
+              </div>
+            </div>
+            <CloseSeasonDialog currentName={season.name} />
+          </div>
+        </CardBody>
+      </Card>
 
       <Card>
         <CardBody className="space-y-3">
