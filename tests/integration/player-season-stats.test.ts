@@ -6,7 +6,7 @@ import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 async function makeSeason() {
   const year = 2026;
   return prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
 }
 async function makePlayer(name: string) {
@@ -36,7 +36,7 @@ describe("computePlayerSeasonStats", () => {
   it("counts medals from finished game days in the season only", async () => {
     const season = await makeSeason();
     const otherSeason = await prisma.season.create({
-      data: { year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
+      data: { name: "Saison 2025", year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
     });
     const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
     const day1 = await prisma.gameDay.create({
@@ -391,7 +391,7 @@ describe("computePlayerSeasonStats", () => {
   it("excludes JokerUse rows from other seasons", async () => {
     const season = await makeSeason();
     const otherSeason = await prisma.season.create({
-      data: { year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
+      data: { name: "Saison 2025", year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
     });
     const me = await makePlayer("Me");
     const day = await prisma.gameDay.create({

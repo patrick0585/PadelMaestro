@@ -13,7 +13,7 @@ const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 async function setup() {
   const year = new Date().getFullYear();
   const season = await prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
   const player = await prisma.player.create({
     data: { name: "P", email: "p@x", passwordHash: "x" },

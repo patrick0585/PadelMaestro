@@ -17,6 +17,7 @@ describe("getOrCreateActiveSeason", () => {
     const s = await getOrCreateActiveSeason();
     expect(s.year).toBe(year);
     expect(s.isActive).toBe(true);
+    expect(s.name).toBe(`Saison ${year}`);
   });
 
   it("returns the existing active season on subsequent calls", async () => {

@@ -40,7 +40,8 @@ model Player {
 
 model Season {
   id        String   @id @default(uuid())
-  year      Int      @unique
+  name      String   @unique
+  year      Int
   startDate DateTime @db.Date
   endDate   DateTime @db.Date
   isActive  Boolean  @default(false)

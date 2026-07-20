@@ -3,9 +3,9 @@ import { prisma } from "@/lib/db";
 import { listArchivedGameDays } from "@/lib/archive/list";
 import { resetDb } from "../helpers/reset-db";
 
-async function makeSeason(year = new Date().getFullYear()) {
+async function makeSeason(year = new Date().getFullYear(), name = `Saison ${year}`) {
   return prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { name, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
 }
 
@@ -47,6 +47,17 @@ describe("listArchivedGameDays", () => {
     expect(result).toEqual([]);
   });
 
+  it("carries season id, name and active flag on every row", async () => {
+    const season = await makeSeason(2026, "Hinrunde 2026");
+    const players = await Promise.all(["A", "B", "C", "D"].map(makeUser));
+    await makeFinishedDayWithOneMatch(season.id, new Date("2026-04-17"), players);
+
+    const [row] = await listArchivedGameDays(null);
+    expect(row.seasonId).toBe(season.id);
+    expect(row.seasonName).toBe("Hinrunde 2026");
+    expect(row.seasonIsActive).toBe(true);
+  });
+
   it("aggregates matchCount, playerCount, and podium per finished day", async () => {
     const season = await makeSeason(2026);
     const [paul, patrick, michi, thomas] = await Promise.all(
@@ -83,7 +94,9 @@ describe("listArchivedGameDays", () => {
     const result = await listArchivedGameDays(null);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe(day.id);
-    expect(result[0].seasonYear).toBe(2026);
+    expect(result[0].seasonId).toBe(season.id);
+    expect(result[0].seasonName).toBe(season.name);
+    expect(result[0].seasonIsActive).toBe(true);
     expect(result[0].matchCount).toBe(2);
     expect(result[0].playerCount).toBe(4);
     expect(result[0].podium.map((p) => p.playerName)).toEqual(["Paul", "Michi", "Patrick"]);
@@ -186,10 +199,10 @@ describe("listArchivedGameDays", () => {
     // Use two seasons because GameDay has @@unique([seasonId, date]);
     // we still exercise date-DESC sort across seasons and id-DESC tiebreak on same date.
     const seasonA = await prisma.season.create({
-      data: { year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
+      data: { name: "Saison 2025", year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
     });
     const seasonB = await prisma.season.create({
-      data: { year: 2026, startDate: new Date(2026, 0, 1), endDate: new Date(2026, 11, 31), isActive: true },
+      data: { name: "Saison 2026", year: 2026, startDate: new Date(2026, 0, 1), endDate: new Date(2026, 11, 31), isActive: true },
     });
     const [paul, patrick, michi, thomas] = await Promise.all(
       ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),
