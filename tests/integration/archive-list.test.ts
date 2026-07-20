@@ -5,7 +5,7 @@ import { resetDb } from "../helpers/reset-db";
 
 async function makeSeason(year = new Date().getFullYear()) {
   return prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
 }
 
@@ -186,10 +186,10 @@ describe("listArchivedGameDays", () => {
     // Use two seasons because GameDay has @@unique([seasonId, date]);
     // we still exercise date-DESC sort across seasons and id-DESC tiebreak on same date.
     const seasonA = await prisma.season.create({
-      data: { year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
+      data: { name: "Saison 2025", year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
     });
     const seasonB = await prisma.season.create({
-      data: { year: 2026, startDate: new Date(2026, 0, 1), endDate: new Date(2026, 11, 31), isActive: true },
+      data: { name: "Saison 2026", year: 2026, startDate: new Date(2026, 0, 1), endDate: new Date(2026, 11, 31), isActive: true },
     });
     const [paul, patrick, michi, thomas] = await Promise.all(
       ["Paul", "Patrick", "Michi", "Thomas"].map(makeUser),

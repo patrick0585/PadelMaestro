@@ -6,7 +6,7 @@ import { resetDb } from "../helpers/reset-db";
 async function makeSeason() {
   const year = new Date().getFullYear();
   return prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
 }
 

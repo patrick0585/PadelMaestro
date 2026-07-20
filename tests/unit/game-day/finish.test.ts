@@ -14,7 +14,7 @@ async function makeDay(status: "planned" | "in_progress" | "finished") {
   });
   const year = new Date().getFullYear();
   const season = await prisma.season.create({
-    data: { year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
   const day = await prisma.gameDay.create({
     data: { seasonId: season.id, date: new Date("2026-04-21"), status },

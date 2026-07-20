@@ -10,6 +10,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -24,6 +25,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -67,6 +69,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -114,6 +117,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -216,6 +220,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -263,6 +268,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -307,6 +313,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -350,6 +357,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),
@@ -392,6 +400,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 11, 31),

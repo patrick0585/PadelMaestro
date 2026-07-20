@@ -30,6 +30,7 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
   const year = new Date().getFullYear();
   const season = await prisma.season.create({
     data: {
+      name: `Saison ${year}`,
       year,
       startDate: new Date(Date.UTC(year, 0, 1)),
       endDate: new Date(Date.UTC(year, 11, 31)),

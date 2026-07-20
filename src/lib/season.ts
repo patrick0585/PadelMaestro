@@ -7,6 +7,7 @@ export async function getOrCreateActiveSeason() {
 
   return prisma.season.create({
     data: {
+      name: `Saison ${year}`,
       year,
       startDate: new Date(year, 0, 1),
       endDate: new Date(year, 11, 31),
