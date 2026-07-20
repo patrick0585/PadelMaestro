@@ -73,4 +73,21 @@ describe("<CloseSeasonDialog>", () => {
 
     expect(await screen.findByText(/bereits vergeben/)).toBeInTheDocument();
   });
+
+  it("shows a network error and re-enables the button when fetch rejects", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("network"))),
+    );
+
+    render(<CloseSeasonDialog currentName="Saison 2026" />);
+    await userEvent.click(screen.getByRole("button", { name: /Saison abschließen/ }));
+    await userEvent.type(screen.getByLabelText("Name der neuen Saison"), "Rückrunde 2026");
+    await userEvent.click(screen.getByRole("button", { name: "Abschließen" }));
+
+    expect(await screen.findByText(/Netzwerkfehler/)).toBeInTheDocument();
+    const submitButton = screen.getByRole("button", { name: "Abschließen" });
+    expect(submitButton).not.toBeDisabled();
+    expect(refresh).not.toHaveBeenCalled();
+  });
 });

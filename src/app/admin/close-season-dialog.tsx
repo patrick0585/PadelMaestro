@@ -31,36 +31,42 @@ export function CloseSeasonDialog({ currentName }: { currentName: string }) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/seasons/close", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ closedName, nextName }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        days?: string[];
-      };
-      if (body.error === "open_game_days") {
-        const dates = (body.days ?? [])
-          .map((d) =>
-            new Date(`${d}T00:00:00Z`).toLocaleDateString("de-DE", {
-              timeZone: "UTC",
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            }),
-          )
-          .join(", ");
-        setError(`Es gibt noch offene Spieltage: ${dates}. Bitte erst beenden oder löschen.`);
-      } else {
-        setError(ERROR_MESSAGES[body.error ?? ""] ?? "Abschließen fehlgeschlagen");
+    try {
+      const res = await fetch("/api/seasons/close", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ closedName, nextName }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          days?: string[];
+        };
+        if (body.error === "open_game_days") {
+          const dates = (body.days ?? [])
+            .map((d) =>
+              new Date(`${d}T00:00:00Z`).toLocaleDateString("de-DE", {
+                timeZone: "UTC",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }),
+            )
+            .join(", ");
+          setError(`Es gibt noch offene Spieltage: ${dates}. Bitte erst beenden oder löschen.`);
+        } else {
+          setError(ERROR_MESSAGES[body.error ?? ""] ?? "Abschließen fehlgeschlagen");
+        }
+        return;
       }
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setError("Netzwerkfehler, bitte erneut versuchen.");
       return;
+    } finally {
+      setLoading(false);
     }
-    setOpen(false);
-    router.refresh();
   }
 
   return (

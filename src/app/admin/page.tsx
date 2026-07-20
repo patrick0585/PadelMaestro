@@ -118,7 +118,14 @@ export default async function AdminPage() {
             <div className="text-sm">
               <div className="font-medium text-foreground">{season.name}</div>
               <div className="text-xs text-foreground-muted">
-                seit {new Date(season.startDate).toLocaleDateString("de-DE", { timeZone: "UTC" })} ·{" "}
+                seit{" "}
+                {new Date(season.startDate).toLocaleDateString("de-DE", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  timeZone: "UTC",
+                })}{" "}
+                ·{" "}
                 {finishedCount} {finishedCount === 1 ? "Spieltag" : "Spieltage"} gespielt
               </div>
             </div>
