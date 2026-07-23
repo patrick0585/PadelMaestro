@@ -570,4 +570,53 @@ describe("computePlayerSeasonStats", () => {
     // Konsistenz: erstes Element == bestPartner.
     expect(stats.partners[0]).toEqual(stats.bestPartner);
   });
+
+  it("falls back to the name tiebreaker when points and matches are fully tied", async () => {
+    const season = await makeSeason();
+    const [me, anna, bert, carl, x, y] = await Promise.all(
+      ["Me", "Anna", "Bert", "Carl", "X", "Y"].map(makePlayer),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-05-08"), playerCount: 4, status: "finished" },
+    });
+    // Anna und Bert sind auf Punkte UND Matches exakt gleichauf (3 Pt / 1 Match) —
+    // nur der Namens-Tiebreaker (localeCompare "de") entscheidet die Reihenfolge.
+    // Carl bleibt eindeutig letzter (weniger Punkte), damit auch die
+    // worstPartner-Konsistenz mitgeprüft wird.
+    await prisma.match.createMany({
+      data: [
+        {
+          gameDayId: day.id, matchNumber: 1,
+          team1PlayerAId: me.id, team1PlayerBId: anna.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: 3, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 2,
+          team1PlayerAId: me.id, team1PlayerBId: bert.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: 3, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 3,
+          team1PlayerAId: me.id, team1PlayerBId: carl.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: 1, team2Score: 0,
+        },
+      ],
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+
+    expect(stats.partners.map((p) => [p.name, p.pointsTogether, p.matches])).toEqual([
+      ["Anna", 3, 1],
+      ["Bert", 3, 1],
+      ["Carl", 1, 1],
+    ]);
+    // bestPartner ist der alphabetisch erste der punktgleichen Partner.
+    expect(stats.bestPartner?.name).toBe("Anna");
+    // worstPartner bleibt eindeutig (kein Tie) und entspricht dem letzten Listeneintrag.
+    expect(stats.worstPartner?.name).toBe("Carl");
+    expect(stats.worstPartner).toEqual(stats.partners.at(-1));
+  });
 });
