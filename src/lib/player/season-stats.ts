@@ -34,6 +34,7 @@ export interface PlayerSeasonStats {
   recentDays: DayTrend[];
   bestPartner: PartnerStat | null;
   worstPartner: PartnerStat | null;
+  partners: PartnerStat[];
   jokers: { used: number; remaining: number; total: number };
 }
 
@@ -259,6 +260,7 @@ export async function computePlayerSeasonStats(
     recentDays,
     bestPartner,
     worstPartner,
+    partners: bestSorted.map(stripId),
     jokers: {
       used: jokerCount,
       remaining: Math.max(0, MAX_JOKERS_PER_SEASON - jokerCount),

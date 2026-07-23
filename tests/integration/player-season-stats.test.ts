@@ -29,6 +29,7 @@ describe("computePlayerSeasonStats", () => {
       recentDays: [],
       bestPartner: null,
       worstPartner: null,
+      partners: [],
       jokers: { used: 0, remaining: 2, total: 2 },
     });
   });
@@ -518,5 +519,104 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.bestPartner?.name).toBe("Alex");
     expect(stats.worstPartner?.name).toBe("Alex2");
     expect(stats.bestPartner?.name).not.toBe(stats.worstPartner?.name);
+  });
+
+  it("returns all partners sorted by points, matches, then name", async () => {
+    const season = await makeSeason();
+    const [me, anna, ben, carl] = await Promise.all(
+      ["Me", "Anna", "Ben", "Carl"].map(makePlayer),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-05-01"), playerCount: 4, status: "finished" },
+    });
+    // Mit Anna: 2 Matches, 5+1=6 Punkte; mit Ben: 1 Match, 6 Punkte; mit Carl: 1 Match, 2 Punkte.
+    await prisma.match.createMany({
+      data: [
+        {
+          gameDayId: day.id, matchNumber: 1,
+          team1PlayerAId: me.id, team1PlayerBId: anna.id,
+          team2PlayerAId: ben.id, team2PlayerBId: carl.id,
+          team1Score: 5, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 2,
+          team1PlayerAId: anna.id, team1PlayerBId: me.id,
+          team2PlayerAId: ben.id, team2PlayerBId: carl.id,
+          team1Score: 1, team2Score: 6,
+        },
+        {
+          gameDayId: day.id, matchNumber: 3,
+          team1PlayerAId: me.id, team1PlayerBId: ben.id,
+          team2PlayerAId: anna.id, team2PlayerBId: carl.id,
+          team1Score: 6, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 4,
+          team1PlayerAId: carl.id, team1PlayerBId: me.id,
+          team2PlayerAId: anna.id, team2PlayerBId: ben.id,
+          team1Score: 2, team2Score: 6,
+        },
+      ],
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+
+    // Anna 6 Pt/2 M und Ben 6 Pt/1 M sind punktgleich → mehr Matches zuerst.
+    expect(stats.partners.map((p) => [p.name, p.pointsTogether, p.matches])).toEqual([
+      ["Anna", 6, 2],
+      ["Ben", 6, 1],
+      ["Carl", 2, 1],
+    ]);
+    // Konsistenz: erstes Element == bestPartner.
+    expect(stats.partners[0]).toEqual(stats.bestPartner);
+  });
+
+  it("falls back to the name tiebreaker when points and matches are fully tied", async () => {
+    const season = await makeSeason();
+    const [me, anna, bert, carl, x, y] = await Promise.all(
+      ["Me", "Anna", "Bert", "Carl", "X", "Y"].map(makePlayer),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-05-08"), playerCount: 4, status: "finished" },
+    });
+    // Anna und Bert sind auf Punkte UND Matches exakt gleichauf (3 Pt / 1 Match) —
+    // nur der Namens-Tiebreaker (localeCompare "de") entscheidet die Reihenfolge.
+    // Carl bleibt eindeutig letzter (weniger Punkte), damit auch die
+    // worstPartner-Konsistenz mitgeprüft wird.
+    await prisma.match.createMany({
+      data: [
+        {
+          gameDayId: day.id, matchNumber: 1,
+          team1PlayerAId: me.id, team1PlayerBId: anna.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: 3, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 2,
+          team1PlayerAId: me.id, team1PlayerBId: bert.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: 3, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 3,
+          team1PlayerAId: me.id, team1PlayerBId: carl.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: 1, team2Score: 0,
+        },
+      ],
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+
+    expect(stats.partners.map((p) => [p.name, p.pointsTogether, p.matches])).toEqual([
+      ["Anna", 3, 1],
+      ["Bert", 3, 1],
+      ["Carl", 1, 1],
+    ]);
+    // bestPartner ist der alphabetisch erste der punktgleichen Partner.
+    expect(stats.bestPartner?.name).toBe("Anna");
+    // worstPartner bleibt eindeutig (kein Tie) und entspricht dem letzten Listeneintrag.
+    expect(stats.worstPartner?.name).toBe("Carl");
+    expect(stats.worstPartner).toEqual(stats.partners.at(-1));
   });
 });

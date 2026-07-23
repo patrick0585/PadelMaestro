@@ -78,6 +78,15 @@ export default async function DashboardPage() {
 
   const top3 = ranking.slice(0, 3);
 
+  const bestPartner = stats.bestPartner;
+  const restPartners = bestPartner
+    ? stats.partners.filter(
+        (p) =>
+          p.playerId !== bestPartner.playerId &&
+          p.playerId !== stats.worstPartner?.playerId,
+      )
+    : [];
+
   const subtitleParts: string[] = [];
   if (myRow) subtitleParts.push(`Platz ${myRow.rank}`);
   if (stats.attendance.attended > 0) {
@@ -211,6 +220,24 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+          {restPartners.length > 0 && (
+            <ul className="mt-3 space-y-1 border-t border-border pt-2">
+              {restPartners.map((p) => (
+                <li key={p.playerId} className="flex items-center gap-3 py-1 text-sm">
+                  <Avatar
+                    playerId={p.playerId}
+                    name={p.name}
+                    avatarVersion={p.avatarVersion}
+                    size={32}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{p.name}</span>
+                  <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-foreground-muted">
+                    {p.pointsTogether} Pt · {p.matches} {p.matches === 1 ? "Match" : "Matches"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
