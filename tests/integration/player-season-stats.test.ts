@@ -29,6 +29,7 @@ describe("computePlayerSeasonStats", () => {
       recentDays: [],
       bestPartner: null,
       worstPartner: null,
+      partners: [],
       jokers: { used: 0, remaining: 2, total: 2 },
     });
   });
@@ -518,5 +519,55 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.bestPartner?.name).toBe("Alex");
     expect(stats.worstPartner?.name).toBe("Alex2");
     expect(stats.bestPartner?.name).not.toBe(stats.worstPartner?.name);
+  });
+
+  it("returns all partners sorted by points, matches, then name", async () => {
+    const season = await makeSeason();
+    const [me, anna, ben, carl] = await Promise.all(
+      ["Me", "Anna", "Ben", "Carl"].map(makePlayer),
+    );
+    const day = await prisma.gameDay.create({
+      data: { seasonId: season.id, date: new Date("2026-05-01"), playerCount: 4, status: "finished" },
+    });
+    // Mit Anna: 2 Matches, 5+1=6 Punkte; mit Ben: 1 Match, 6 Punkte; mit Carl: 1 Match, 2 Punkte.
+    await prisma.match.createMany({
+      data: [
+        {
+          gameDayId: day.id, matchNumber: 1,
+          team1PlayerAId: me.id, team1PlayerBId: anna.id,
+          team2PlayerAId: ben.id, team2PlayerBId: carl.id,
+          team1Score: 5, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 2,
+          team1PlayerAId: anna.id, team1PlayerBId: me.id,
+          team2PlayerAId: ben.id, team2PlayerBId: carl.id,
+          team1Score: 1, team2Score: 6,
+        },
+        {
+          gameDayId: day.id, matchNumber: 3,
+          team1PlayerAId: me.id, team1PlayerBId: ben.id,
+          team2PlayerAId: anna.id, team2PlayerBId: carl.id,
+          team1Score: 6, team2Score: 0,
+        },
+        {
+          gameDayId: day.id, matchNumber: 4,
+          team1PlayerAId: carl.id, team1PlayerBId: me.id,
+          team2PlayerAId: anna.id, team2PlayerBId: ben.id,
+          team1Score: 2, team2Score: 6,
+        },
+      ],
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+
+    // Anna 6 Pt/2 M und Ben 6 Pt/1 M sind punktgleich → mehr Matches zuerst.
+    expect(stats.partners.map((p) => [p.name, p.pointsTogether, p.matches])).toEqual([
+      ["Anna", 6, 2],
+      ["Ben", 6, 1],
+      ["Carl", 2, 1],
+    ]);
+    // Konsistenz: erstes Element == bestPartner.
+    expect(stats.partners[0]).toEqual(stats.bestPartner);
   });
 });
