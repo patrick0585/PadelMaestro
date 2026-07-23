@@ -43,7 +43,7 @@ Saison sichtbar.
 - Neu darunter, mit `border-t border-border` abgesetzt: Kompaktliste
   der übrigen Partner (alle außer `bestPartner`/`worstPartner`),
   punktabsteigend. Zeile: Avatar (32px), Name (fett), rechtsbündig
-  `X Pt · Y M` (tabular-nums, muted). Kein Link, keine Interaktion.
+  `X Pt · Y Matches` (Singular: `Match`; tabular-nums, muted). Kein Link, keine Interaktion.
 - Die Filterung „alle außer best/worst" passiert in `page.tsx`
   (per `playerId`-Vergleich), nicht in der Datenschicht.
 

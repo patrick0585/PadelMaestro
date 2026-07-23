@@ -230,9 +230,9 @@ export default async function DashboardPage() {
                     avatarVersion={p.avatarVersion}
                     size={32}
                   />
-                  <span className="flex-1 font-semibold text-foreground">{p.name}</span>
-                  <span className="tabular-nums text-xs text-foreground-muted">
-                    {p.pointsTogether} Pt · {p.matches} M
+                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{p.name}</span>
+                  <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-foreground-muted">
+                    {p.pointsTogether} Pt · {p.matches} {p.matches === 1 ? "Match" : "Matches"}
                   </span>
                 </li>
               ))}
