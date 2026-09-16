@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { PrintSheet } from "@/app/game-day/print/print-sheet";
+import { JOKER_GAMES_CREDITED } from "@/lib/joker/constants";
 
 const baseMatches = [
   { id: "m1", matchNumber: 1, team1A: "Anna", team1B: "Ben", team2A: "Carl", team2B: "Dora" },
@@ -73,6 +74,22 @@ describe("<PrintSheet>", () => {
     );
     expect(screen.getByText("Joker (1)")).toBeInTheDocument();
     expect(screen.getByText("Werner")).toBeInTheDocument();
+  });
+
+  it("shows the joker games-credited footer using the current constant", () => {
+    render(
+      <PrintSheet
+        dateText="Dienstag"
+        status="in_progress"
+        maxScore={12}
+        playing={["Anna", "Ben", "Carl", "Dora"]}
+        joker={[]}
+        matches={baseMatches}
+      />,
+    );
+    expect(
+      screen.getByText(new RegExp(`Joker zählt ${JOKER_GAMES_CREDITED} × Saisonschnitt`)),
+    ).toBeInTheDocument();
   });
 
   it("shows the empty-matches hint when there are no matches yet", () => {

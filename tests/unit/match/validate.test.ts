@@ -39,6 +39,12 @@ describe("validateScore", () => {
       [8, 6],
       [6, 8],
       [10, 8],
+      [6, 5],
+      [5, 6],
+      [7, 6],
+      [7, 4],
+      [8, 5],
+      [10, 5],
     ])("accepts %i:%i", (a, b) => {
       expect(validateScore(a, b, "tennis-set").ok).toBe(true);
     });
@@ -46,12 +52,8 @@ describe("validateScore", () => {
     it.each([
       [6, 6],
       [5, 5],
-      [6, 5],
-      [5, 6],
-      [7, 6],
-      [7, 4],
-      [8, 5],
-      [10, 5],
+      [5, 4],
+      [5, 0],
       [0, 0],
       [-1, 6],
     ])("rejects %i:%i", (a, b) => {

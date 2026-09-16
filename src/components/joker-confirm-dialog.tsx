@@ -2,6 +2,7 @@
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatDe } from "@/lib/format";
+import { JOKER_GAMES_CREDITED } from "@/lib/joker/constants";
 
 export interface JokerConfirmDialogProps {
   open: boolean;
@@ -36,7 +37,8 @@ export function JokerConfirmDialog({
           <p>
             Aktuelle PPG: <strong>{formatDe(ppgSnapshot, 2)}</strong> → du bekommst{" "}
             <strong>
-              10 × {formatDe(ppgSnapshot, 2)} ≈ {Math.round(ppgSnapshot * 10)} Punkte
+              {JOKER_GAMES_CREDITED} × {formatDe(ppgSnapshot, 2)} ≈{" "}
+              {Math.round(ppgSnapshot * JOKER_GAMES_CREDITED)} Punkte
             </strong>{" "}
             gutgeschrieben.
           </p>

@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
+import { JOKER_GAMES_CREDITED } from "./constants";
 
+export { JOKER_GAMES_CREDITED };
 export const MAX_JOKERS_PER_SEASON = 2;
-export const JOKER_GAMES_CREDITED = 10;
 
 export class JokerLockedError extends Error {
   constructor(message = "Game day is locked; Joker can no longer be used") {

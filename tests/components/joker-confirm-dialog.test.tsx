@@ -11,14 +11,14 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
-        ppgSnapshot={1.64}
+        ppgSnapshot={1.63}
       />,
     );
     expect(screen.getByText(/1\. von 2 Jokern/)).toBeInTheDocument();
-    // Two occurrences of "1,64" are expected now (standalone + inside "10 × 1,64 ≈ ...").
-    expect(screen.getAllByText(/1,64/).length).toBeGreaterThanOrEqual(1);
-    // 1.64 × 10 = 16.4 → rounds down to 16
-    expect(screen.getByText(/16 Punkte/)).toBeInTheDocument();
+    // Two occurrences of "1,63" are expected (standalone + inside "15 × 1,63 ≈ ...").
+    expect(screen.getAllByText(/1,63/).length).toBeGreaterThanOrEqual(1);
+    // 1.63 × 15 = 24.45 → rounds down to 24
+    expect(screen.getByText(/24 Punkte/)).toBeInTheDocument();
   });
 
   it("rounds the credited points up from 0.5", () => {
@@ -28,11 +28,11 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
-        ppgSnapshot={1.65}
+        ppgSnapshot={1.7}
       />,
     );
-    // 1.65 × 10 = 16.5 → rounds up to 17
-    expect(screen.getByText(/17 Punkte/)).toBeInTheDocument();
+    // 1.7 × 15 = 25.5 → rounds up to 26
+    expect(screen.getByText(/26 Punkte/)).toBeInTheDocument();
   });
 
   it("renders the 2-of-2 wording when one joker is remaining", () => {
