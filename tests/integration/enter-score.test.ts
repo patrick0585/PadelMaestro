@@ -17,8 +17,12 @@ import {
 import { resetDb } from "../helpers/reset-db";
 
 async function setupFivePlayerGame() {
+  return setupGame(5);
+}
+
+async function setupGame(count: number) {
   const players = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= count; i++) {
     players.push(
       await prisma.player.create({
         data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x", isAdmin: i === 1 },
@@ -53,6 +57,34 @@ describe("enterScore", () => {
     expect(updated.team1Score).toBe(2);
     expect(updated.team2Score).toBe(1);
     expect(updated.version).toBe(1);
+  });
+
+  it("accepts a 7:6 tennis-set score on a 4-player day (no minimum-lead requirement)", async () => {
+    const { players, matches } = await setupGame(4);
+    const updated = await enterScore({
+      matchId: matches[0].id,
+      team1Score: 7,
+      team2Score: 6,
+      scoredBy: players[0].id,
+      expectedVersion: 0,
+      isAdmin: true,
+    });
+    expect(updated.team1Score).toBe(7);
+    expect(updated.team2Score).toBe(6);
+  });
+
+  it("accepts a 6:5 tennis-set score on a 4-player day (no minimum-lead requirement)", async () => {
+    const { players, matches } = await setupGame(4);
+    const updated = await enterScore({
+      matchId: matches[0].id,
+      team1Score: 6,
+      team2Score: 5,
+      scoredBy: players[0].id,
+      expectedVersion: 0,
+      isAdmin: true,
+    });
+    expect(updated.team1Score).toBe(6);
+    expect(updated.team2Score).toBe(5);
   });
 
   it("rejects invalid scores with clear error", async () => {
@@ -212,15 +244,15 @@ describe("enterScore", () => {
 
   it("allows a confirmed day participant who is not playing this match", async () => {
     const { players, matches } = await setupFivePlayerGame();
-    const match = matches[0];
-    const onCourt = new Set([
-      match.team1PlayerAId,
-      match.team1PlayerBId,
-      match.team2PlayerAId,
-      match.team2PlayerBId,
-    ]);
-    const bench = players.find((p) => !onCourt.has(p.id) && !p.isAdmin);
-    if (!bench) throw new Error("no bench player available");
+    // The seeded shuffle decides who sits out match 1; pick the first
+    // match whose bench player is not the admin so the test is stable.
+    const onCourtOf = (m: (typeof matches)[number]) =>
+      new Set([m.team1PlayerAId, m.team1PlayerBId, m.team2PlayerAId, m.team2PlayerBId]);
+    const found = matches
+      .map((m) => ({ m, bench: players.find((p) => !onCourtOf(m).has(p.id) && !p.isAdmin) }))
+      .find((x) => x.bench);
+    if (!found?.bench) throw new Error("no bench player available");
+    const { m: match, bench } = found;
 
     const updated = await enterScore({
       matchId: match.id,

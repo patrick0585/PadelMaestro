@@ -27,7 +27,6 @@ export function germanInvalidReason(serverError: string): string {
   if (/sum to 3/i.test(serverError)) return "Summe muss 3 ergeben (z. B. 3:0, 2:1, 1:2, 0:3).";
   if (/non-negative integers/i.test(serverError)) return "Nur ganze Zahlen ≥ 0 erlaubt.";
   if (/winner must reach at least 6/i.test(serverError)) return "Der Sieger muss mindestens 6 erreichen.";
-  if (/2-game lead/i.test(serverError)) return "Mindestens 2 Spiele Vorsprung nötig.";
   return "Ungültiges Ergebnis.";
 }
 

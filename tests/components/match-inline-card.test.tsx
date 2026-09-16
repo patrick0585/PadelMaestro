@@ -261,15 +261,6 @@ describe("germanInvalidReason", () => {
     );
   });
 
-  it("translates both 2-game-lead variants the server emits", () => {
-    expect(germanInvalidReason("At 6:5 play continues until a 2-game lead")).toBe(
-      "Mindestens 2 Spiele Vorsprung nötig.",
-    );
-    expect(germanInvalidReason("After 6:6 the match ends only on a 2-game lead")).toBe(
-      "Mindestens 2 Spiele Vorsprung nötig.",
-    );
-  });
-
   it("falls back to the generic copy on an unknown reason", () => {
     expect(germanInvalidReason("future server error wording")).toBe("Ungültiges Ergebnis.");
   });

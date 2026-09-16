@@ -17,16 +17,10 @@ export function validateScore(a: number, b: number, format: MatchFormat): Valida
     return { ok: true };
   }
 
-  const winner = Math.max(a, b);
-  const loser = Math.min(a, b);
-  if (winner < 6) {
+  // tennis-set: the winner needs at least 6 games; no minimum lead, so a
+  // set may end 6:5 or 7:6 once the group decides to stop.
+  if (Math.max(a, b) < 6) {
     return { ok: false, reason: "Winner must reach at least 6" };
-  }
-  if (winner === 6 && loser > 4) {
-    return { ok: false, reason: "At 6:5 play continues until a 2-game lead" };
-  }
-  if (winner > 6 && loser !== winner - 2) {
-    return { ok: false, reason: "After 6:6 the match ends only on a 2-game lead" };
   }
   return { ok: true };
 }
