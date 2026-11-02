@@ -7,17 +7,19 @@ import {
 import { GameDayNotActiveError } from "@/lib/game-day/add-extra-match";
 import { GameDayNotFoundError } from "@/lib/game-day/attendance";
 import { resetDb } from "../../helpers/reset-db";
+import { createTestGroup } from "../../helpers/group";
 
 async function makeDay(status: "planned" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
     data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
   });
   const year = new Date().getFullYear();
+  const group = await createTestGroup();
   const season = await prisma.season.create({
-    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { groupId: group.id, name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
   const day = await prisma.gameDay.create({
-    data: { seasonId: season.id, date: new Date("2026-04-21"), status },
+    data: { groupId: group.id, seasonId: season.id, date: new Date("2026-04-21"), status },
   });
   return { admin, day };
 }

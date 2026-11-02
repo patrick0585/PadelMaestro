@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { computeRanking } from "@/lib/ranking/compute";
 import { resetDb } from "../helpers/reset-db";
+import { createTestGroup } from "../helpers/group";
 
 describe("computeRanking", () => {
   beforeEach(resetDb);
@@ -10,6 +11,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -25,6 +27,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -38,7 +41,7 @@ describe("computeRanking", () => {
       ),
     );
     const gd = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4 },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4 },
     });
     await prisma.match.create({
       data: {
@@ -69,6 +72,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -82,7 +86,7 @@ describe("computeRanking", () => {
       ),
     );
     const gd = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-24"), playerCount: 5 },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-24"), playerCount: 5 },
     });
     // HighPpg: 1 game, 5 points → Ø 5, total 5
     await prisma.jokerUse.create({
@@ -117,6 +121,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -133,6 +138,7 @@ describe("computeRanking", () => {
     // Day 1 (finished): p1 gold (3 pts), p2 silver (1 pt), p3 + p4 tied last (1 pt each — alphabetical → p3 bronze)
     const day1 = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-21"),
         playerCount: 4,
@@ -155,6 +161,7 @@ describe("computeRanking", () => {
     // Day 2 (finished): p1 gold again, p3 silver, p2 bronze
     const day2 = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-22"),
         playerCount: 4,
@@ -189,6 +196,7 @@ describe("computeRanking", () => {
     // Day 3 (in_progress) — must NOT contribute medals
     const day3 = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-23"),
         playerCount: 4,
@@ -220,6 +228,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -236,6 +245,7 @@ describe("computeRanking", () => {
     );
     const day = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-21"),
         playerCount: 4,
@@ -268,6 +278,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -282,6 +293,7 @@ describe("computeRanking", () => {
     );
     const day = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-21"),
         playerCount: 2,
@@ -313,6 +325,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -327,6 +340,7 @@ describe("computeRanking", () => {
     );
     const day = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-21"),
         playerCount: 4,
@@ -357,6 +371,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -371,6 +386,7 @@ describe("computeRanking", () => {
     );
     const gd = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-21"),
         playerCount: 4,
@@ -400,6 +416,7 @@ describe("computeRanking", () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
+        groupId: (await createTestGroup()).id,
         name: `Saison ${year}`,
         year,
         startDate: new Date(year, 0, 1),
@@ -411,7 +428,7 @@ describe("computeRanking", () => {
       data: { name: "Joker User", email: "j@x", passwordHash: "x" },
     });
     const gd = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-21"), playerCount: 5 },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 5 },
     });
     await prisma.jokerUse.create({
       data: {

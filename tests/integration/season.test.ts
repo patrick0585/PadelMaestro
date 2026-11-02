@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { resetDb } from "../helpers/reset-db";
@@ -27,17 +27,29 @@ describe("getOrCreateActiveSeason", () => {
   it("legt pro Gruppe eine eigene aktive Saison an (gleicher Name erlaubt)", async () => {
     const groupA = await createTestGroup("A");
     const groupB = await createTestGroup("B");
-    // Season.name is still globally unique; Task 7 lets group B get "Saison <year>" too.
-    const seasonB = await createTestSeason(groupB.id);
+    const name = `Saison ${new Date().getFullYear()}`;
+    const seasonB = await createTestSeason(groupB.id, { name });
 
     const seasonA = await getOrCreateActiveSeason(groupA.id);
 
     expect(seasonA.id).not.toBe(seasonB.id);
     expect(seasonA.groupId).toBe(groupA.id);
     expect(seasonA.isActive).toBe(true);
-    expect(seasonA.name).toBe(`Saison ${new Date().getFullYear()}`);
+    expect(seasonA.name).toBe(name);
     expect((await getOrCreateActiveSeason(groupB.id)).id).toBe(seasonB.id);
     expect(await prisma.season.count({ where: { isActive: true } })).toBe(2);
+  });
+
+  it("liefert nach P2002 die bereits angelegte Saison", async () => {
+    const group = await createTestGroup();
+    const existing = await createTestSeason(group.id, { name: `Saison ${new Date().getFullYear()}` });
+    const spy = vi.spyOn(prisma.season, "findFirst").mockResolvedValueOnce(null);
+    try {
+      const season = await getOrCreateActiveSeason(group.id);
+      expect(season.id).toBe(existing.id);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("liefert bei gleichzeitigen Aufrufen genau eine Saison", async () => {

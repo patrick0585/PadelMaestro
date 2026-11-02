@@ -76,9 +76,6 @@ describe("createGameDay", () => {
       email: "admin-b@x",
       role: "owner",
     });
-    // Season.name is still globally unique until Task 7, so group B gets a distinct name.
-    await createTestSeason(groupB.id);
-
     const date = new Date("2026-04-21");
     const dayA = await createGameDay(a.group.id, date, a.admin.id);
     const dayB = await createGameDay(groupB.id, date, adminB.id);
@@ -86,6 +83,8 @@ describe("createGameDay", () => {
     expect(dayA.groupId).toBe(a.group.id);
     expect(dayB.groupId).toBe(groupB.id);
     expect(dayB.id).not.toBe(dayA.id);
+    const seasons = await prisma.season.findMany({ where: { id: { in: [dayA.seasonId, dayB.seasonId] } } });
+    expect(seasons.map((s) => s.name)).toEqual([`Saison ${new Date().getFullYear()}`, `Saison ${new Date().getFullYear()}`]);
   });
 });
 

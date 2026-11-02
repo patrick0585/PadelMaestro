@@ -2,10 +2,13 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { listJokersForGameDay } from "@/lib/joker/list";
 import { resetDb } from "../helpers/reset-db";
+import { createTestGroup } from "../helpers/group";
 
 async function makeSeason(year = new Date().getFullYear()) {
+  const group = await createTestGroup();
   return prisma.season.create({
     data: {
+      groupId: group.id,
       name: `Saison ${year}`,
       year,
       startDate: new Date(year, 0, 1),
@@ -27,7 +30,7 @@ describe("listJokersForGameDay", () => {
   it("returns an empty array when no joker was used on that day", async () => {
     const season = await makeSeason(2026);
     const day = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
     });
     expect(await listJokersForGameDay(day.id)).toEqual([]);
   });
@@ -35,7 +38,7 @@ describe("listJokersForGameDay", () => {
   it("returns one row per JokerUse, with player details and numeric decimals", async () => {
     const season = await makeSeason(2026);
     const day = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
     });
     const werner = await makePlayer("Werner");
     await prisma.jokerUse.create({
@@ -65,7 +68,7 @@ describe("listJokersForGameDay", () => {
   it("sorts rows alphabetically by player name with de collation", async () => {
     const season = await makeSeason(2026);
     const day = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
     });
     // Includes an umlaut name so the "de" locale sort is actually exercised:
     // under default/en collation Ö would sort after Z, under "de" it sorts like O.
@@ -91,10 +94,10 @@ describe("listJokersForGameDay", () => {
   it("ignores JokerUse rows from other game days", async () => {
     const season = await makeSeason(2026);
     const day1 = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
     });
     const day2 = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-28"), status: "planned" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-28"), status: "planned" },
     });
     const werner = await makePlayer("Werner");
     await prisma.jokerUse.create({

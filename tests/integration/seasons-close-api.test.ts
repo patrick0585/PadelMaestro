@@ -84,7 +84,7 @@ describe("POST /api/seasons/close", () => {
     const groupId = await makeAdmin();
     const season = await getOrCreateActiveSeason(groupId);
     await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-07-21"), status: "planned" },
+      data: { groupId, seasonId: season.id, date: new Date("2026-07-21"), status: "planned" },
     });
     const res = await POST(req({ closedName: "A", nextName: "B" }));
     expect(res.status).toBe(409);

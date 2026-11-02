@@ -120,6 +120,9 @@ Semantik:
   Passwort und E-Mail des Besitzers kann nur der Besitzer selbst ändern
   (sonst 409 `owner_protected`), damit kein Admin das Besitzerkonto
   übernehmen kann.
+  Der Leerzustand ‚Du bist in keiner Gruppe' kommt als einfache
+  Komponente bereits mit PR 4, weil Seiten ohne Gruppe keine Saison mehr
+  laden können; Feinschliff in PR 6.
 - Spieler ohne aktive Mitgliedschaft in der Session-Gruppe können sich
   einloggen, sehen aber eine leere Zustandsseite „Du bist in keiner
   Gruppe“. In Phase 1 kann das nur durch Entfernen entstehen und

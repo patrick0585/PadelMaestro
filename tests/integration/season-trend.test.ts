@@ -2,11 +2,13 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { buildSeasonTrend } from "@/lib/ranking/season-trend";
 import { resetDb } from "../helpers/reset-db";
+import { createTestGroup } from "../helpers/group";
 
 async function makeSeason() {
   const year = new Date().getFullYear();
+  const group = await createTestGroup();
   return prisma.season.create({
-    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+    data: { groupId: group.id, name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
 }
 
@@ -16,9 +18,9 @@ async function makeUser(name: string) {
   });
 }
 
-async function makeFinishedDay(seasonId: string, date: Date) {
+async function makeFinishedDay(season: { id: string; groupId: string }, date: Date) {
   return prisma.gameDay.create({
-    data: { seasonId, date, playerCount: 4, status: "finished" },
+    data: { groupId: season.groupId, seasonId: season.id, date, playerCount: 4, status: "finished" },
   });
 }
 
@@ -68,7 +70,7 @@ describe("buildSeasonTrend", () => {
     //   Match 1: Paul/Patrick beat Michi/Thomas 3:0  → Paul 3, Patrick 3, Michi 0, Thomas 0
     //   Match 2: Paul/Michi vs Patrick/Thomas 2:1     → Paul +2, Michi +2, Patrick +1, Thomas +1
     // After Day A:  Paul 5/2, Patrick 4/2, Michi 2/2, Thomas 1/2
-    const dayA = await makeFinishedDay(season.id, new Date("2026-04-01"));
+    const dayA = await makeFinishedDay(season, new Date("2026-04-01"));
     await makeMatch(dayA.id, 1, [paul.id, patrick.id], [michi.id, thomas.id], 3, 0);
     await makeMatch(dayA.id, 2, [paul.id, michi.id], [patrick.id, thomas.id], 2, 1);
     // Day B: Thomas dominates
@@ -79,7 +81,7 @@ describe("buildSeasonTrend", () => {
     //   Patrick 4+0+3=7 / 4 games  → ppg 1.75
     //   Thomas  1+3+3=7 / 4 games  → ppg 1.75
     //   Michi   2+0+0=2 / 4 games  → ppg 0.5
-    const dayB = await makeFinishedDay(season.id, new Date("2026-04-08"));
+    const dayB = await makeFinishedDay(season, new Date("2026-04-08"));
     await makeMatch(dayB.id, 1, [thomas.id, paul.id], [patrick.id, michi.id], 3, 0);
     await makeMatch(dayB.id, 2, [thomas.id, patrick.id], [paul.id, michi.id], 3, 0);
 
@@ -112,10 +114,10 @@ describe("buildSeasonTrend", () => {
     ]);
     // Day A: only Paul/Patrick/Michi/Thomas play. Eva has never appeared
     // in the season → null at the end of Day A.
-    const dayA = await makeFinishedDay(season.id, new Date("2026-04-01"));
+    const dayA = await makeFinishedDay(season, new Date("2026-04-01"));
     await makeMatch(dayA.id, 1, [paul.id, patrick.id], [michi.id, thomas.id], 2, 1);
     // Day B: Eva plays for the first time → she gains a rank from Day B onward.
-    const dayB = await makeFinishedDay(season.id, new Date("2026-04-08"));
+    const dayB = await makeFinishedDay(season, new Date("2026-04-08"));
     await makeMatch(dayB.id, 1, [paul.id, eva.id], [patrick.id, michi.id], 3, 0);
 
     const trend = await buildSeasonTrend(season.id);
@@ -162,7 +164,7 @@ describe("buildSeasonTrend", () => {
     ]);
     // Active players play one match. Eva uses a joker on the same day
     // (zero games credited so her ppg is undefined → NULLS LAST).
-    const day = await makeFinishedDay(season.id, new Date("2026-04-01"));
+    const day = await makeFinishedDay(season, new Date("2026-04-01"));
     await makeMatch(day.id, 1, [active1.id, active2.id], [active3.id, active4.id], 2, 1);
     await prisma.jokerUse.create({
       data: {
@@ -197,10 +199,11 @@ describe("buildSeasonTrend", () => {
       makeUser("Michi"),
       makeUser("Thomas"),
     ]);
-    const finished = await makeFinishedDay(season.id, new Date("2026-04-01"));
+    const finished = await makeFinishedDay(season, new Date("2026-04-01"));
     await makeMatch(finished.id, 1, [paul.id, patrick.id], [michi.id, thomas.id], 2, 1);
     await prisma.gameDay.create({
       data: {
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date("2026-04-08"),
         playerCount: 4,

@@ -76,16 +76,14 @@ describe("closeSeasonAndStartNext", () => {
     const other = await createTestGroup("Andere");
     await createTestSeason(other.id, { name: "Alt", isActive: false });
 
-    const err = await closeSeasonAndStartNext({
-      groupId,
-      closedName: "Alt",
-      nextName: "Neu",
-      actorId: admin.id,
-    }).catch((e: unknown) => e);
-
-    // The group-scoped check lets "Alt" through; the global Season.name unique index
-    // still rejects it at the DB until Task 7 relaxes it, then this must resolve.
-    expect(err).not.toBeInstanceOf(SeasonNameConflictError);
+    await expect(
+      closeSeasonAndStartNext({
+        groupId,
+        closedName: "Alt",
+        nextName: "Neu",
+        actorId: admin.id,
+      }),
+    ).resolves.toMatchObject({ closedSeason: { name: "Alt" }, newSeason: { name: "Neu" } });
   });
 
   it("starts the new season with an empty ranking and a fresh joker budget", async () => {
@@ -97,7 +95,7 @@ describe("closeSeasonAndStartNext", () => {
       ),
     );
     const day = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-07-14"), status: "finished" },
+      data: { groupId, seasonId: season.id, date: new Date("2026-07-14"), status: "finished" },
     });
     await prisma.match.create({
       data: {
@@ -141,7 +139,7 @@ describe("closeSeasonAndStartNext", () => {
       const { groupId, admin } = await makeAdmin();
       const season = await getOrCreateActiveSeason(groupId);
       await prisma.gameDay.create({
-        data: { seasonId: season.id, date: new Date("2026-07-21"), status },
+        data: { groupId, seasonId: season.id, date: new Date("2026-07-21"), status },
       });
 
       await expect(
@@ -163,7 +161,7 @@ describe("closeSeasonAndStartNext", () => {
     const { groupId, admin } = await makeAdmin();
     const season = await getOrCreateActiveSeason(groupId);
     await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-07-21"), status: "planned" },
+      data: { groupId, seasonId: season.id, date: new Date("2026-07-21"), status: "planned" },
     });
     const err = await closeSeasonAndStartNext({
       groupId,

@@ -48,7 +48,7 @@ async function main() {
   for (const gd of data.gameDays) {
     const day = await prisma.gameDay.create({
       data: {
-        groupId: season.groupId ?? (await getSoleGroup()).id,
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date(gd.date),
         playerCount: gd.playerCount,
