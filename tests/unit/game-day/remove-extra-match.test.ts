@@ -15,6 +15,7 @@ import {
   __resetLiveBroadcastForTests,
 } from "@/lib/game-day/live-broadcast";
 import { resetDb } from "../../helpers/reset-db";
+import { createMember, createTestGroup } from "../../helpers/group";
 
 // Monotonic counter so emails stay unique even when a single test builds
 // two game days (e.g. the cross-game-day case).
@@ -24,16 +25,20 @@ let playerSeq = 0;
 // 5/6 players → 15 matches. So the first extra match is matchNumber
 // (template total + 1).
 async function setupDay(count: number, date = new Date("2026-06-09")) {
+  const group = (await prisma.group.findFirst()) ?? (await createTestGroup());
   const players = [];
   for (let i = 1; i <= count; i++) {
     const n = playerSeq++;
     players.push(
-      await prisma.player.create({
-        data: { name: `P${n}`, email: `p${n}@example.com`, passwordHash: "x", isAdmin: i === 1 },
+      await createMember(group.id, {
+        name: `P${n}`,
+        email: `p${n}@example.com`,
+        passwordHash: "x",
+        role: i === 1 ? "owner" : "member",
       }),
     );
   }
-  const day = await createGameDay(date, players[0].id);
+  const day = await createGameDay(group.id, date, players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
   await startGameDay(day.id, players[0].id);
   return { players, day };

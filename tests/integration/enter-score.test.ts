@@ -15,21 +15,26 @@ import {
   __resetLiveBroadcastForTests,
 } from "@/lib/game-day/live-broadcast";
 import { resetDb } from "../helpers/reset-db";
+import { createMember, createTestGroup } from "../helpers/group";
 
 async function setupFivePlayerGame() {
   return setupGame(5);
 }
 
 async function setupGame(count: number) {
+  const group = await createTestGroup();
   const players = [];
   for (let i = 1; i <= count; i++) {
     players.push(
-      await prisma.player.create({
-        data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x", isAdmin: i === 1 },
+      await createMember(group.id, {
+        name: `P${i}`,
+        email: `p${i}@x`,
+        passwordHash: "x",
+        role: i === 1 ? "owner" : "member",
       }),
     );
   }
-  const day = await createGameDay(new Date("2026-04-21"), players[0].id);
+  const day = await createGameDay(group.id, new Date("2026-04-21"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
   await startGameDay(day.id, players[0].id);
   const matches = await prisma.match.findMany({

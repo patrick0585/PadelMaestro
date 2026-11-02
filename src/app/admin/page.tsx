@@ -60,7 +60,7 @@ export default async function AdminPage() {
 
   const players = await listActiveMembers(ctx.groupId);
   const manageableDay = await prisma.gameDay.findFirst({
-    where: { status: "planned" },
+    where: { status: "planned", groupId: ctx.groupId },
     orderBy: { date: "desc" },
     include: {
       participants: {

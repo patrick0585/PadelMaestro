@@ -6,19 +6,18 @@ import {
   GameDayNotPlannedError,
 } from "@/lib/game-day/shuffle-preview";
 import { resetDb } from "../helpers/reset-db";
+import { setupGroupWithAdmin } from "../helpers/group";
 
 async function makeAdmin() {
-  return prisma.player.create({
-    data: { name: "Admin", email: "admin@x", passwordHash: "x", isAdmin: true },
-  });
+  return setupGroupWithAdmin();
 }
 
 describe("shufflePreviewSeed", () => {
   beforeEach(resetDb);
 
   it("persists a fresh seed on a planned game day and writes an audit entry", async () => {
-    const admin = await makeAdmin();
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const { group, admin } = await makeAdmin();
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
 
     const { seed } = await shufflePreviewSeed(day.id, admin.id);
     expect(seed).toBeTruthy();
@@ -34,8 +33,8 @@ describe("shufflePreviewSeed", () => {
   });
 
   it("changes the seed each call (very high probability)", async () => {
-    const admin = await makeAdmin();
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const { group, admin } = await makeAdmin();
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
 
     const a = await shufflePreviewSeed(day.id, admin.id);
     const b = await shufflePreviewSeed(day.id, admin.id);
@@ -43,8 +42,8 @@ describe("shufflePreviewSeed", () => {
   });
 
   it("rejects shuffle once Spielbetrieb is started (in_progress)", async () => {
-    const admin = await makeAdmin();
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const { group, admin } = await makeAdmin();
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
     await prisma.gameDay.update({
       where: { id: day.id },
       data: { status: "in_progress" },
@@ -56,8 +55,8 @@ describe("shufflePreviewSeed", () => {
   });
 
   it("rejects shuffle on a finished day", async () => {
-    const admin = await makeAdmin();
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const { group, admin } = await makeAdmin();
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
     await prisma.gameDay.update({
       where: { id: day.id },
       data: { status: "finished" },

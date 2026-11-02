@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
-import { getSoleGroup } from "@/lib/group/sole-group";
 
 export class GameDayDateExistsError extends Error {
   constructor(date: Date) {
@@ -10,10 +9,12 @@ export class GameDayDateExistsError extends Error {
   }
 }
 
-export async function createGameDay(date: Date, actorId: string) {
-  const groupId = (await getSoleGroup()).id;
+export async function createGameDay(groupId: string, date: Date, actorId: string) {
   const season = await getOrCreateActiveSeason(groupId);
-  const players = await prisma.player.findMany({ where: { deletedAt: null } });
+  const members = await prisma.membership.findMany({
+    where: { groupId, removedAt: null },
+    select: { playerId: true },
+  });
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -24,7 +25,7 @@ export async function createGameDay(date: Date, actorId: string) {
           date,
           status: "planned",
           participants: {
-            create: players.map((p) => ({ playerId: p.id })),
+            create: members.map((m) => ({ playerId: m.playerId })),
           },
         },
         include: { participants: true },

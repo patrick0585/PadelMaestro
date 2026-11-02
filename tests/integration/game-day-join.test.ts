@@ -3,16 +3,21 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { POST } from "@/app/api/game-days/[id]/join/route";
 import { resetDb } from "../helpers/reset-db";
+import { createMember, createTestGroup } from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 async function setup() {
-  const admin = await prisma.player.create({
-    data: { name: "Admin", email: "a@x", isAdmin: true, passwordHash: "x" },
+  const group = await createTestGroup();
+  const admin = await createMember(group.id, {
+    name: "Admin",
+    email: "a@x",
+    role: "owner",
+    passwordHash: "x",
   });
-  const day = await createGameDay(new Date("2026-04-21"), admin.id);
+  const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
   return { admin, day };
 }
 

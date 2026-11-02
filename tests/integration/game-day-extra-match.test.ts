@@ -5,21 +5,26 @@ import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { startGameDay } from "@/lib/game-day/start";
 import { resetDb } from "../helpers/reset-db";
+import { createMember, createTestGroup } from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 async function setupFive() {
+  const group = await createTestGroup();
   const players = [];
   for (let i = 1; i <= 5; i++) {
     players.push(
-      await prisma.player.create({
-        data: { name: `P${i}`, email: `p${i}@example.com`, passwordHash: "x", isAdmin: i === 1 },
+      await createMember(group.id, {
+        name: `P${i}`,
+        email: `p${i}@example.com`,
+        passwordHash: "x",
+        role: i === 1 ? "owner" : "member",
       }),
     );
   }
-  const day = await createGameDay(new Date("2026-04-21"), players[0].id);
+  const day = await createGameDay(group.id, new Date("2026-04-21"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
   await startGameDay(day.id, players[0].id);
   return { players, day };
@@ -50,10 +55,14 @@ describe("POST /api/game-days/[id]/matches", () => {
   });
 
   it("returns 409 in planned", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
+    const group = await createTestGroup();
+    const admin = await createMember(group.id, {
+      name: "A",
+      email: "a@example.com",
+      passwordHash: "x",
+      role: "owner",
     });
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
     authMock.mockResolvedValue({
       user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
     });

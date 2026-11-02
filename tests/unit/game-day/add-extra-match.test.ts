@@ -10,17 +10,22 @@ import {
 import { removeExtraMatch } from "@/lib/game-day/remove-extra-match";
 import { GameDayNotFoundError } from "@/lib/game-day/attendance";
 import { resetDb } from "../../helpers/reset-db";
+import { createMember, createTestGroup } from "../../helpers/group";
 
 async function setupDay(count: number) {
+  const group = await createTestGroup();
   const players = [];
   for (let i = 1; i <= count; i++) {
     players.push(
-      await prisma.player.create({
-        data: { name: `P${i}`, email: `p${i}@example.com`, passwordHash: "x", isAdmin: i === 1 },
+      await createMember(group.id, {
+        name: `P${i}`,
+        email: `p${i}@example.com`,
+        passwordHash: "x",
+        role: i === 1 ? "owner" : "member",
       }),
     );
   }
-  const day = await createGameDay(new Date("2026-04-21"), players[0].id);
+  const day = await createGameDay(group.id, new Date("2026-04-21"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
   await startGameDay(day.id, players[0].id);
   return { players, day };
@@ -146,10 +151,14 @@ describe("addExtraMatch", () => {
   });
 
   it("rejects in planned with GameDayNotActiveError", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
+    const group = await createTestGroup();
+    const admin = await createMember(group.id, {
+      name: "A",
+      email: "a@example.com",
+      passwordHash: "x",
+      role: "owner",
     });
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
     await expect(addExtraMatch(day.id, admin.id)).rejects.toBeInstanceOf(GameDayNotActiveError);
   });
 

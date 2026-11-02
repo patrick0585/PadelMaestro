@@ -6,21 +6,26 @@ import { setAttendance } from "@/lib/game-day/attendance";
 import { startGameDay } from "@/lib/game-day/start";
 import { addExtraMatch } from "@/lib/game-day/add-extra-match";
 import { resetDb } from "../helpers/reset-db";
+import { createMember, createTestGroup } from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 async function setupFive() {
+  const group = await createTestGroup();
   const players = [];
   for (let i = 1; i <= 5; i++) {
     players.push(
-      await prisma.player.create({
-        data: { name: `P${i}`, email: `p${i}@example.com`, passwordHash: "x", isAdmin: i === 1 },
+      await createMember(group.id, {
+        name: `P${i}`,
+        email: `p${i}@example.com`,
+        passwordHash: "x",
+        role: i === 1 ? "owner" : "member",
       }),
     );
   }
-  const day = await createGameDay(new Date("2026-06-09"), players[0].id);
+  const day = await createGameDay(group.id, new Date("2026-06-09"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
   await startGameDay(day.id, players[0].id);
   return { players, day };

@@ -9,15 +9,20 @@ import {
   GameDayLockedError,
 } from "@/lib/game-day/attendance";
 import { resetDb } from "../helpers/reset-db";
+import { createMember, createTestGroup } from "../helpers/group";
 
 describe("setAttendance", () => {
   beforeEach(resetDb);
 
   it("updates attendance from pending to confirmed", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@x", isAdmin: true, passwordHash: "x" },
+    const group = await createTestGroup();
+    const admin = await createMember(group.id, {
+      name: "A",
+      email: "a@x",
+      role: "owner",
+      passwordHash: "x",
     });
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
 
     await setAttendance(day.id, admin.id, "confirmed");
 
@@ -29,10 +34,14 @@ describe("setAttendance", () => {
   });
 
   it("rejects updates after roster is locked", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@x", isAdmin: true, passwordHash: "x" },
+    const group = await createTestGroup();
+    const admin = await createMember(group.id, {
+      name: "A",
+      email: "a@x",
+      role: "owner",
+      passwordHash: "x",
     });
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
     await prisma.gameDay.update({ where: { id: day.id }, data: { status: "in_progress" } });
 
     await expect(setAttendance(day.id, admin.id, "confirmed")).rejects.toThrow(/locked/i);
@@ -43,13 +52,15 @@ describe("setAttendanceAsAdmin", () => {
   beforeEach(resetDb);
 
   async function setup() {
-    const admin = await prisma.player.create({
-      data: { name: "Admin", email: "admin@x", isAdmin: true, passwordHash: "x" },
+    const group = await createTestGroup();
+    const admin = await createMember(group.id, {
+      name: "Admin",
+      email: "admin@x",
+      role: "owner",
+      passwordHash: "x",
     });
-    const other = await prisma.player.create({
-      data: { name: "Ben", email: "ben@x", isAdmin: false, passwordHash: "x" },
-    });
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
+    const other = await createMember(group.id, { name: "Ben", email: "ben@x", passwordHash: "x" });
+    const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
     return { admin, other, day };
   }
 
