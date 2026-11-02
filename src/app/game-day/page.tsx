@@ -20,7 +20,7 @@ import { ShufflePreviewButton } from "./shuffle-preview-button";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { GameDayLiveUpdates } from "./live-updates";
 import { RefreshButton } from "./refresh-button";
-import { assignPlayersToTemplate } from "@/lib/pairings/assign";
+import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
 import { loadTemplate } from "@/lib/pairings/load";
 
 export const dynamic = "force-dynamic";
@@ -127,7 +127,9 @@ export default async function GameDayPage() {
   const previewSeed = day.seed ?? day.id;
   const previewPlans = showPreview
     ? assignPlayersToTemplate(
-        confirmedPlayers.map((p) => ({ id: p.playerId, name: p.name })),
+        sortPlayersForAssignment(
+          confirmedPlayers.map((p) => ({ id: p.playerId, name: p.name })),
+        ),
         previewSeed,
       )
     : [];

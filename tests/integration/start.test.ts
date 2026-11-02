@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { setAttendance } from "@/lib/game-day/attendance";
 import { startGameDay } from "@/lib/game-day/start";
-import { assignPlayersToTemplate } from "@/lib/pairings/assign";
+import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
 import { resetDb } from "../helpers/reset-db";
 import { createMember, createTestGroup } from "../helpers/group";
 
@@ -111,14 +111,17 @@ describe("startGameDay", () => {
       data: { seed: presetSeed },
     });
 
-    // Build the preview the same way the page does: only confirmed
-    // players, ordered by name (sortedRoster equivalent — see
-    // assignPlayersToTemplate). The page does no extra sorting; we
-    // pass the same shape it does.
+    // Build the preview the same way the page does: confirmed players
+    // through sortPlayersForAssignment. Input is reversed on purpose so
+    // the result cannot depend on creation or DB row order.
     const previewPlayers = all
       .slice(0, 5)
+      .reverse()
       .map((p) => ({ id: p.id, name: p.name }));
-    const previewPlans = assignPlayersToTemplate(previewPlayers, presetSeed);
+    const previewPlans = assignPlayersToTemplate(
+      sortPlayersForAssignment(previewPlayers),
+      presetSeed,
+    );
 
     await startGameDay(day.id, all[0].id);
 

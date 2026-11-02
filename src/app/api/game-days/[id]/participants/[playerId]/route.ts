@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import { findGroupGameDay } from "@/lib/game-day/group-scope";
+import { findGroupMembership } from "@/lib/group/active-membership";
+import { prisma } from "@/lib/db";
 import {
   setAttendanceAsAdmin,
   GameDayNotFoundError,
@@ -21,6 +23,9 @@ export async function PATCH(
   const { id, playerId } = await ctx.params;
   if (!(await findGroupGameDay(g.ctx.groupId, id))) {
     return NextResponse.json({ error: "game_day_not_found" }, { status: 404 });
+  }
+  if (!(await findGroupMembership(prisma, g.ctx.groupId, playerId))) {
+    return NextResponse.json({ error: "player_not_found" }, { status: 404 });
   }
   const parsed = Schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import { findGroupGameDay } from "@/lib/game-day/group-scope";
+import { findGroupMembership } from "@/lib/group/active-membership";
+import { prisma } from "@/lib/db";
 import {
   recordJokerUseAsAdmin,
   cancelJokerUseAsAdmin,
@@ -18,6 +20,9 @@ export async function POST(_req: Request, ctx: Params) {
   const { id, playerId } = await ctx.params;
   if (!(await findGroupGameDay(g.ctx.groupId, id))) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (!(await findGroupMembership(prisma, g.ctx.groupId, playerId))) {
+    return NextResponse.json({ error: "player_not_found" }, { status: 404 });
   }
 
   try {
@@ -46,6 +51,9 @@ export async function DELETE(_req: Request, ctx: Params) {
   const { id, playerId } = await ctx.params;
   if (!(await findGroupGameDay(g.ctx.groupId, id))) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (!(await findGroupMembership(prisma, g.ctx.groupId, playerId))) {
+    return NextResponse.json({ error: "player_not_found" }, { status: 404 });
   }
 
   try {

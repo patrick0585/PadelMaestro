@@ -108,6 +108,71 @@ describe("/api/game-days/[id]/participants/[playerId]/joker", () => {
     expect(await res.json()).toEqual({ code: "JOKER_NOT_FOUND" });
   });
 
+  describe("target player outside the group", () => {
+    it("POST 404 player_not_found für Spieler einer anderen Gruppe", async () => {
+      const { session, gameDay } = await setup();
+      const otherGroup = await createTestGroup("Andere");
+      const stranger = await createMember(otherGroup.id, { name: "S", email: "s@x", passwordHash: "x" });
+      authMock.mockResolvedValue(session);
+      const res = await POST(buildReq("POST", gameDay.id, stranger.id), {
+        params: Promise.resolve({ id: gameDay.id, playerId: stranger.id }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "player_not_found" });
+      expect(await prisma.jokerUse.count()).toBe(0);
+      expect(
+        await prisma.gameDayParticipant.count({ where: { gameDayId: gameDay.id, playerId: stranger.id } }),
+      ).toBe(0);
+    });
+
+    it("POST 404 für entferntes Mitglied", async () => {
+      const { group, session, player, gameDay } = await setup();
+      await prisma.membership.updateMany({
+        where: { groupId: group.id, playerId: player.id },
+        data: { removedAt: new Date() },
+      });
+      authMock.mockResolvedValue(session);
+      const res = await POST(buildReq("POST", gameDay.id, player.id), {
+        params: Promise.resolve({ id: gameDay.id, playerId: player.id }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "player_not_found" });
+      expect(await prisma.jokerUse.count()).toBe(0);
+      const part = await prisma.gameDayParticipant.findUniqueOrThrow({
+        where: { gameDayId_playerId: { gameDayId: gameDay.id, playerId: player.id } },
+      });
+      expect(part.attendance).toBe("pending");
+    });
+
+    it("DELETE 404 player_not_found für Spieler einer anderen Gruppe", async () => {
+      const { session, gameDay } = await setup();
+      const otherGroup = await createTestGroup("Andere");
+      const stranger = await createMember(otherGroup.id, { name: "S", email: "s@x", passwordHash: "x" });
+      authMock.mockResolvedValue(session);
+      const res = await DELETE(buildReq("DELETE", gameDay.id, stranger.id), {
+        params: Promise.resolve({ id: gameDay.id, playerId: stranger.id }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "player_not_found" });
+    });
+
+    it("DELETE 404 für entferntes Mitglied and keeps the joker", async () => {
+      const { group, session, player, gameDay } = await setup();
+      await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
+      await prisma.membership.updateMany({
+        where: { groupId: group.id, playerId: player.id },
+        data: { removedAt: new Date() },
+      });
+      authMock.mockResolvedValue(session);
+      const res = await DELETE(buildReq("DELETE", gameDay.id, player.id), {
+        params: Promise.resolve({ id: gameDay.id, playerId: player.id }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "player_not_found" });
+      expect(await prisma.jokerUse.count()).toBe(1);
+    });
+  });
+
   describe("game day of another group", () => {
     async function asOtherAdmin() {
       const otherGroup = await createTestGroup("Andere");

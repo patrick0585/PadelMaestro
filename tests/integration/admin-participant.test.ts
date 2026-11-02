@@ -81,18 +81,49 @@ describe("PATCH /api/game-days/[id]/participants/[playerId]", () => {
 
   it("creates a participant row when the player has none yet", async () => {
     const { group, admin, day } = await setup();
-    const outsider = await prisma.player.create({
-      data: { name: "O", email: "o@x", passwordHash: "x" },
-    });
+    const latecomer = await createMember(group.id, { name: "L", email: "l@x", passwordHash: "x" });
     authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
-    const res = await PATCH(req(day.id, outsider.id, { status: "confirmed" }), {
-      params: Promise.resolve({ id: day.id, playerId: outsider.id }),
+    const res = await PATCH(req(day.id, latecomer.id, { status: "confirmed" }), {
+      params: Promise.resolve({ id: day.id, playerId: latecomer.id }),
     });
     expect(res.status).toBe(200);
     const p = await prisma.gameDayParticipant.findUniqueOrThrow({
-      where: { gameDayId_playerId: { gameDayId: day.id, playerId: outsider.id } },
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: latecomer.id } },
     });
     expect(p.attendance).toBe("confirmed");
+  });
+
+  it("404 player_not_found für Spieler einer anderen Gruppe", async () => {
+    const { group, admin, day } = await setup();
+    const otherGroup = await createTestGroup("Andere");
+    const stranger = await createMember(otherGroup.id, { name: "S", email: "s@x", passwordHash: "x" });
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
+    const res = await PATCH(req(day.id, stranger.id, { status: "confirmed" }), {
+      params: Promise.resolve({ id: day.id, playerId: stranger.id }),
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "player_not_found" });
+    expect(
+      await prisma.gameDayParticipant.count({ where: { gameDayId: day.id, playerId: stranger.id } }),
+    ).toBe(0);
+  });
+
+  it("404 für entferntes Mitglied", async () => {
+    const { group, admin, other, day } = await setup();
+    await prisma.membership.updateMany({
+      where: { groupId: group.id, playerId: other.id },
+      data: { removedAt: new Date() },
+    });
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
+    const res = await PATCH(req(day.id, other.id, { status: "confirmed" }), {
+      params: Promise.resolve({ id: day.id, playerId: other.id }),
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "player_not_found" });
+    const p = await prisma.gameDayParticipant.findUniqueOrThrow({
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: other.id } },
+    });
+    expect(p.attendance).toBe("pending");
   });
 
   it("returns 404 when the player does not exist or is soft-deleted", async () => {
@@ -138,6 +169,6 @@ describe("PATCH /api/game-days/[id]/participants/[playerId]", () => {
     const p = await prisma.gameDayParticipant.findUniqueOrThrow({
       where: { gameDayId_playerId: { gameDayId: day.id, playerId: other.id } },
     });
-    expect(p.attendance).not.toBe("confirmed");
+    expect(p.attendance).toBe("pending");
   });
 });
