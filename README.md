@@ -88,6 +88,10 @@ pnpm dev
 
 Open <http://localhost:3000> and log in.
 
+## Groups and roles
+
+Phase 1 runs a single group per installation. Every player is a member of that group with one of three roles: **owner**, **admin** or **member**. `pnpm bootstrap:admin` creates the group "Padelmaestro" and makes the first admin its owner; further bootstrapped admins become plain admins. Use `pnpm tenancy:set-owner <email>` to move the owner role to another player (the previous owner becomes admin). "Remove player" ends the membership; match history, rankings and jokers stay intact. `session.user.isAdmin` is derived from the role (owner or admin), not stored on the player.
+
 ## Common tasks
 
 ```bash

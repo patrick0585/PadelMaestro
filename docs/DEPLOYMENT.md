@@ -198,6 +198,10 @@ sudo -u padel -H bash -c '
 
 The script prints a one-time password. **Copy it now** — it is only shown once.
 
+The first admin becomes the owner of the group "Padelmaestro"; any admin bootstrapped later is a plain admin. To hand the owner role to someone else, run `pnpm tenancy:set-owner <EMAIL>` the same way (the previous owner becomes admin).
+
+The multi-tenancy migrations (PR 1–6) were each rehearsed against a production dump; see `docs/superpowers/plans/2026-11-02-tenancy-pr*-rehearsal.md` for the protocols.
+
 ---
 
 ## 5. Create the systemd service

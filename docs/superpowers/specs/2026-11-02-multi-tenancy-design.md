@@ -286,3 +286,59 @@ Rangliste kurz prüfen.
   Joker-Abfragen sonst unhandlich werden.
 - Reihenfolge innerhalb eines PRs und Schnitt der Tests.
 - Form des Leerzustands „keine Gruppe“ (einfacher Text reicht).
+
+## Anhang: Abschluss-Audit PR 6 (Abfragen ohne groupId)
+
+Stand 2026-11-02. Geprüft wurden alle Treffer von
+`grep -rn "\.\(findFirst\|findMany\|count\|groupBy\|aggregate\)(" src/lib src/app --include='*.ts' --include='*.tsx' | grep -v groupId`.
+Der Filter wirkt zeilenweise: Treffer, bei denen `groupId` erst in der
+`where`-Zeile darunter steht, sind mit „groupId in where“ markiert. Ergebnis:
+keine Lücke, jede Stelle ist über die Gruppe der Session oder über eine
+bereits gruppengeprüfte Beziehung gescoped oder bewusst konto-global.
+
+| Datei:Zeile | Abfrage | Begründung |
+| --- | --- | --- |
+| src/lib/season.ts:79 | `gameDay.findMany` offene Spieltage | gescoped über `seasonId` der aktiven Saison, die per `groupId` ermittelt wird (Zeile 76) |
+| src/lib/season.ts:86 | `season.findFirst` Namenskonflikt | groupId in where (nächste Zeile) |
+| src/lib/ranking/season-trend.ts:61 | `gameDay.findMany` | gescoped über `seasonId`; Saison gehört der Session-Gruppe (PR 4) |
+| src/lib/ranking/season-trend.ts:70 | `match.findMany` | gescoped über `gameDay.seasonId`, Saison der Session-Gruppe |
+| src/lib/ranking/season-trend.ts:93 | `jokerUse.findMany` | gescoped über `seasonId`, Saison der Session-Gruppe |
+| src/lib/ranking/compute.ts:25 | `gameDay.findMany` | gescoped über `seasonId`; Aufrufer übergeben nur Saisons der Session-Gruppe (Startseite, Rangliste, API) bzw. aus dem gruppengescopten Archiv |
+| src/lib/archive/list.ts:26 | `gameDay.findMany` | groupId in where (nächste Zeile) |
+| src/lib/archive/list.ts:44 | `jokerUse.groupBy` | gescoped über `gameDayId in` die zuvor gruppengescopten Spieltage |
+| src/lib/auth/authorize.ts:41 | `player.findFirst` Login | Konto-global per Design (Login per E-Mail/Benutzername) |
+| src/lib/group/sole-group.ts:16 | `group.findMany` | Bootstrap/Skript: einzige Gruppe bis Phase 2, bricht bei mehreren Gruppen ab |
+| src/lib/group/members.ts:15 | `membership.findMany` | groupId in where (nächste Zeile) |
+| src/lib/group/members.ts:50 | `player.findMany` | Einschränkung über `memberships: { some: { groupId } }` in der Zeile darunter |
+| src/lib/group/set-owner.ts:27 | `membership.findFirst` | groupId in where (nächste Zeile) |
+| src/lib/group/bootstrap-admin.ts:23 | `membership.count` | groupId in where (nächste Zeile), Skript |
+| src/lib/group/active-membership.ts:13 | `membership.findFirst` | Membership-Abfrage ist selbst die Quelle der Gruppe der Session (Login/JWT) |
+| src/lib/group/active-membership.ts:25 | `membership.count` | groupId in where (Folgezeilen) |
+| src/lib/group/active-membership.ts:40 | `membership.findFirst` | groupId in where (nächste Zeile) |
+| src/lib/players/create.ts:73 | `gameDay.findMany` geplante Tage | groupId in where (nächste Zeile) |
+| src/lib/players/delete.ts:58 | `gameDayParticipant.findFirst` | gescoped über `gameDay: { groupId }` in der Folgezeile |
+| src/lib/game-day/group-scope.ts:7 | `gameDay.findFirst` | groupId in where (nächste Zeile); Helfer für die Gruppenprüfung der Routen |
+| src/lib/game-day/group-scope.ts:17 | `match.findFirst` | gescoped über `gameDay: { groupId }` in der nächsten Zeile |
+| src/lib/game-day/live-standings.ts:206 | `player.findMany` Namen/Avatare | Spieler-IDs stammen aus Matches des bereits gruppengeprüften Spieltags; liefert nur Name und Avatar-Version |
+| src/lib/game-day/summary.ts:60 | `player.findMany` Namen/Avatare | wie live-standings: IDs aus Matches des Spieltags |
+| src/lib/game-day/remove-extra-match.ts:36 | `match.findFirst` | gescoped über `gameDayId` nach Gruppenprüfung der Route (PR 4) |
+| src/lib/game-day/remove-extra-match.ts:68 | `match.findMany` | gescoped über `gameDayId` desselben Matches |
+| src/lib/game-day/create.ts:14 | `membership.findMany` | groupId in where (nächste Zeile) |
+| src/lib/joker/use.ts:73 | `jokerUse.count` | gescoped über `playerId` + `seasonId` des Spieltags, der zuvor per Route gruppengeprüft wird |
+| src/lib/joker/list.ts:15 | `jokerUse.findMany` | gescoped über `gameDayId` nach Gruppenprüfung der Route |
+| src/lib/player/season-stats.ts:89 | `match.findMany` | gescoped über `gameDay.seasonId` der Session-Gruppe und `playerId` |
+| src/lib/player/season-stats.ts:115 | `jokerUse.count` | gescoped über `seasonId` der Session-Gruppe und `playerId` |
+| src/lib/player/season-stats.ts:116 | `gameDay.count` | gescoped über `seasonId` der Session-Gruppe |
+| src/app/page.tsx:40 | `gameDay.findFirst` | groupId in where (nächste Zeile) |
+| src/app/game-day/page.tsx:54 | `gameDay.findFirst` | groupId in where (nächste Zeile) |
+| src/app/game-day/page.tsx:62 | `gameDay.findFirst` | groupId in where (Folgezeilen) |
+| src/app/game-day/print/page.tsx:17 | `gameDay.findFirst` | groupId in where (nächste Zeile) |
+| src/app/game-day/partnership-counts.tsx:9 | `match.findMany` | gescoped über `gameDayId` des gruppengeprüften Spieltags der Seite |
+| src/app/game-day/partnership-counts.tsx:33 | `player.findMany` | IDs aus Matches dieses Spieltags; liefert nur Namen |
+| src/app/admin/page.tsx:62 | `gameDay.findFirst` | groupId in where (nächste Zeile) |
+| src/app/admin/page.tsx:74 | `jokerUse.groupBy` | gescoped über `seasonId` der Session-Gruppe; ausgewertet nur für Mitglieder der Gruppe |
+| src/app/admin/page.tsx:83 | `gameDay.count` | gescoped über `seasonId` der Session-Gruppe |
+| src/app/api/game-days/route.ts:13 | `gameDay.findMany` | groupId in where (nächste Zeile) |
+| src/app/api/game-days/[id]/matches/route.ts:27 | `gameDayParticipant.findFirst` | gescoped über `gameDayId` und die eigene `userId`, nach `findGroupGameDay` der Route |
+
+Lücken: keine.
