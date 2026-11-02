@@ -49,5 +49,7 @@ Alle Prüfungen bestanden, der Besitzer bleibt `owner`, die Migration ist wieder
 
 1. Manueller Dump nach `/root/backups/<datum>-pre-tenancy-2/` (`pg_dump -Fc`).
 2. `deploy.sh` ausführen. Der Health-Check auf :3000 schlägt fälschlich fehl; die Migration ist dann bereits angewendet.
+   Während des Deploys keine Admin-Aktionen (Spieler anlegen/ändern) ausführen.
+   Nach dem Neustart den Abgleich erneut ausführen, weil der alte Code während `pnpm build` weiter nur `Player` geschrieben hat: `sudo -u postgres psql padel_tracker -f /srv/padel/app/prisma/migrations/20261102130000_reconcile_memberships/migration.sql` (idempotent), danach Prüf-SQL.
 3. Prüf-SQL ausführen (owner = 1, Patrick `owner`, Thomas `admin`, alle Zähler 0). Kein `set-owner`-Schritt, der Besitzer besteht seit PR 1.
 4. Login, Dashboard, Spieltag, Rangliste prüfen.
