@@ -1,4 +1,5 @@
-import { auth } from "@/auth";
+import { guardMember } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import { subscribeToGameDay } from "@/lib/game-day/live-broadcast";
 
 // SSE keeps a long-lived HTTP connection open; must run on Node, not Edge.
@@ -14,12 +15,13 @@ export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const g = await guardMember();
+  if (g.response) return g.response;
 
   const { id: gameDayId } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, gameDayId))) {
+    return new Response("Not Found", { status: 404 });
+  }
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
