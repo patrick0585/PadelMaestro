@@ -1,7 +1,7 @@
 # Migrationsprobe PR 1 (Mandantenfähigkeit)
 
 Datum: 2026-11-02
-Dump: Produktions-Backup (pg_dump, custom format, 79 KB), eingespielt in eine Wegwerf-Postgres-16-DB (Docker, Port 5436).
+Dump: Produktions-Backup (pg_dump, custom format, 79 KB; Dump vom 2026-11-02 11:12, Produktion), eingespielt in eine Wegwerf-Postgres-16-DB (Docker, Port 5436).
 
 ## Ablauf
 
@@ -9,6 +9,8 @@ Dump: Produktions-Backup (pg_dump, custom format, 79 KB), eingespielt in eine We
 
 1. `20261102094416_joker_games_credited_default_15` (bereits auf `main`, im Dump noch nicht enthalten; nur ein neuer Spalten-Default)
 2. `20261102120000_add_groups_and_memberships` (diese Branch)
+
+Der erste Lauf wich damit vom Briefing ab: zwei Migrationen statt einer, weil der Dump älter ist als die Joker-Default-Migration aus PR #28.
 
 Laufzeit beider Migrationen zusammen: 0,92 s (davon Prisma-Start inklusive).
 
@@ -56,3 +58,27 @@ Danach: `owner` genau 1 (patrick@padel.local), `thomas@padel.local` bleibt `admi
 ## Fazit
 
 Alle Prüfungen bestanden, Ranking-relevante Zeilen (Match, GameDayParticipant, Season-Status) unverändert. Die Migration ist auf den Produktionsdaten unkritisch (unter 1 s). Beim Deploy wird zusätzlich die Joker-Default-Migration von `main` angewendet.
+
+## Zweite Probe: soft-gelöschte Spieler
+
+Gleicher Dump (2026-11-02 11:12, Produktion), frische Wegwerf-DB (Docker, Port 5437). Vor der Migration zwei synthetische, soft-gelöschte Spieler eingefügt (`deletedAt = now() - 10 Tage`, `invitedAt = now() - 100 Tage`):
+
+- `probe-geloescht@padel.local` (kein Admin)
+- `probe-admin-geloescht@padel.local` (Admin)
+
+`prisma migrate deploy` wendete wieder beide ausstehenden Migrationen an. Ergebnis:
+
+| Spieler | Memberships | role | removedAt = deletedAt | joinedAt = invitedAt |
+|---|---|---|---|---|
+| probe-geloescht | 1 | member | ja (Differenz 0) | ja |
+| probe-admin-geloescht | 1 | admin | ja (Differenz 0) | ja |
+
+Die Standardprüfungen gelten weiter: Player ohne Membership 0, role/isAdmin-Abweichungen 0, removedAt/deletedAt-Abweichungen 0, groupId-NULLs in Season/GameDay/AuditLog 0, Group 1, Memberships gesamt 8 (6 + 2 Probe), owner 0. Match 469, GameDayParticipant 187, Season 2, GameDay 33, AuditLog 209 unverändert. Container und Dump danach gelöscht.
+
+## Deploy-Ablauf
+
+1. Manueller Dump nach `/root/backups/<datum>-pre-tenancy-1/` (`pg_dump -Fc`).
+2. `deploy.sh` ausführen. Der Health-Check auf :3000 schlägt fälschlich fehl; die Migration ist dann bereits angewendet.
+3. Im App-Verzeichnis als User `padel`: `pnpm tenancy:set-owner patrick@padel.local`.
+4. Prüf-SQL erneut ausführen (owner = 1).
+5. Login, Dashboard, Spieltag, Rangliste prüfen.
