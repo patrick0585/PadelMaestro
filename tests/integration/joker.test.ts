@@ -44,6 +44,12 @@ describe("recordJokerUse", () => {
       where: { gameDayId_playerId: { gameDayId: gameDay.id, playerId: player.id } },
     });
     expect(part.attendance).toBe("joker");
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "joker.use", entityId: use.id },
+    });
+    expect(log.actorId).toBe(player.id);
+    expect(log.groupId).toBe(gameDay.groupId);
   });
 
   it("snapshots current ppg when player has prior matches", async () => {
@@ -165,6 +171,7 @@ describe("cancelJokerUse", () => {
       where: { actorId: player.id, action: "joker.cancel" },
     });
     expect(logs).toHaveLength(1);
+    expect(logs[0].groupId).toBe(gameDay.groupId);
     expect((logs[0].payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
   });
 
@@ -210,6 +217,7 @@ describe("recordJokerUseAsAdmin", () => {
       where: { action: "joker.use.admin" },
     });
     expect(log?.actorId).toBe(admin.id);
+    expect(log?.groupId).toBe(gameDay.groupId);
     expect((log?.payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
     expect((log?.payload as { seasonId: string }).seasonId).toBe(season.id);
   });

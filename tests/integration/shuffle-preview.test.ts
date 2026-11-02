@@ -29,6 +29,7 @@ describe("shufflePreviewSeed", () => {
       where: { action: "game_day.shuffle_preview", entityId: day.id },
     });
     expect(entries).toHaveLength(1);
+    expect(entries[0].groupId).toBe(day.groupId);
     expect(entries[0].payload).toMatchObject({ seed });
   });
 

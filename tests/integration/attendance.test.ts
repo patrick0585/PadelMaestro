@@ -4,6 +4,7 @@ import { createGameDay } from "@/lib/game-day/create";
 import {
   setAttendance,
   setAttendanceAsAdmin,
+  joinGameDay,
   GameDayNotFoundError,
   PlayerNotFoundError,
   GameDayLockedError,
@@ -77,6 +78,7 @@ describe("setAttendanceAsAdmin", () => {
     });
     expect(logs).toHaveLength(1);
     expect(logs[0].actorId).toBe(admin.id);
+    expect(logs[0].groupId).toBe(day.groupId);
     expect(logs[0].entityId).toBe(updated.id);
     expect(logs[0].payload).toMatchObject({
       gameDayId: day.id,
@@ -125,5 +127,21 @@ describe("setAttendanceAsAdmin", () => {
     await expect(
       setAttendanceAsAdmin(day.id, other.id, "confirmed", admin.id),
     ).rejects.toBeInstanceOf(GameDayLockedError);
+  });
+});
+
+describe("joinGameDay", () => {
+  beforeEach(resetDb);
+
+  it("writes a self_join audit log carrying the group", async () => {
+    const group = await createTestGroup();
+    const creator = await createMember(group.id, { name: "C", email: "c@x", passwordHash: "x" });
+    const day = await createGameDay(group.id, new Date("2026-04-21"), creator.id);
+    const player = await createMember(group.id, { name: "J", email: "j@x", passwordHash: "x" });
+
+    await joinGameDay(day.id, player.id);
+
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: "game_day.self_join" } });
+    expect(log.groupId).toBe(group.id);
   });
 });

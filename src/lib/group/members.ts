@@ -39,3 +39,16 @@ export async function listActiveMembers(groupId: string): Promise<MemberRow[]> {
     avatarVersion: player.avatarVersion,
   }));
 }
+
+export type MemberPlayer = { id: string; name: string; avatarVersion: number };
+
+export async function activeMemberPlayers(
+  groupId: string,
+  playerIds: string[],
+): Promise<MemberPlayer[]> {
+  if (playerIds.length === 0) return [];
+  return prisma.player.findMany({
+    where: { id: { in: playerIds }, memberships: { some: { groupId, removedAt: null } } },
+    select: { id: true, name: true, avatarVersion: true },
+  });
+}

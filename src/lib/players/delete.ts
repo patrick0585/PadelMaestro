@@ -78,6 +78,7 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
     await tx.auditLog.create({
       data: {
         actorId: input.actorId,
+        groupId: input.groupId,
         action: "player.delete",
         entityType: "Player",
         entityId: target.id,

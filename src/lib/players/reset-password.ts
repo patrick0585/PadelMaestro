@@ -34,6 +34,7 @@ export async function resetPlayerPassword(input: ResetPlayerPasswordInput): Prom
     await tx.auditLog.create({
       data: {
         actorId: input.actorId,
+        groupId: input.groupId,
         action: "player.password_reset",
         entityType: "Player",
         entityId: input.playerId,

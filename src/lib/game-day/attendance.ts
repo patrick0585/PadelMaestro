@@ -77,6 +77,7 @@ export async function joinGameDay(gameDayId: string, playerId: string) {
     await tx.auditLog.create({
       data: {
         actorId: playerId,
+        groupId: day.groupId,
         action: "game_day.self_join",
         entityType: "GameDayParticipant",
         entityId: created.id,
@@ -120,6 +121,7 @@ export async function setAttendanceAsAdmin(
     await tx.auditLog.create({
       data: {
         actorId,
+        groupId: day.groupId,
         action: "game_day.admin_set_attendance",
         entityType: "GameDayParticipant",
         entityId: upserted.id,

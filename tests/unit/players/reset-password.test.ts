@@ -43,6 +43,7 @@ describe("resetPlayerPassword", () => {
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { action: "player.password_reset" },
     });
+    expect(log.groupId).toBe(group.id);
     expect(log.payload).toMatchObject({ playerId: target.id });
     expect(JSON.stringify(log.payload)).not.toContain("newpass12");
   });

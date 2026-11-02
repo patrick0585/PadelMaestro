@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
-import { createTestGroup } from "../helpers/group";
+import { createMember, createTestGroup } from "../helpers/group";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 
 async function makeSeason() {
@@ -11,10 +11,8 @@ async function makeSeason() {
     data: { groupId: group.id, name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
   });
 }
-async function makePlayer(name: string) {
-  return prisma.player.create({
-    data: { name, email: `${name.toLowerCase()}@x`, passwordHash: "x" },
-  });
+async function makePlayer(season: { groupId: string }, name: string) {
+  return createMember(season.groupId, { name, email: `${name.toLowerCase()}@x`, passwordHash: "x" });
 }
 
 describe("computePlayerSeasonStats", () => {
@@ -22,7 +20,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("returns empty stats when the player has no activity", async () => {
     const season = await makeSeason();
-    const me = await makePlayer("Me");
+    const me = await makePlayer(season, "Me");
     const stats = await computePlayerSeasonStats(me.id, season.id);
     expect(stats).toEqual({
       medals: { gold: 0, silver: 0, bronze: 0 },
@@ -41,7 +39,7 @@ describe("computePlayerSeasonStats", () => {
     const otherSeason = await prisma.season.create({
       data: { groupId: season.groupId, name: "Saison 2025", year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
     });
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const day1 = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -89,7 +87,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("computes attendance as finished days where I played ≥1 scored match", async () => {
     const season = await makeSeason();
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const day1 = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -108,7 +106,7 @@ describe("computePlayerSeasonStats", () => {
       data: {
         gameDayId: day2.id, matchNumber: 1,
         team1PlayerAId: a.id, team1PlayerBId: b.id,
-        team2PlayerAId: c.id, team2PlayerBId: await makePlayer("D").then((d) => d.id),
+        team2PlayerAId: c.id, team2PlayerBId: await makePlayer(season, "D").then((d) => d.id),
         team1Score: 1, team2Score: 1,
       },
     });
@@ -118,7 +116,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("computes win rate across all scored season matches (wins/losses/draws)", async () => {
     const season = await makeSeason();
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -152,7 +150,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("returns recent days newest-first with PPG and trend vs previous day", async () => {
     const season = await makeSeason();
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const day1 = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-03"), playerCount: 4, status: "finished" },
     });
@@ -199,7 +197,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("marks delta as 'down' when a day's PPG is lower than the previous day's", async () => {
     const season = await makeSeason();
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const day1 = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-03"), playerCount: 4, status: "finished" },
     });
@@ -230,7 +228,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("caps recentDays at 5 entries and discards older attended days", async () => {
     const season = await makeSeason();
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const dates = [
       "2026-04-03",
       "2026-04-10",
@@ -267,7 +265,7 @@ describe("computePlayerSeasonStats", () => {
   it("computes best and worst partner by total points together", async () => {
     const season = await makeSeason();
     const [me, paul, michi, x, y] = await Promise.all(
-      ["Me", "Paul", "Michi", "X", "Y"].map(makePlayer),
+      ["Me", "Paul", "Michi", "X", "Y"].map((n) => makePlayer(season, n)),
     );
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
@@ -303,7 +301,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("returns worstPartner as null when the player has only one distinct partner", async () => {
     const season = await makeSeason();
-    const [me, paul, x, y] = await Promise.all(["Me", "Paul", "X", "Y"].map(makePlayer));
+    const [me, paul, x, y] = await Promise.all(["Me", "Paul", "X", "Y"].map((n) => makePlayer(season, n)));
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -323,7 +321,7 @@ describe("computePlayerSeasonStats", () => {
   it("uses match count as tiebreaker when partners tie on points", async () => {
     const season = await makeSeason();
     const [me, alex, bob, x, y] = await Promise.all(
-      ["Me", "Alex", "Bob", "X", "Y"].map(makePlayer),
+      ["Me", "Alex", "Bob", "X", "Y"].map((n) => makePlayer(season, n)),
     );
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
@@ -377,7 +375,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("computes joker balance from JokerUse rows for the season", async () => {
     const season = await makeSeason();
-    const me = await makePlayer("Me");
+    const me = await makePlayer(season, "Me");
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -396,7 +394,7 @@ describe("computePlayerSeasonStats", () => {
     const otherSeason = await prisma.season.create({
       data: { groupId: season.groupId, name: "Saison 2025", year: 2025, startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), isActive: false },
     });
-    const me = await makePlayer("Me");
+    const me = await makePlayer(season, "Me");
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -421,7 +419,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("counts draw scores toward partner points accumulation", async () => {
     const season = await makeSeason();
-    const [me, alex, x, y] = await Promise.all(["Me", "Alex", "X", "Y"].map(makePlayer));
+    const [me, alex, x, y] = await Promise.all(["Me", "Alex", "X", "Y"].map((n) => makePlayer(season, n)));
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -448,7 +446,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("does not expose soft-deleted partners by name", async () => {
     const season = await makeSeason();
-    const [me, ghost, x, y] = await Promise.all(["Me", "Ghost", "X", "Y"].map(makePlayer));
+    const [me, ghost, x, y] = await Promise.all(["Me", "Ghost", "X", "Y"].map((n) => makePlayer(season, n)));
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
@@ -460,6 +458,8 @@ describe("computePlayerSeasonStats", () => {
         team1Score: 3, team2Score: 0,
       },
     });
+    // Mirrors deletePlayer: membership removed and player soft-deleted.
+    await prisma.membership.updateMany({ where: { playerId: ghost.id }, data: { removedAt: new Date() } });
     await prisma.player.update({ where: { id: ghost.id }, data: { deletedAt: new Date() } });
     const stats = await computePlayerSeasonStats(me.id, season.id);
     expect(stats.bestPartner?.name).toBe("Unbekannt");
@@ -467,7 +467,7 @@ describe("computePlayerSeasonStats", () => {
 
   it("marks delta as 'flat' when two consecutive days share the same display PPG", async () => {
     const season = await makeSeason();
-    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map(makePlayer));
+    const [me, a, b, c] = await Promise.all(["Me", "A", "B", "C"].map((n) => makePlayer(season, n)));
     const day1 = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-03"), playerCount: 4, status: "finished" },
     });
@@ -496,7 +496,7 @@ describe("computePlayerSeasonStats", () => {
     // guard, bestPartner and worstPartner would reference the same person.
     const season = await makeSeason();
     const [me, alex, alex2, x, y] = await Promise.all(
-      ["Me", "Alex", "Alex2", "X", "Y"].map(makePlayer),
+      ["Me", "Alex", "Alex2", "X", "Y"].map((n) => makePlayer(season, n)),
     );
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
@@ -526,7 +526,7 @@ describe("computePlayerSeasonStats", () => {
   it("returns all partners sorted by points, matches, then name", async () => {
     const season = await makeSeason();
     const [me, anna, ben, carl] = await Promise.all(
-      ["Me", "Anna", "Ben", "Carl"].map(makePlayer),
+      ["Me", "Anna", "Ben", "Carl"].map((n) => makePlayer(season, n)),
     );
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-05-01"), playerCount: 4, status: "finished" },
@@ -576,7 +576,7 @@ describe("computePlayerSeasonStats", () => {
   it("falls back to the name tiebreaker when points and matches are fully tied", async () => {
     const season = await makeSeason();
     const [me, anna, bert, carl, x, y] = await Promise.all(
-      ["Me", "Anna", "Bert", "Carl", "X", "Y"].map(makePlayer),
+      ["Me", "Anna", "Bert", "Carl", "X", "Y"].map((n) => makePlayer(season, n)),
     );
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-05-08"), playerCount: 4, status: "finished" },
@@ -620,5 +620,73 @@ describe("computePlayerSeasonStats", () => {
     // worstPartner bleibt eindeutig (kein Tie) und entspricht dem letzten Listeneintrag.
     expect(stats.worstPartner?.name).toBe("Carl");
     expect(stats.worstPartner).toEqual(stats.partners.at(-1));
+  });
+
+  it("hides a removed partner by name and leaves the other partners unchanged", async () => {
+    const season = await makeSeason();
+    const [me, gone, anna, x, y] = await Promise.all(
+      ["Me", "Gone", "Anna", "X", "Y"].map((n) => makePlayer(season, n)),
+    );
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: gone.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 2,
+        team1PlayerAId: me.id, team1PlayerBId: anna.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 2, team2Score: 1,
+      },
+    });
+    await prisma.membership.updateMany({
+      where: { groupId: season.groupId, playerId: gone.id },
+      data: { removedAt: new Date() },
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.partners).toEqual([
+      { playerId: gone.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1 },
+      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1 },
+    ]);
+  });
+
+  it("shows a partner who is a member only of another group as Unbekannt", async () => {
+    const season = await makeSeason();
+    const [me, anna, x, y] = await Promise.all(["Me", "Anna", "X", "Y"].map((n) => makePlayer(season, n)));
+    const otherGroup = await createTestGroup("Andere");
+    const outsider = await createMember(otherGroup.id, { name: "Olaf", email: "olaf@x", passwordHash: "x" });
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: outsider.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 2,
+        team1PlayerAId: me.id, team1PlayerBId: anna.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 2, team2Score: 1,
+      },
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.partners).toEqual([
+      { playerId: outsider.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1 },
+      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1 },
+    ]);
   });
 });

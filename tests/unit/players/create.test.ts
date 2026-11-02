@@ -44,6 +44,7 @@ describe("createPlayer", () => {
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { action: "player.create" },
     });
+    expect(log.groupId).toBe(actor.groupId);
     expect(log.payload).toMatchObject({ email: "new@example.com", name: "Newbie", isAdmin: true });
     expect(JSON.stringify(log.payload)).not.toContain("hunter22extra");
   });

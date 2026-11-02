@@ -41,6 +41,7 @@ describe("updatePlayer", () => {
       where: { entityId: target.id, action: "player.update" },
     });
     expect(entries).toHaveLength(1);
+    expect(entries[0].groupId).toBe(group.id);
     const payload = entries[0].payload as {
       before: Record<string, unknown>;
       after: Record<string, unknown>;

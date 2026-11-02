@@ -62,6 +62,7 @@ describe("removeExtraMatch", () => {
       where: { action: "game_day.remove_extra_match", entityId: extra.id },
     });
     expect(entries).toHaveLength(1);
+    expect(entries[0].groupId).toBe(day.groupId);
     expect(entries[0].payload).toMatchObject({
       gameDayId: day.id,
       matchNumber: 16,

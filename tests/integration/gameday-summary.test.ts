@@ -145,4 +145,26 @@ describe("computeGameDaySummary", () => {
     expect(summary!.podium).toHaveLength(3);
     expect(summary!.podium).toEqual(summary!.rows.slice(0, 3));
   });
+
+  it("keeps a removed member in rows and podium", async () => {
+    const season = await makeSeason();
+    const [a, b, c, d] = await Promise.all(["Anna", "Bert", "Cara", "Dirk"].map(makeUser));
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4, status: "finished" },
+    });
+    await prisma.membership.create({
+      data: { groupId: season.groupId, playerId: a.id, role: "member", removedAt: new Date() },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 1,
+        team1PlayerAId: a.id, team1PlayerBId: b.id,
+        team2PlayerAId: c.id, team2PlayerBId: d.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    const summary = await computeGameDaySummary(day.id);
+    expect(summary!.rows.map((r) => r.playerName)).toContain("Anna");
+    expect(summary!.podium.map((r) => r.playerName)).toContain("Anna");
+  });
 });

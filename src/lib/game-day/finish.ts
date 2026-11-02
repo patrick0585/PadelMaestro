@@ -23,6 +23,7 @@ export async function finishGameDay(gameDayId: string, actorId: string) {
     await tx.auditLog.create({
       data: {
         actorId,
+        groupId: day.groupId,
         action: "game_day.finish",
         entityType: "GameDay",
         entityId: gameDayId,

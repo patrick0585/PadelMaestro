@@ -1,4 +1,6 @@
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { guardMember } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import { subscribeToGameDay } from "@/lib/game-day/live-broadcast";
 
 // SSE keeps a long-lived HTTP connection open; must run on Node, not Edge.
@@ -14,13 +16,16 @@ export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const g = await guardMember();
+  if (g.response) return g.response;
 
   const { id: gameDayId } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, gameDayId))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   const encoder = new TextEncoder();
+
+  let cleanup: () => void = () => {};
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -28,7 +33,7 @@ export async function GET(
       let keepalive: ReturnType<typeof setInterval> | null = null;
       let unsubscribe: () => void = () => {};
 
-      const cleanup = () => {
+      cleanup = () => {
         if (closed) return;
         closed = true;
         if (keepalive) clearInterval(keepalive);
@@ -66,6 +71,10 @@ export async function GET(
       }, KEEPALIVE_INTERVAL_MS);
 
       req.signal.addEventListener("abort", cleanup);
+    },
+    // Client disconnect without an abort signal (reader cancelled).
+    cancel() {
+      cleanup();
     },
   });
 

@@ -15,7 +15,7 @@ export class GameDayNotPlannedError extends Error {
 export async function shufflePreviewSeed(gameDayId: string, actorId: string) {
   const day = await prisma.gameDay.findUniqueOrThrow({
     where: { id: gameDayId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, groupId: true },
   });
   if (day.status !== "planned") {
     throw new GameDayNotPlannedError(day.status);
@@ -26,6 +26,7 @@ export async function shufflePreviewSeed(gameDayId: string, actorId: string) {
     await tx.auditLog.create({
       data: {
         actorId,
+        groupId: day.groupId,
         action: "game_day.shuffle_preview",
         entityType: "GameDay",
         entityId: gameDayId,

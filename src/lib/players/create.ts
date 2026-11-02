@@ -58,6 +58,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
       await tx.auditLog.create({
         data: {
           actorId: input.actorId,
+          groupId: input.groupId,
           action: "player.create",
           entityType: "Player",
           entityId: player.id,
