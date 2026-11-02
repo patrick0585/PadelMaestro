@@ -316,7 +316,7 @@ bereits gruppengeprüfte Beziehung gescoped oder bewusst konto-global.
 | src/lib/group/active-membership.ts:25 | `membership.count` | groupId in where (Folgezeilen) |
 | src/lib/group/active-membership.ts:40 | `membership.findFirst` | groupId in where (nächste Zeile) |
 | src/lib/players/create.ts:60 | `gameDay.findMany` geplante Tage | groupId in where (nächste Zeile) |
-| src/lib/players/delete.ts:48 | `gameDayParticipant.findFirst` | gescoped über `gameDay: { groupId }` in der Folgezeile |
+| src/lib/players/delete.ts:47 | `gameDayParticipant.findFirst` | gescoped über `gameDay: { groupId }` im `where` |
 | src/lib/game-day/group-scope.ts:7 | `gameDay.findFirst` | groupId in where (nächste Zeile); Helfer für die Gruppenprüfung der Routen |
 | src/lib/game-day/group-scope.ts:17 | `match.findFirst` | gescoped über `gameDay: { groupId }` in der nächsten Zeile |
 | src/lib/game-day/live-standings.ts:206 | `player.findMany` Namen/Avatare | Spieler-IDs stammen aus Matches des bereits gruppengeprüften Spieltags; liefert nur Name und Avatar-Version |
