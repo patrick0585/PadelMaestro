@@ -23,12 +23,13 @@ export type RefreshOutcome =
 // upgrade and well below any realistic privilege-escalation window.
 export const STALE_REFRESH_AFTER_MS = 5 * 60 * 1000;
 
-// Refreshes mutable session fields (isAdmin, username, groupId, role) from the DB on every
-// JWT renewal. Keeps the existing token when the lookup fails *and* the
-// token was successfully refreshed within STALE_REFRESH_AFTER_MS, so users
-// are not logged out by transient infrastructure issues. Beyond that grace
-// window, a failed lookup invalidates the session — bounding the time a
-// stale `isAdmin` claim could survive.
+// Refreshes mutable session fields (isAdmin, username, groupId, role) from
+// the DB on every JWT renewal. Keeps the existing token when the lookup
+// fails *and* the token was successfully refreshed within
+// STALE_REFRESH_AFTER_MS, so users are not logged out by transient
+// infrastructure issues. Beyond that grace window, a failed lookup
+// invalidates the session, bounding the time a stale `isAdmin` claim could
+// survive.
 export async function refreshTokenFromPlayer(
   token: JWT,
   client: PlayerLookupClient,

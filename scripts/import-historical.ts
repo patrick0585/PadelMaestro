@@ -29,12 +29,18 @@ async function main() {
   const data = JSON.parse(readFileSync(path, "utf-8")) as HistoricalExport;
   const season = await getOrCreateActiveSeason();
 
+  const group = await getSoleGroup();
   const playerByName = new Map<string, string>();
   for (const raw of data.players) {
     const p = await prisma.player.upsert({
       where: { email: raw.email },
       create: { name: raw.name, email: raw.email, passwordHash: null },
       update: { name: raw.name },
+    });
+    await prisma.membership.upsert({
+      where: { groupId_playerId: { groupId: group.id, playerId: p.id } },
+      create: { groupId: group.id, playerId: p.id, role: "member" },
+      update: {},
     });
     playerByName.set(raw.name, p.id);
   }

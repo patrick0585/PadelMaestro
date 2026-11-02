@@ -44,6 +44,11 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
   const adminPassword = options.adminPassword ?? randomBytes(12).toString("base64url");
   const adminHash = await hashPassword(adminPassword);
 
+  const hasOwner = await prisma.membership.count({
+    where: { groupId: group.id, role: "owner", removedAt: null },
+  });
+  const adminRole = hasOwner > 0 ? "admin" : "owner";
+
   const admin = await prisma.player.create({
     data: {
       name: ADMIN_NAME,
@@ -53,7 +58,7 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
     },
   });
 
-  await prisma.membership.create({ data: { groupId: group.id, playerId: admin.id, role: "admin" } });
+  await prisma.membership.create({ data: { groupId: group.id, playerId: admin.id, role: adminRole } });
 
   for (const p of NON_ADMIN_PLAYERS) {
     const player = await prisma.player.create({

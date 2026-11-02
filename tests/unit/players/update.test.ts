@@ -229,6 +229,30 @@ describe("updatePlayer", () => {
       expect(m.role).toBe("owner");
     });
 
+    it("owner who is the only admin gets OwnerProtectedError, not LastAdminError", async () => {
+      const actor = await makeUser();
+      const owner = await makeAdmin(2);
+      const group = await makeGroup();
+      await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+      await expect(
+        updatePlayer({ playerId: owner.id, actorId: actor.id, fields: { isAdmin: false } }),
+      ).rejects.toBeInstanceOf(OwnerProtectedError);
+    });
+
+    it("demoting a player whose only membership is removed keeps removedAt", async () => {
+      const admin = await makeAdmin();
+      const target = await makeAdmin(2);
+      const group = await makeGroup();
+      const removedAt = new Date("2026-01-01T00:00:00Z");
+      await prisma.membership.create({
+        data: { groupId: group.id, playerId: target.id, role: "owner", removedAt },
+      });
+      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: false } });
+      const m = await prisma.membership.findFirstOrThrow({ where: { playerId: target.id } });
+      expect(m.role).toBe("member");
+      expect(m.removedAt).toEqual(removedAt);
+    });
+
     it("creates the membership if missing", async () => {
       const admin = await makeAdmin();
       const target = await makeUser();

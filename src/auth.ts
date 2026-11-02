@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { authorizeCredentials } from "@/lib/auth/authorize";
+import { findPlayerForRefresh } from "@/lib/auth/refresh-lookup";
 import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 import { prisma } from "@/lib/db";
 import type { GroupRole } from "@/lib/auth/roles";
@@ -54,27 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       const result = await refreshTokenFromPlayer(token, {
-        findUnique: async (id) => {
-          const player = await prisma.player.findUnique({
-            where: { id },
-            select: {
-              username: true,
-              deletedAt: true,
-              memberships: {
-                where: { removedAt: null },
-                orderBy: { joinedAt: "desc" },
-                take: 1,
-                select: { groupId: true, role: true },
-              },
-            },
-          });
-          if (!player) return null;
-          return {
-            username: player.username,
-            deletedAt: player.deletedAt,
-            membership: player.memberships[0] ?? null,
-          };
-        },
+        findUnique: (id) => findPlayerForRefresh(prisma, id),
       });
       return result.kind === "ok" ? result.token : null;
     },

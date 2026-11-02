@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
 import { rateLimitRequest } from "@/lib/rate-limit";
+import { findActiveMembership } from "@/lib/group/active-membership";
 import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
 const CredentialsSchema = z.object({
@@ -46,11 +47,7 @@ export async function authorizeCredentials(
   const hash = player?.passwordHash ?? DUMMY_HASH;
   const ok = await verifyPassword(password, hash);
   if (!ok || !player) return null;
-  const membership = await prisma.membership.findFirst({
-    where: { playerId: player.id, removedAt: null },
-    orderBy: { joinedAt: "desc" },
-    select: { groupId: true, role: true },
-  });
+  const membership = await findActiveMembership(prisma, player.id);
   return {
     id: player.id,
     email: player.email,

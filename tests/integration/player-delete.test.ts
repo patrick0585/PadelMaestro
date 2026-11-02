@@ -214,5 +214,19 @@ describe("deletePlayer", () => {
     );
     const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
     expect(p.deletedAt).toBeNull();
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+    expect(m.removedAt).toBeNull();
+  });
+
+  it("deletes a player whose owner membership was removed", async () => {
+    const admin = await makeAdmin();
+    const target = await makeUser();
+    const group = await prisma.group.create({ data: { name: "G", slug: "g" } });
+    await prisma.membership.create({
+      data: { groupId: group.id, playerId: target.id, role: "owner", removedAt: new Date() },
+    });
+    await expect(deletePlayer({ playerId: target.id, actorId: admin.id })).resolves.toBeUndefined();
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(p.deletedAt).not.toBeNull();
   });
 });

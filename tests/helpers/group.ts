@@ -13,7 +13,7 @@ function slugify(name: string): string {
 }
 
 export async function createTestGroup(name = "Testgruppe"): Promise<Group> {
-  const suffix = randomBytes(4).toString("base64url").replace(/[^a-z0-9]/gi, "x").slice(0, 6).toLowerCase();
+  const suffix = randomBytes(3).toString("hex");
   return prisma.group.create({ data: { name, slug: `${slugify(name)}-${suffix}` } });
 }
 
