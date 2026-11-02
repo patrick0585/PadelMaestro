@@ -98,7 +98,9 @@ export function EditPlayerDialog({
     } else if (res.status === 409 && body.error === "last_admin") {
       setError("Der letzte verbleibende Admin kann nicht degradiert werden");
     } else if (res.status === 409 && body.error === "owner_protected") {
-      setError("Der Besitzer der Gruppe kann nicht herabgestuft oder entfernt werden");
+      setError(
+        "Der Besitzer ist geschützt: Er kann nicht herabgestuft oder entfernt werden, und seine E-Mail kann nur er selbst ändern.",
+      );
     } else if (res.status === 400) {
       setError("Eingabe ungültig");
     } else if (res.status === 404) {
