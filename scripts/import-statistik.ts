@@ -197,6 +197,7 @@ async function wipeAll() {
     prisma.gameDayParticipant.deleteMany({}),
     prisma.gameDay.deleteMany({}),
     prisma.season.deleteMany({}),
+    prisma.membership.deleteMany({}),
     prisma.player.deleteMany({}),
   ]);
 }

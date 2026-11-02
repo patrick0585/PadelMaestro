@@ -1,12 +1,15 @@
 import { prisma } from "./db";
+import { getSoleGroup } from "./group/sole-group";
 
 export async function getOrCreateActiveSeason() {
   const year = new Date().getFullYear();
   const existing = await prisma.season.findFirst({ where: { isActive: true } });
   if (existing) return existing;
 
+  const group = await getSoleGroup();
   return prisma.season.create({
     data: {
+      groupId: group.id,
       name: `Saison ${year}`,
       year,
       startDate: new Date(year, 0, 1),
@@ -75,6 +78,7 @@ export async function closeSeasonAndStartNext(args: {
     });
     if (clash) throw new SeasonNameConflictError(clash.name);
 
+    const groupId = active.groupId ?? (await getSoleGroup(tx)).id;
     const now = new Date();
     const year = now.getFullYear();
     const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -90,10 +94,12 @@ export async function closeSeasonAndStartNext(args: {
         startDate: today,
         endDate: new Date(year, 11, 31),
         isActive: true,
+        groupId,
       },
     });
     await tx.auditLog.create({
       data: {
+        groupId,
         actorId: args.actorId,
         action: "season.close",
         entityType: "Season",

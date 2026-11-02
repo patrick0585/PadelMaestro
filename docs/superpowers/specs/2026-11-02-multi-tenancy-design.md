@@ -211,6 +211,8 @@ und nach). Direkt vor dem Deploy ein manueller Dump nach dem Muster in
 - `seed:demo`, `seed:initial`, `scripts/dev/seed-demo-day.ts`,
   Import-Skripte: Gruppe anlegen oder ermitteln, Mitgliedschaften
   schreiben.
+- `import-statistik.ts`: `wipeAll` entfernt bereits Mitgliedschaften
+  (PR 1).
 - Neues Skript `tenancy:set-owner <email>`.
 - Tests: `tests/helpers/reset-db.ts` erhält `createTestGroup()` und
   `addMember()`. Integrationstests, die Spieler anlegen, laufen über
@@ -232,14 +234,21 @@ Rangliste kurz prüfen.
    `getSoleGroup()`, die in PR 4 wieder verschwindet; sonst bleibt der
    App-Code unberührt. Probe gegen Produktions-Dump dokumentiert im
    PR.
-2. **Gruppenkontext.** Session-Claims, Helfer, Token-Refresh über
+2. **Gruppenkontext.** Zuerst eine Abgleich-Migration (idempotent):
+   fehlende Mitgliedschaften anlegen, `role` aus `isAdmin` übernehmen
+   (ohne `owner` anzufassen), `removedAt` aus `deletedAt`,
+   `groupId`-NULLs füllen — gleicht Daten ab, die zwischen Deploy von
+   PR 1 und PR 2 ohne Gruppe entstanden sind (Spieler anlegen,
+   Admin-Schalter, Skripte, Build-Fenster). Dann Session-Claims,
+   Helfer, Token-Refresh über
    Mitgliedschaft, `isAdmin` abgeleitet. `bootstrap:admin` und Seeds
    auf Mitgliedschaften umgestellt. Testhelfer.
 3. **Spieler.** Listen, Anlegen, Entfernen, Passwort-Reset, Avatar-
    Routen über Mitgliedschaft; Admin-Seite.
 4. **Saison und Spieltag.** Aktive Saison und aktiver Spieltag pro
    Gruppe, Teilnehmer aus Mitgliedern, Archiv, Joker, Saison schließen,
-   Druckansicht, alle `game-days`-Routen mit Gruppenprüfung.
+   Druckansicht, alle `game-days`-Routen mit Gruppenprüfung. Vor dem
+   Setzen von NOT NULL die `groupId`-NULLs erneut füllen.
 5. **Rangliste, Profil, Live.** Ranking-SQL, Profil-Statistiken, SSE-
    Autorisierung, Ranking-API.
 6. **Aufräumen.** `Player.isAdmin` entfernen, letzte `findFirst`-Reste
