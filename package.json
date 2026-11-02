@@ -17,6 +17,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
+    "tenancy:set-owner": "tsx scripts/tenancy-set-owner.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:initial": "tsx scripts/seed-initial.ts",
     "import:historical": "tsx scripts/import-historical.ts",
