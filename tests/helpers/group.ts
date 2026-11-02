@@ -19,7 +19,13 @@ export async function createTestGroup(name = "Testgruppe"): Promise<Group> {
 
 export async function createMember(
   groupId: string,
-  opts: { name: string; email: string; role?: GroupRole; passwordHash?: string | null },
+  opts: {
+    name: string;
+    email: string;
+    role?: GroupRole;
+    passwordHash?: string | null;
+    username?: string | null;
+  },
 ): Promise<Player> {
   const role = opts.role ?? "member";
   const player = await prisma.player.create({
@@ -27,6 +33,7 @@ export async function createMember(
       name: opts.name,
       email: opts.email,
       passwordHash: opts.passwordHash ?? null,
+      username: opts.username ?? null,
       isAdmin: isAdminRole(role),
     },
   });
@@ -36,8 +43,8 @@ export async function createMember(
 
 export function sessionFor(
   player: { id: string; email: string; name: string },
-  groupId: string,
-  role: GroupRole,
+  groupId: string | null,
+  role: GroupRole | null,
 ) {
   return {
     user: {
@@ -45,9 +52,22 @@ export function sessionFor(
       email: player.email,
       name: player.name,
       username: null,
-      isAdmin: isAdminRole(role),
+      isAdmin: role !== null && isAdminRole(role),
       groupId,
       role,
     },
   };
+}
+
+export async function setupGroupWithAdmin(
+  role: "owner" | "admin" = "owner",
+): Promise<{ group: Group; admin: Player; session: ReturnType<typeof sessionFor> }> {
+  const group = await createTestGroup();
+  const admin = await createMember(group.id, {
+    name: "Admin",
+    email: "admin@example.com",
+    role,
+    passwordHash: "x",
+  });
+  return { group, admin, session: sessionFor(admin, group.id, role) };
 }

@@ -16,3 +16,14 @@ export async function findActiveMembership(
     select: { groupId: true, role: true },
   });
 }
+
+export async function findGroupMembership(
+  db: Prisma.TransactionClient | PrismaClient,
+  groupId: string,
+  playerId: string,
+): Promise<{ role: GroupRole } | null> {
+  return db.membership.findFirst({
+    where: { groupId, playerId, removedAt: null },
+    select: { role: true },
+  });
+}
