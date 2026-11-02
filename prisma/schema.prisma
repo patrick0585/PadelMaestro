@@ -131,7 +131,7 @@ model JokerUse {
   seasonId       String
   gameDayId      String
   ppgAtUse       Decimal  @db.Decimal(5, 3)
-  gamesCredited  Int      @default(10)
+  gamesCredited  Int      @default(15)
   pointsCredited Decimal  @db.Decimal(6, 2)
   createdAt      DateTime @default(now())
 
