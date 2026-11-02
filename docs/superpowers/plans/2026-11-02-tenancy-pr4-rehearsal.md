@@ -62,8 +62,11 @@ Alle Prüfungen bestanden, Zeilenzahlen unverändert, Pflichtfelder und Fremdsch
 
 ## Deploy-Ablauf
 
-1. Manueller Dump nach `/root/backups/<datum>-pre-tenancy-4/db.dump` (`sudo -u postgres pg_dump -Fc padel_tracker`).
-2. `deploy.sh` ausführen. Der Health-Check auf :3000 schlägt fälschlich fehl; stattdessen `systemctl is-active padel` und `curl http://127.0.0.1:8080/login` prüfen.
+1. Pre-Check (Soll 0, vor dem Deploy): `SELECT count(*) FROM "GameDay" d JOIN "Season" s ON s.id=d."seasonId" WHERE d."groupId" <> s."groupId";`
+2. Manueller Dump nach `/root/backups/<datum>-pre-tenancy-4/db.dump` (`sudo -u postgres pg_dump -Fc padel_tracker`).
+3. `deploy.sh` ausführen. Der Health-Check auf :3000 schlägt fälschlich fehl; stattdessen `systemctl is-active padel` und `curl http://127.0.0.1:8080/login` prüfen.
    Während des Deploys keine Admin-Aktionen (Spieler anlegen/ändern, Saison oder Spieltag anlegen) ausführen.
-3. Prüf-SQL ausführen: `groupId` auf Season und GameDay `NOT NULL`, `Season_name_key` fehlt, Memberships mit role=owner = 1, Zeilenzahlen wie vor dem Deploy.
-4. Login, Dashboard, Spieltag, Rangliste und Archiv prüfen.
+4. Prüf-SQL ausführen: `groupId` auf Season und GameDay `NOT NULL`, `Season_name_key` fehlt, Memberships mit role=owner = 1, Zeilenzahlen wie vor dem Deploy. Zusätzlich die Invariante (Soll 0): `SELECT count(*) FROM "Membership" m JOIN "Player" p ON p.id=m."playerId" WHERE p."deletedAt" IS NOT NULL AND m."removedAt" IS NULL;`
+5. Login, Dashboard, Spieltag, Rangliste und Archiv prüfen.
+
+Rollback: Bei Fehler der Migration: `prisma migrate resolve --rolled-back 20261102160000_group_required` (als padel im App-Verzeichnis mit geladener .env), Ursache beheben, erneut deployen; der Dump liegt unter /root/backups/<datum>-pre-tenancy-4/.

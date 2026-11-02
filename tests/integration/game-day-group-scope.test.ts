@@ -18,7 +18,7 @@ describe("game-day group scope", () => {
     const group = await createTestGroup();
     const season = await createTestSeason(group.id);
     const day = await createTestGameDay(group.id, season.id);
-    expect(await findGroupGameDay(group.id, day.id)).toEqual({ id: day.id, status: "planned" });
+    expect(await findGroupGameDay(group.id, day.id)).toEqual({ id: day.id });
   });
 
   it("findGroupGameDay liefert null für Spieltag einer anderen Gruppe", async () => {

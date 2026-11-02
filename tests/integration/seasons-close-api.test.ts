@@ -80,6 +80,16 @@ describe("POST /api/seasons/close", () => {
     expect(untouched.isActive).toBe(true);
   });
 
+  it("closes only the active season of the admin's own group", async () => {
+    const groupId = await makeAdmin();
+    const own = await createTestSeason(groupId);
+    const foreign = await createTestSeason((await createTestGroup("Andere")).id);
+    const res = await POST(req({ closedName: "Alt", nextName: "Neu" }));
+    expect(res.status).toBe(200);
+    expect((await prisma.season.findUniqueOrThrow({ where: { id: own.id } })).isActive).toBe(false);
+    expect((await prisma.season.findUniqueOrThrow({ where: { id: foreign.id } })).isActive).toBe(true);
+  });
+
   it("returns 409 open_game_days with the blocking dates", async () => {
     const groupId = await makeAdmin();
     const season = await getOrCreateActiveSeason(groupId);

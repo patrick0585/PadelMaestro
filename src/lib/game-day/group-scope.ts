@@ -1,13 +1,12 @@
-import type { GameDayStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export function findGroupGameDay(
   groupId: string,
   gameDayId: string,
-): Promise<{ id: string; status: GameDayStatus } | null> {
+): Promise<{ id: string } | null> {
   return prisma.gameDay.findFirst({
     where: { id: gameDayId, groupId },
-    select: { id: true, status: true },
+    select: { id: true },
   });
 }
 
