@@ -200,7 +200,7 @@ describe("recordJokerUseAsAdmin", () => {
   it("records a JokerUse with actorId=admin and audit action joker.use.admin", async () => {
     const { season, player, gameDay } = await setup();
     const admin = await prisma.player.create({
-      data: { name: "Admin", email: "a@x", passwordHash: "x", isAdmin: true },
+      data: { name: "Admin", email: "a@x", passwordHash: "x" },
     });
 
     const use = await recordJokerUseAsAdmin({
@@ -225,7 +225,7 @@ describe("recordJokerUseAsAdmin", () => {
   it("rejects when the cap is already reached", async () => {
     const { season, player, gameDay } = await setup();
     const admin = await prisma.player.create({
-      data: { name: "Admin", email: "a2@x", passwordHash: "x", isAdmin: true },
+      data: { name: "Admin", email: "a2@x", passwordHash: "x" },
     });
     for (let i = 0; i < MAX_JOKERS_PER_SEASON; i++) {
       const g = await prisma.gameDay.create({
@@ -248,7 +248,7 @@ describe("cancelJokerUseAsAdmin", () => {
   it("cancels the joker and writes audit action joker.cancel.admin", async () => {
     const { player, gameDay } = await setup();
     const admin = await prisma.player.create({
-      data: { name: "Admin", email: "ac@x", passwordHash: "x", isAdmin: true },
+      data: { name: "Admin", email: "ac@x", passwordHash: "x" },
     });
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
 

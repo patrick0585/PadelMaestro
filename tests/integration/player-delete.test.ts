@@ -38,20 +38,27 @@ async function makeSeasonAndDay(
   return { season, day };
 }
 
+async function removedAtOf(groupId: string, playerId: string) {
+  const m = await prisma.membership.findUniqueOrThrow({
+    where: { groupId_playerId: { groupId, playerId } },
+  });
+  return m.removedAt;
+}
+
 describe("deletePlayer", () => {
   beforeEach(async () => {
     await resetDb();
     dayCounter = 0;
   });
 
-  it("sets removedAt on the group membership and deletedAt on the player, and writes an audit log", async () => {
+  it("sets removedAt on the group membership, leaves deletedAt null, and writes an audit log", async () => {
     const { group, admin } = await setupGroupWithAdmin();
     const target = await createMember(group.id, { name: "U1", email: "u1@x" });
 
     await deletePlayer({ groupId: group.id, playerId: target.id, actorId: admin.id });
 
     const row = await prisma.player.findUnique({ where: { id: target.id } });
-    expect(row?.deletedAt).not.toBeNull();
+    expect(row?.deletedAt).toBeNull();
     const m = await prisma.membership.findUniqueOrThrow({
       where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
     });
@@ -147,8 +154,7 @@ describe("deletePlayer", () => {
     const { group, admin: owner } = await setupGroupWithAdmin("owner");
     const admin = await createMember(group.id, { name: "A2", email: "a2@x", role: "admin" });
     await deletePlayer({ groupId: group.id, playerId: admin.id, actorId: owner.id });
-    const row = await prisma.player.findUnique({ where: { id: admin.id } });
-    expect(row?.deletedAt).not.toBeNull();
+    expect(await removedAtOf(group.id, admin.id)).not.toBeNull();
   });
 
   it("allows removing a plain member when the deleter is the only admin", async () => {
@@ -165,8 +171,7 @@ describe("deletePlayer", () => {
     const { group, admin: a1 } = await setupGroupWithAdmin("admin");
     const a2 = await createMember(group.id, { name: "A2", email: "a2@x", role: "admin" });
     await deletePlayer({ groupId: group.id, playerId: a1.id, actorId: a2.id });
-    const row = await prisma.player.findUnique({ where: { id: a1.id } });
-    expect(row?.deletedAt).not.toBeNull();
+    expect(await removedAtOf(group.id, a1.id)).not.toBeNull();
   });
 
   it("removed admins do not count toward the remaining-admin check", async () => {
@@ -215,8 +220,7 @@ describe("deletePlayer", () => {
       data: { gameDayId: day.id, playerId: target.id, attendance: "confirmed" },
     });
     await deletePlayer({ groupId: group.id, playerId: target.id, actorId: admin.id });
-    const row = await prisma.player.findUnique({ where: { id: target.id } });
-    expect(row?.deletedAt).not.toBeNull();
+    expect(await removedAtOf(group.id, target.id)).not.toBeNull();
   });
 
   it("allows deletion when only declined or pending on non-finished days", async () => {
@@ -231,8 +235,7 @@ describe("deletePlayer", () => {
       data: { gameDayId: inProgress.id, playerId: target.id, attendance: "pending" },
     });
     await deletePlayer({ groupId: group.id, playerId: target.id, actorId: admin.id });
-    const row = await prisma.player.findUnique({ where: { id: target.id } });
-    expect(row?.deletedAt).not.toBeNull();
+    expect(await removedAtOf(group.id, target.id)).not.toBeNull();
   });
 
   it("allows deletion when confirmed only on finished days", async () => {
@@ -243,8 +246,7 @@ describe("deletePlayer", () => {
       data: { gameDayId: finished.id, playerId: target.id, attendance: "confirmed" },
     });
     await deletePlayer({ groupId: group.id, playerId: target.id, actorId: admin.id });
-    const row = await prisma.player.findUnique({ where: { id: target.id } });
-    expect(row?.deletedAt).not.toBeNull();
+    expect(await removedAtOf(group.id, target.id)).not.toBeNull();
   });
 
   it("preserves historical matches after deletion", async () => {

@@ -34,7 +34,6 @@ export async function createMember(
       email: opts.email,
       passwordHash: opts.passwordHash ?? null,
       username: opts.username ?? null,
-      isAdmin: isAdminRole(role),
     },
   });
   await prisma.membership.create({ data: { groupId, playerId: player.id, role } });

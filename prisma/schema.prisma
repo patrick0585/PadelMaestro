@@ -17,7 +17,6 @@ model Player {
   avatarMimeType String?
   avatarVersion  Int       @default(0)
   telegramId     BigInt?   @unique
-  isAdmin        Boolean   @default(false)
   invitedAt      DateTime  @default(now())
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())

@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
-import { roleForAdminFlag } from "@/lib/auth/roles";
+import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
 import { OwnerProtectedError } from "./owner-protected-error";
 
 export class PlayerNotFoundError extends Error {
@@ -79,7 +79,6 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
           id: true,
           email: true,
           name: true,
-          isAdmin: true,
           username: true,
           deletedAt: true,
         },
@@ -109,31 +108,29 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new LastAdminError();
       }
 
-      const updated = await tx.player.update({
+      const { username, name, email } = definedFields;
+      const updatedPlayer = await tx.player.update({
         where: { id: existing.id },
-        data: definedFields,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          isAdmin: true,
-          username: true,
-        },
+        data: { username, name, email },
+        select: { id: true, email: true, name: true, username: true },
       });
 
-      if (newIsAdmin !== undefined && membership.role !== "owner") {
+      let role = membership.role;
+      if (newIsAdmin !== undefined && role !== "owner") {
+        role = roleForAdminFlag(newIsAdmin);
         await tx.membership.update({
           where: { groupId_playerId: { groupId: input.groupId, playerId: existing.id } },
-          data: { role: roleForAdminFlag(newIsAdmin) },
+          data: { role },
         });
       }
+      const updated: UpdatedPlayer = { ...updatedPlayer, isAdmin: isAdminRole(role) };
 
       const changedFields: TrackedField[] = [];
       const before: Record<TrackedField, string | boolean | null> = {
         username: existing.username,
         name: existing.name,
         email: existing.email,
-        isAdmin: existing.isAdmin,
+        isAdmin: isAdminRole(membership.role),
       };
       const after: Record<TrackedField, string | boolean | null> = {
         username: updated.username,

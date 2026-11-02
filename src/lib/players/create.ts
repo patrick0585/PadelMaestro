@@ -46,11 +46,10 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
         data: {
           email: input.email,
           name: input.name,
-          isAdmin: input.isAdmin,
           passwordHash,
           username,
         },
-        select: { id: true, email: true, name: true, isAdmin: true, username: true },
+        select: { id: true, email: true, name: true, username: true },
       });
       await tx.membership.create({
         data: { groupId: input.groupId, playerId: player.id, role: roleForAdminFlag(input.isAdmin) },
@@ -65,7 +64,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           payload: {
             email: player.email,
             name: player.name,
-            isAdmin: player.isAdmin,
+            isAdmin: input.isAdmin,
             username: player.username,
           },
         },
@@ -80,7 +79,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           skipDuplicates: true,
         });
       }
-      return player;
+      return { ...player, isAdmin: input.isAdmin };
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

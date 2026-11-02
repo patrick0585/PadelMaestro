@@ -171,7 +171,7 @@ describe("addExtraMatch", () => {
 
   it("throws GameDayNotFoundError for an unknown id", async () => {
     const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
+      data: { name: "A", email: "a@example.com", passwordHash: "x" },
     });
     await expect(
       addExtraMatch("00000000-0000-0000-0000-000000000000", admin.id),

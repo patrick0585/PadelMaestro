@@ -21,12 +21,11 @@ const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 const FIXTURE = readFileSync(path.join(__dirname, "../fixtures/avatar-sample.png"));
 
-async function makePlayer(name: string, extra: { isAdmin?: boolean } = {}) {
+async function makePlayer(name: string) {
   return prisma.player.create({
     data: {
       name,
       email: `${name.toLowerCase()}@x`,
-      isAdmin: extra.isAdmin ?? false,
     },
   });
 }

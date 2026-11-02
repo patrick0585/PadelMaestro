@@ -25,7 +25,7 @@ export async function bootstrapAdmin(input: {
     });
     const role: GroupRole = hasOwner > 0 ? "admin" : "owner";
     const player = await tx.player.create({
-      data: { name: input.name, email: input.email, passwordHash, isAdmin: true },
+      data: { name: input.name, email: input.email, passwordHash },
     });
     await tx.membership.create({ data: { groupId: group.id, playerId: player.id, role } });
     return { playerId: player.id, groupId: group.id, role };

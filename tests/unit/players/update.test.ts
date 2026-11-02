@@ -177,8 +177,6 @@ describe("updatePlayer", () => {
     });
     expect(updated.isAdmin).toBe(false);
     expect((await membershipOf(group.id, admin.id)).role).toBe("member");
-    const row = await prisma.player.findUniqueOrThrow({ where: { id: admin.id } });
-    expect(row.isAdmin).toBe(false);
   });
 
   it("does not count an admin of another group as remaining admin", async () => {
@@ -206,6 +204,42 @@ describe("updatePlayer", () => {
     });
     expect(updated.isAdmin).toBe(true);
     expect((await membershipOf(group.id, target.id)).role).toBe("admin");
+  });
+
+  it("derives isAdmin in response and audit from the role", async () => {
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
+    const promoted = await updatePlayer({
+      groupId: group.id,
+      playerId: target.id,
+      actorId: admin.id,
+      fields: { isAdmin: true },
+    });
+    expect(promoted.isAdmin).toBe(true);
+    const entry = await prisma.auditLog.findFirstOrThrow({
+      where: { entityId: target.id, action: "player.update" },
+    });
+    const payload = entry.payload as {
+      before: Record<string, unknown>;
+      after: Record<string, unknown>;
+      changedFields: string[];
+    };
+    expect(payload.before.isAdmin).toBe(false);
+    expect(payload.after.isAdmin).toBe(true);
+    expect(payload.changedFields).toContain("isAdmin");
+
+    const again = await updatePlayer({
+      groupId: group.id,
+      playerId: target.id,
+      actorId: admin.id,
+      fields: { isAdmin: true, name: "U2" },
+    });
+    expect(again.isAdmin).toBe(true);
+    const entries = await prisma.auditLog.findMany({
+      where: { entityId: target.id, action: "player.update", NOT: { id: entry.id } },
+    });
+    expect(entries).toHaveLength(1);
+    expect((entries[0].payload as { changedFields: string[] }).changedFields).toEqual(["name"]);
   });
 
   it("omits unchanged fields from changedFields", async () => {
@@ -266,8 +300,6 @@ describe("updatePlayer", () => {
           fields: { isAdmin: false },
         }),
       ).rejects.toBeInstanceOf(OwnerProtectedError);
-      const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
-      expect(p.isAdmin).toBe(true);
       expect((await membershipOf(group.id, owner.id)).role).toBe("owner");
     });
 

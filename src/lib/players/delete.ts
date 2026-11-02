@@ -65,14 +65,9 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
     });
     if (activeParticipation) throw new ActiveParticipationError();
 
-    const now = new Date();
     await tx.membership.update({
       where: { groupId_playerId: { groupId: input.groupId, playerId: target.id } },
-      data: { removedAt: now },
-    });
-    await tx.player.update({
-      where: { id: target.id },
-      data: { deletedAt: now },
+      data: { removedAt: new Date() },
     });
 
     await tx.auditLog.create({

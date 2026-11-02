@@ -99,8 +99,7 @@ Geändert:
   wie oben). `@@unique([seasonId, date])` bleibt.
 - `AuditLog.groupId` (optional; Konto-Aktionen ohne Gruppe bleiben
   leer).
-- `Player.isAdmin` wird in PR 6 entfernt. Bis dahin bleibt die Spalte,
-  wird aber ab PR 2 nicht mehr gelesen.
+- `Player.isAdmin` wurde in PR 6 entfernt.
 
 Unverändert: `Match`, `GameDayParticipant`, `JokerUse` erben die Gruppe
 über `GameDay` bzw. `Season`. `Player.email`/`username` bleiben global
@@ -114,9 +113,8 @@ Semantik:
   (`removedAt` setzen). Historie (Matches, Joker, Ränge) bleibt. Der
   bisherige Soft-Delete des Players wird dafür nicht mehr benutzt;
   bestehende `deletedAt`-Werte werden migriert (siehe unten).
-  Übergang: Bis PR 6 setzt „Spieler entfernen“ zusätzlich
-  `Player.deletedAt`, damit der Login gesperrt bleibt; PR 6 nimmt das
-  mit dem Leerzustand heraus.
+  Seit PR 6 beendet Entfernen nur die Mitgliedschaft; `deletedAt` bleibt
+  für die Kontolöschung in Phase 2.
   Passwort und E-Mail des Besitzers kann nur der Besitzer selbst ändern
   (sonst 409 `owner_protected`), damit kein Admin das Besitzerkonto
   übernehmen kann.
