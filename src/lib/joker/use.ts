@@ -58,7 +58,7 @@ async function recordJokerUseInternal(args: {
 }) {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
-    select: { id: true, status: true, seasonId: true },
+    select: { id: true, status: true, seasonId: true, groupId: true },
   });
   if (gameDay.status !== "planned") throw new JokerLockedError();
 
@@ -94,6 +94,7 @@ async function recordJokerUseInternal(args: {
     await tx.auditLog.create({
       data: {
         actorId: args.actorId,
+        groupId: gameDay.groupId,
         action: args.auditAction,
         entityType: "JokerUse",
         entityId: use.id,
@@ -135,7 +136,7 @@ async function cancelJokerUseInternal(args: {
 }): Promise<void> {
   const gameDay = await prisma.gameDay.findUniqueOrThrow({
     where: { id: args.gameDayId },
-    select: { id: true, status: true, seasonId: true },
+    select: { id: true, status: true, seasonId: true, groupId: true },
   });
   if (gameDay.status !== "planned") throw new JokerLockedError();
 
@@ -161,6 +162,7 @@ async function cancelJokerUseInternal(args: {
     await tx.auditLog.create({
       data: {
         actorId: args.actorId,
+        groupId: gameDay.groupId,
         action: args.auditAction,
         entityType: "JokerUse",
         entityId: existing.id,

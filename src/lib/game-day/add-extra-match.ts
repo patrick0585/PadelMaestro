@@ -79,6 +79,7 @@ export async function addExtraMatch(gameDayId: string, actorId: string) {
     await tx.auditLog.create({
       data: {
         actorId,
+        groupId: day.groupId,
         action: "game_day.add_extra_match",
         entityType: "Match",
         entityId: match.id,

@@ -165,6 +165,7 @@ describe("cancelJokerUse", () => {
       where: { actorId: player.id, action: "joker.cancel" },
     });
     expect(logs).toHaveLength(1);
+    expect(logs[0].groupId).toBe(gameDay.groupId);
     expect((logs[0].payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
   });
 
@@ -210,6 +211,7 @@ describe("recordJokerUseAsAdmin", () => {
       where: { action: "joker.use.admin" },
     });
     expect(log?.actorId).toBe(admin.id);
+    expect(log?.groupId).toBe(gameDay.groupId);
     expect((log?.payload as { targetPlayerId: string }).targetPlayerId).toBe(player.id);
     expect((log?.payload as { seasonId: string }).seasonId).toBe(season.id);
   });

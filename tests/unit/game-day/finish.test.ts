@@ -36,6 +36,7 @@ describe("finishGameDay", () => {
       where: { action: "game_day.finish", entityId: day.id },
     });
     expect(entries).toHaveLength(1);
+    expect(entries[0].groupId).toBe(day.groupId);
   });
 
   it("throws GameDayAlreadyFinishedError on finished", async () => {

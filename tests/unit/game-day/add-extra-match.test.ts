@@ -59,6 +59,7 @@ describe("addExtraMatch", () => {
       where: { action: "game_day.add_extra_match", entityId: match.id },
     });
     expect(entries).toHaveLength(1);
+    expect(entries[0].groupId).toBe(day.groupId);
     // Payload records the picked teams so we can later reproduce why a
     // given extra match landed on the schedule.
     expect(entries[0].payload).toMatchObject({

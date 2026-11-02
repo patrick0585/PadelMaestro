@@ -40,7 +40,7 @@ export async function removeExtraMatch(
         matchNumber: true,
         team1Score: true,
         team2Score: true,
-        gameDay: { select: { status: true, playerCount: true } },
+        gameDay: { select: { status: true, playerCount: true, groupId: true } },
       },
     });
     if (!match) throw new MatchNotFoundError(matchId);
@@ -80,6 +80,7 @@ export async function removeExtraMatch(
     await tx.auditLog.create({
       data: {
         actorId,
+        groupId: match.gameDay.groupId,
         action: "game_day.remove_extra_match",
         entityType: "Match",
         entityId: matchId,

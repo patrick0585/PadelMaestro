@@ -41,6 +41,9 @@ describe("startGameDay", () => {
 
     const matches = await prisma.match.findMany({ where: { gameDayId: day.id } });
     expect(matches).toHaveLength(15);
+
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: "game_day.start" } });
+    expect(log.groupId).toBe(group.id);
   });
 
   it("rejects starting with fewer than 4 confirmed players", async () => {
