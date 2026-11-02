@@ -327,27 +327,56 @@ If any step fails the script exits non-zero and the service stays on the previou
 
 ## 9. Backups
 
-### 9.1 Daily `pg_dump` via cron
+### 9.1 Daily `pg_dump` via systemd timer
+
+The repo ships the backup as a script plus a systemd service/timer in
+`scripts/backup/`. The timer runs `pg_dump -Fc` as user `postgres` every
+night at 03:15 into `/var/backups/padel/` and keeps 30 days of dumps.
+Each run verifies the dump with `pg_restore --list` before it replaces
+the previous one.
+
+Install (or update) from your machine:
 
 ```bash
-sudo mkdir -p /var/backups/padel
-sudo chown postgres:postgres /var/backups/padel
-sudo -u postgres crontab -l 2>/dev/null > /tmp/pgcron || true
-echo '0 3 * * * pg_dump padel_tracker | gzip > /var/backups/padel/dump-$(date +\%F).sql.gz && find /var/backups/padel -name "dump-*.sql.gz" -mtime +30 -delete' >> /tmp/pgcron
-sudo -u postgres crontab /tmp/pgcron
-rm /tmp/pgcron
+scp scripts/backup/padel-db-backup.{sh,service,timer} scripts/backup/install.sh root@<host>:/root/padel-backup/
+ssh root@<host> 'bash /root/padel-backup/install.sh'
+```
+
+`install.sh` is idempotent: it copies the files, enables the timer, runs
+one backup immediately as a smoke test and prints the timer status plus
+the directory listing.
+
+Check it later:
+
+```bash
+systemctl list-timers 'padel-db-backup*'
+journalctl -u padel-db-backup.service -n 5 --no-pager
+ls -lh /var/backups/padel
 ```
 
 ### 9.2 Restore
 
+Dumps are in `pg_dump` custom format. Restore into the existing database
+(stop the app first so no writes race the restore):
+
 ```bash
-gunzip -c /var/backups/padel/dump-YYYY-MM-DD.sql.gz \
-  | sudo -u postgres psql padel_tracker
+sudo systemctl stop padel
+sudo -u postgres pg_restore --clean --if-exists --no-owner --no-acl \
+  -d padel_tracker /var/backups/padel/padel_tracker-YYYY-MM-DD_HHMM.dump
+sudo systemctl start padel
 ```
+
+### 9.3 Offsite copy
+
+The dumps live on the VPS disk only. Before the app accepts data from
+groups outside the original one, a nightly copy to an external storage
+(rclone to an S3-compatible bucket or a Hetzner Storage Box) has to be
+added. Provider and credentials are still to be decided; the script's
+output directory is the source for that sync.
 
 ---
 
-## 9.3 Keep Postgres out of unattended-upgrades
+## 9.4 Keep Postgres out of unattended-upgrades
 
 Ubuntu's `unattended-upgrades` will silently update `postgresql-*` packages overnight, which restarts Postgres and severs every active connection (`E57P01: terminating connection due to administrator command`). Symptom in the app: every JWT renewal that happens during the restart fails, and users get logged out.
 
