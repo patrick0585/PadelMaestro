@@ -96,4 +96,41 @@ describe("PATCH /api/players/[id]/password", () => {
     });
     expect(res.status).toBe(400);
   });
+  it("returns 409 owner_protected when an admin resets the owner's password", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const owner = await createMember(group.id, {
+      name: "Owner",
+      email: "owner@example.com",
+      role: "owner",
+      passwordHash: "legacy",
+    });
+    authMock.mockResolvedValue(session);
+    const res = await PATCH(patchReq(owner.id, "newpass12"), {
+      params: Promise.resolve({ id: owner.id }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "owner_protected" });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(after.passwordHash).toBe("legacy");
+  });
+
+  it("returns 404 for a removed member of the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const gone = await createMember(group.id, {
+      name: "Gone",
+      email: "gone@example.com",
+      passwordHash: "legacy",
+    });
+    await prisma.membership.updateMany({
+      where: { groupId: group.id, playerId: gone.id },
+      data: { removedAt: new Date() },
+    });
+    authMock.mockResolvedValue(session);
+    const res = await PATCH(patchReq(gone.id, "newpass12"), {
+      params: Promise.resolve({ id: gone.id }),
+    });
+    expect(res.status).toBe(404);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: gone.id } });
+    expect(after.passwordHash).toBe("legacy");
+  });
 });

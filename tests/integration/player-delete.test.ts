@@ -150,6 +150,16 @@ describe("deletePlayer", () => {
     expect(row?.deletedAt).not.toBeNull();
   });
 
+  it("allows removing a plain member when the deleter is the only admin", async () => {
+    const { group, admin: soleAdmin } = await setupGroupWithAdmin("admin");
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
+    await deletePlayer({ groupId: group.id, playerId: target.id, actorId: soleAdmin.id });
+    const m = await prisma.membership.findUniqueOrThrow({
+      where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
+    });
+    expect(m.removedAt).not.toBeNull();
+  });
+
   it("allows removing an admin when another admin remains", async () => {
     const { group, admin: a1 } = await setupGroupWithAdmin("admin");
     const a2 = await createMember(group.id, { name: "A2", email: "a2@x", role: "admin" });

@@ -303,6 +303,13 @@ async function setupForeignTarget() {
   return createMember(other.id, { name: "Fremd", email: "fremd@example.com" });
 }
 
+async function removeMembership(groupId: string, playerId: string) {
+  await prisma.membership.updateMany({
+    where: { groupId, playerId },
+    data: { removedAt: new Date() },
+  });
+}
+
 describe("PUT /api/players/[id]/avatar (admin)", () => {
   beforeEach(resetDb);
 
@@ -335,6 +342,18 @@ describe("PUT /api/players/[id]/avatar (admin)", () => {
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
     const after = await prisma.player.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(after.avatarVersion).toBe(0);
+  });
+
+  it("returns 404 for a removed member of the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const gone = await createMember(group.id, { name: "Gone", email: "gone@example.com" });
+    await removeMembership(group.id, gone.id);
+    authMock.mockResolvedValueOnce(session);
+    const res = await putAvatar(gone.id);
+    expect(res.status).toBe(404);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: gone.id } });
+    expect(after.deletedAt).toBeNull();
     expect(after.avatarVersion).toBe(0);
   });
 
@@ -431,6 +450,19 @@ describe("DELETE /api/players/[id]/avatar (admin)", () => {
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
     const after = await prisma.player.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(after.avatarVersion).toBe(1);
+  });
+
+  it("returns 404 for a removed member of the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const gone = await createMember(group.id, { name: "Gone", email: "gone@example.com" });
+    await setPlayerAvatar({ playerId: gone.id, actorId: gone.id, file: FIXTURE });
+    await removeMembership(group.id, gone.id);
+    authMock.mockResolvedValueOnce(session);
+    const res = await deleteAvatar(gone.id);
+    expect(res.status).toBe(404);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: gone.id } });
+    expect(after.deletedAt).toBeNull();
     expect(after.avatarVersion).toBe(1);
   });
 });

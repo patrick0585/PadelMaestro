@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
 import { findGroupMembership } from "@/lib/group/active-membership";
+import { OwnerProtectedError } from "./owner-protected-error";
 
 export class PlayerNotFoundError extends Error {
   constructor(id: string) {
@@ -19,6 +20,9 @@ export interface ResetPlayerPasswordInput {
 export async function resetPlayerPassword(input: ResetPlayerPasswordInput): Promise<void> {
   const membership = await findGroupMembership(prisma, input.groupId, input.playerId);
   if (!membership) throw new PlayerNotFoundError(input.playerId);
+  if (membership.role === "owner" && input.actorId !== input.playerId) {
+    throw new OwnerProtectedError("only the owner may change the owner's password");
+  }
 
   const passwordHash = await hashPassword(input.password);
 

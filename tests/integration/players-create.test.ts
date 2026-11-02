@@ -260,4 +260,13 @@ describe("GET /api/players", () => {
     const res = await GET(getReq());
     expect(res.status).toBe(403);
   });
+
+  it("returns 403 for a session without a group", async () => {
+    const player = await prisma.player.create({
+      data: { name: "Loner", email: "loner@example.com", passwordHash: "x" },
+    });
+    authMock.mockResolvedValue(sessionFor(player, null, null));
+    const res = await GET(getReq());
+    expect(res.status).toBe(403);
+  });
 });

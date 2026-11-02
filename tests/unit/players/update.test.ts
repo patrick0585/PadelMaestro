@@ -281,5 +281,45 @@ describe("updatePlayer", () => {
         }),
       ).rejects.toBeInstanceOf(OwnerProtectedError);
     });
+
+    it("rejects changing the owner's email by an admin", async () => {
+      const { group, admin } = await setupGroupWithAdmin("admin");
+      const owner = await createMember(group.id, { name: "O", email: "o@x", role: "owner" });
+      await expect(
+        updatePlayer({
+          groupId: group.id,
+          playerId: owner.id,
+          actorId: admin.id,
+          fields: { email: "hijack@x" },
+        }),
+      ).rejects.toBeInstanceOf(OwnerProtectedError);
+      const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+      expect(p.email).toBe("o@x");
+    });
+
+    it("allows the owner to change their own email", async () => {
+      const { group, admin: owner } = await setupGroupWithAdmin("owner");
+      const updated = await updatePlayer({
+        groupId: group.id,
+        playerId: owner.id,
+        actorId: owner.id,
+        fields: { email: "new-owner@x" },
+      });
+      expect(updated.email).toBe("new-owner@x");
+    });
+
+    it("admin may still rename the owner", async () => {
+      const { group, admin } = await setupGroupWithAdmin("admin");
+      const owner = await createMember(group.id, { name: "O", email: "o@x", role: "owner" });
+      const updated = await updatePlayer({
+        groupId: group.id,
+        playerId: owner.id,
+        actorId: admin.id,
+        fields: { name: "Olga", username: "olga" },
+      });
+      expect(updated.name).toBe("Olga");
+      expect(updated.username).toBe("olga");
+      expect(updated.email).toBe("o@x");
+    });
   });
 });

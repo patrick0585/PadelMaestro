@@ -3,6 +3,7 @@ import { z } from "zod";
 import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import { resetPlayerPassword, PlayerNotFoundError } from "@/lib/players/reset-password";
+import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
 
 // Cap at 72 bytes — bcrypt silently truncates longer inputs.
 const Schema = z.object({ password: z.string().min(8).max(72) });
@@ -40,6 +41,9 @@ export async function PATCH(
   } catch (e) {
     if (e instanceof PlayerNotFoundError) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    if (e instanceof OwnerProtectedError) {
+      return NextResponse.json({ error: "owner_protected" }, { status: 409 });
     }
     throw e;
   }

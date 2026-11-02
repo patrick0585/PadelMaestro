@@ -89,6 +89,14 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new PlayerNotFoundError(input.playerId);
       }
 
+      if (
+        definedFields.email !== undefined &&
+        membership.role === "owner" &&
+        input.actorId !== input.playerId
+      ) {
+        throw new OwnerProtectedError("only the owner may change the owner's email");
+      }
+
       const newIsAdmin = definedFields.isAdmin;
       if (newIsAdmin === false && membership.role === "owner") {
         throw new OwnerProtectedError();

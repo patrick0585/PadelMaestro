@@ -23,6 +23,11 @@ function tooLargeByContentLength(req: Request): boolean {
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
+async function targetNotFound(groupId: string, id: string): Promise<NextResponse | null> {
+  if (await findGroupMembership(prisma, groupId, id)) return null;
+  return NextResponse.json({ error: "not_found" }, { status: 404 });
+}
+
 export async function PUT(req: Request, ctx: RouteCtx) {
   const g = await guardGroupAdmin();
   if (g.response) return g.response;
@@ -31,9 +36,8 @@ export async function PUT(req: Request, ctx: RouteCtx) {
   }
 
   const { id } = await ctx.params;
-  if (!(await findGroupMembership(prisma, g.ctx.groupId, id))) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
+  const notFound = await targetNotFound(g.ctx.groupId, id);
+  if (notFound) return notFound;
 
   let form: FormData;
   try {
@@ -73,9 +77,8 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
   const g = await guardGroupAdmin();
   if (g.response) return g.response;
   const { id } = await ctx.params;
-  if (!(await findGroupMembership(prisma, g.ctx.groupId, id))) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
+  const notFound = await targetNotFound(g.ctx.groupId, id);
+  if (notFound) return notFound;
   try {
     await deletePlayerAvatar({ playerId: id, actorId: g.ctx.userId });
   } catch (e) {

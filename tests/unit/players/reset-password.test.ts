@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { verifyPassword, hashPassword } from "@/lib/auth/hash";
 import { resetPlayerPassword, PlayerNotFoundError } from "@/lib/players/reset-password";
+import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
 import { resetDb } from "../../helpers/reset-db";
 import { createMember, createTestGroup, setupGroupWithAdmin } from "../../helpers/group";
 
@@ -92,5 +93,36 @@ describe("resetPlayerPassword", () => {
         actorId: actor.id,
       }),
     ).rejects.toBeInstanceOf(PlayerNotFoundError);
+  });
+  it("rejects resetting the owner's password by an admin with OwnerProtectedError", async () => {
+    const { group, admin } = await setupGroupWithAdmin("admin");
+    const owner = await createMember(group.id, {
+      name: "Owner",
+      email: "o@example.com",
+      role: "owner",
+      passwordHash: "legacy",
+    });
+    await expect(
+      resetPlayerPassword({
+        groupId: group.id,
+        playerId: owner.id,
+        password: "newpass12",
+        actorId: admin.id,
+      }),
+    ).rejects.toBeInstanceOf(OwnerProtectedError);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(after.passwordHash).toBe("legacy");
+  });
+
+  it("allows the owner to reset their own password", async () => {
+    const { group, admin: owner } = await setupGroupWithAdmin("owner");
+    await resetPlayerPassword({
+      groupId: group.id,
+      playerId: owner.id,
+      password: "newpass12",
+      actorId: owner.id,
+    });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(await verifyPassword("newpass12", after.passwordHash!)).toBe(true);
   });
 });

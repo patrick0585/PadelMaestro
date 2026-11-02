@@ -32,6 +32,7 @@ export function EditPlayerDialog({
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isOwner = player?.role === "owner";
 
   useEffect(() => {
     if (open && player) {
@@ -144,19 +145,27 @@ export function EditPlayerDialog({
             autoComplete="off"
           />
         </div>
-        <label
-          htmlFor="edit-player-is-admin"
-          className="flex items-center gap-2 text-sm text-foreground"
-        >
-          <input
-            id="edit-player-is-admin"
-            type="checkbox"
-            checked={isAdmin}
-            disabled={player?.role === "owner"}
-            onChange={(e) => setIsAdmin(e.target.checked)}
-          />
-          Admin-Rechte
-        </label>
+        <div className="space-y-1">
+          <label
+            htmlFor="edit-player-is-admin"
+            className={`flex items-center gap-2 text-sm text-foreground${isOwner ? " cursor-not-allowed opacity-60" : ""}`}
+          >
+            <input
+              id="edit-player-is-admin"
+              type="checkbox"
+              checked={isOwner || isAdmin}
+              disabled={isOwner}
+              aria-describedby={isOwner ? "edit-player-is-admin-hint" : undefined}
+              onChange={(e) => setIsAdmin(e.target.checked)}
+            />
+            Admin-Rechte
+          </label>
+          {isOwner && (
+            <p id="edit-player-is-admin-hint" className="text-xs text-foreground-muted">
+              Der Besitzer behält immer Admin-Rechte.
+            </p>
+          )}
+        </div>
         {error && (
           <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
             {error}

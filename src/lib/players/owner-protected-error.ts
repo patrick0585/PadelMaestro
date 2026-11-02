@@ -1,6 +1,6 @@
 export class OwnerProtectedError extends Error {
-  constructor() {
-    super("the group owner cannot be demoted or removed");
+  constructor(message = "the group owner cannot be demoted or removed") {
+    super(message);
     this.name = "OwnerProtectedError";
   }
 }

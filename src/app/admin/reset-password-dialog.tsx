@@ -42,7 +42,12 @@ export function ResetPasswordDialog({
     });
     setLoading(false);
     if (!res.ok) {
-      setError("Zurücksetzen fehlgeschlagen");
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      setError(
+        res.status === 409 && body.error === "owner_protected"
+          ? "Das Passwort des Besitzers kann nur der Besitzer selbst ändern"
+          : "Zurücksetzen fehlgeschlagen",
+      );
       return;
     }
     onClose();

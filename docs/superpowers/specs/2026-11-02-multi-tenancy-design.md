@@ -117,6 +117,9 @@ Semantik:
   Übergang: Bis PR 6 setzt „Spieler entfernen“ zusätzlich
   `Player.deletedAt`, damit der Login gesperrt bleibt; PR 6 nimmt das
   mit dem Leerzustand heraus.
+  Passwort und E-Mail des Besitzers kann nur der Besitzer selbst ändern
+  (sonst 409 `owner_protected`), damit kein Admin das Besitzerkonto
+  übernehmen kann.
 - Spieler ohne aktive Mitgliedschaft in der Session-Gruppe können sich
   einloggen, sehen aber eine leere Zustandsseite „Du bist in keiner
   Gruppe“. In Phase 1 kann das nur durch Entfernen entstehen und

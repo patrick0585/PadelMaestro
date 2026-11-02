@@ -166,6 +166,34 @@ describe("PATCH /api/players/[id]", () => {
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe("owner_protected");
   });
+
+  it("returns 409 owner_protected when an admin changes the owner's email", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const owner = await createMember(group.id, { name: "O", email: "owner@example.com", role: "owner" });
+    authMock.mockResolvedValue(session);
+    const res = await call(owner.id, { email: "hijack@example.com" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe("owner_protected");
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(p.email).toBe("owner@example.com");
+  });
+
+  it("returns 200 and demotes an admin to member when an owner exists", async () => {
+    const { group, session } = await setupGroupWithAdmin("owner");
+    const admin = await createMember(group.id, { name: "A2", email: "a2@example.com", role: "admin" });
+    authMock.mockResolvedValue(session);
+    const res = await call(admin.id, { isAdmin: false });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { isAdmin: boolean }).isAdmin).toBe(false);
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: admin.id } });
+    expect(m.role).toBe("member");
+  });
+
+  it("returns 401 without a session", async () => {
+    authMock.mockResolvedValue(null);
+    const res = await call("00000000-0000-0000-0000-000000000000", { name: "X" });
+    expect(res.status).toBe(401);
+  });
 });
 
 describe("DELETE /api/players/[id]", () => {
@@ -213,6 +241,17 @@ describe("DELETE /api/players/[id]", () => {
     const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
     expect(p.deletedAt).toBeNull();
     const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+    expect(m.removedAt).toBeNull();
+  });
+
+  it("returns 403 for a member session", async () => {
+    const { group } = await setupGroupWithAdmin();
+    const u = await createMember(group.id, { name: "U1", email: "user1@example.com" });
+    const target = await createMember(group.id, { name: "U2", email: "user2@example.com" });
+    authMock.mockResolvedValue(sessionFor(u, group.id, "member"));
+    const res = await callDelete(target.id);
+    expect(res.status).toBe(403);
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: target.id } });
     expect(m.removedAt).toBeNull();
   });
 });
