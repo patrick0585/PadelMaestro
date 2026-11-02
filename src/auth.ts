@@ -4,6 +4,7 @@ import { authConfig } from "@/auth.config";
 import { authorizeCredentials } from "@/lib/auth/authorize";
 import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 import { prisma } from "@/lib/db";
+import type { GroupRole } from "@/lib/auth/roles";
 
 const DEV_PLACEHOLDERS = new Set([
   "dev-secret-replace-me",
@@ -44,18 +45,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
-        token.username = (user as { username?: string | null }).username ?? null;
-        (token as { refreshedAt?: number }).refreshedAt = Date.now();
+        token.isAdmin = user.isAdmin ?? false;
+        token.username = user.username ?? null;
+        token.groupId = user.groupId ?? null;
+        token.role = user.role ?? null;
+        token.refreshedAt = Date.now();
         return token;
       }
 
       const result = await refreshTokenFromPlayer(token, {
-        findUnique: (id) =>
-          prisma.player.findUnique({
+        findUnique: async (id) => {
+          const player = await prisma.player.findUnique({
             where: { id },
-            select: { isAdmin: true, deletedAt: true, username: true },
-          }),
+            select: {
+              username: true,
+              deletedAt: true,
+              memberships: {
+                where: { removedAt: null },
+                orderBy: { joinedAt: "desc" },
+                take: 1,
+                select: { groupId: true, role: true },
+              },
+            },
+          });
+          if (!player) return null;
+          return {
+            username: player.username,
+            deletedAt: player.deletedAt,
+            membership: player.memberships[0] ?? null,
+          };
+        },
       });
       return result.kind === "ok" ? result.token : null;
     },
@@ -66,6 +85,8 @@ declare module "next-auth" {
   interface User {
     isAdmin?: boolean;
     username?: string | null;
+    groupId?: string | null;
+    role?: GroupRole | null;
   }
   interface Session {
     user: {
@@ -74,6 +95,19 @@ declare module "next-auth" {
       name: string;
       username: string | null;
       isAdmin: boolean;
+      groupId: string | null;
+      role: GroupRole | null;
     };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    isAdmin?: boolean;
+    username?: string | null;
+    groupId?: string | null;
+    role?: GroupRole | null;
+    refreshedAt?: number;
   }
 }
