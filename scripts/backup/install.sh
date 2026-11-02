@@ -14,7 +14,10 @@ systemctl daemon-reload
 systemctl enable --now padel-db-backup.timer
 
 echo "--- smoke test"
-systemctl start padel-db-backup.service
+systemctl start padel-db-backup.service || {
+  journalctl -u padel-db-backup.service -n 20 --no-pager -o cat
+  exit 1
+}
 journalctl -u padel-db-backup.service -n 3 --no-pager -o cat
 
 echo "--- timer"

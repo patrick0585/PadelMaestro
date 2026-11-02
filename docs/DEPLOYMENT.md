@@ -338,6 +338,7 @@ the previous one.
 Install (or update) from your machine:
 
 ```bash
+ssh root@<host> 'mkdir -p /root/padel-backup'
 scp scripts/backup/padel-db-backup.{sh,service,timer} scripts/backup/install.sh root@<host>:/root/padel-backup/
 ssh root@<host> 'bash /root/padel-backup/install.sh'
 ```
@@ -357,11 +358,12 @@ ls -lh /var/backups/padel
 ### 9.2 Restore
 
 Dumps are in `pg_dump` custom format. Restore into the existing database
-(stop the app first so no writes race the restore):
+(stop the app first so no writes race the restore; `--role=padel` makes the
+restored objects belong to the app role instead of `postgres`):
 
 ```bash
 sudo systemctl stop padel
-sudo -u postgres pg_restore --clean --if-exists --no-owner --no-acl \
+sudo -u postgres pg_restore --clean --if-exists --no-owner --no-acl --role=padel \
   -d padel_tracker /var/backups/padel/padel_tracker-YYYY-MM-DD_HHMM.dump
 sudo systemctl start padel
 ```

@@ -24,7 +24,8 @@ pg_restore --list "$tmp" > /dev/null
 mv "$tmp" "$out"
 trap - EXIT
 
-find "$DIR" -maxdepth 1 -name "${DB}-*.dump" -mtime +"$KEEP_DAYS" -delete
+find "$DIR" -maxdepth 1 -name "${DB}-*.dump" -mtime +"$((KEEP_DAYS - 1))" -delete
+find "$DIR" -maxdepth 1 -name "*.dump.part" -mmin +60 -delete
 
 size="$(du -h "$out" | cut -f1)"
 count="$(find "$DIR" -maxdepth 1 -name "${DB}-*.dump" | wc -l | tr -d ' ')"

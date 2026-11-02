@@ -1,7 +1,7 @@
 [Unit]
 Description=Daily pg_dump of padel_tracker
 After=postgresql.service
-Requires=postgresql.service
+Wants=postgresql.service
 
 [Service]
 Type=oneshot
