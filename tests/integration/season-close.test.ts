@@ -10,7 +10,12 @@ import {
 } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { resetDb } from "../helpers/reset-db";
-import { createTestGroup, createTestSeason, setupGroupWithAdmin } from "../helpers/group";
+import {
+  createMember,
+  createTestGroup,
+  createTestSeason,
+  setupGroupWithAdmin,
+} from "../helpers/group";
 
 async function makeAdmin() {
   const { group, admin } = await setupGroupWithAdmin();
@@ -91,7 +96,7 @@ describe("closeSeasonAndStartNext", () => {
     const season = await getOrCreateActiveSeason(groupId);
     const players = await Promise.all(
       ["A", "B", "C", "D"].map((n) =>
-        prisma.player.create({ data: { name: n, email: `${n}@x`, passwordHash: "x" } }),
+        createMember(groupId, { name: n, email: `${n}@x`, passwordHash: "x" }),
       ),
     );
     const day = await prisma.gameDay.create({

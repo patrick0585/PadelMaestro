@@ -61,6 +61,7 @@ describe("deletePlayer", () => {
       where: { entityId: target.id, action: "player.delete" },
     });
     expect(audit).toHaveLength(1);
+    expect(audit[0].groupId).toBe(group.id);
     const payload = audit[0].payload as { name: string; email: string };
     expect(payload.name).toBe(target.name);
     expect(payload.email).toBe(target.email);

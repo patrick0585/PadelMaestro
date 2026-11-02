@@ -15,8 +15,8 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
-function call(id: string) {
-  return GET(new Request(`http://localhost/api/game-day/${id}/events`), {
+function call(id: string, signal?: AbortSignal) {
+  return GET(new Request(`http://localhost/api/game-day/${id}/events`, { signal }), {
     params: Promise.resolve({ id }),
   });
 }
@@ -65,9 +65,21 @@ describe("GET /api/game-day/[id]/events", () => {
   it("opens an event stream for the own group's day", async () => {
     const { groupA, memberA, dayA } = await setupTwoGroups();
     authMock.mockResolvedValue(sessionFor(memberA, groupA.id, "member"));
-    const res = await call(dayA.id);
+    const controller = new AbortController();
+    const res = await call(dayA.id, controller.signal);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/^text\/event-stream/);
+    expect(getActiveSubscriberCount(dayA.id)).toBe(1);
+    controller.abort();
+    expect(getActiveSubscriberCount(dayA.id)).toBe(0);
+  });
+
+  it("cleans up when the reader cancels the stream", async () => {
+    const { groupA, memberA, dayA } = await setupTwoGroups();
+    authMock.mockResolvedValue(sessionFor(memberA, groupA.id, "member"));
+    const res = await call(dayA.id);
+    expect(getActiveSubscriberCount(dayA.id)).toBe(1);
     await res.body?.cancel();
+    expect(getActiveSubscriberCount(dayA.id)).toBe(0);
   });
 });

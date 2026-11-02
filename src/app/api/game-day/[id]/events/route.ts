@@ -24,13 +24,15 @@ export async function GET(
   }
   const encoder = new TextEncoder();
 
+  let cleanup: () => void = () => {};
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false;
       let keepalive: ReturnType<typeof setInterval> | null = null;
       let unsubscribe: () => void = () => {};
 
-      const cleanup = () => {
+      cleanup = () => {
         if (closed) return;
         closed = true;
         if (keepalive) clearInterval(keepalive);
@@ -68,6 +70,10 @@ export async function GET(
       }, KEEPALIVE_INTERVAL_MS);
 
       req.signal.addEventListener("abort", cleanup);
+    },
+    // Client disconnect without an abort signal (reader cancelled).
+    cancel() {
+      cleanup();
     },
   });
 

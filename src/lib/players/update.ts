@@ -149,6 +149,7 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         await tx.auditLog.create({
           data: {
             actorId: input.actorId,
+            groupId: input.groupId,
             action: "player.update",
             entityType: "Player",
             entityId: existing.id,

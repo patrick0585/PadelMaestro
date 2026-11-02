@@ -44,6 +44,12 @@ describe("recordJokerUse", () => {
       where: { gameDayId_playerId: { gameDayId: gameDay.id, playerId: player.id } },
     });
     expect(part.attendance).toBe("joker");
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "joker.use", entityId: use.id },
+    });
+    expect(log.actorId).toBe(player.id);
+    expect(log.groupId).toBe(gameDay.groupId);
   });
 
   it("snapshots current ppg when player has prior matches", async () => {
