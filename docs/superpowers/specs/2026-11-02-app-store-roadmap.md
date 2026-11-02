@@ -94,6 +94,9 @@ Sitzungen:
 Ausstiegskriterium: Spike zeigt grün, oder wir kennen die nötige
 Anpassung (z. B. Origin-Allowlist um `capacitor://localhost` erweitern).
 
+Ergebnis 2026-11-02: Spike grün, siehe
+`2026-11-02-capacitor-spike-findings.md`. Remote-URL-Modus bestätigt.
+
 ### Phase 1: Mandantenfähigkeit (8 Wochen, ~40 h)
 
 Eigene Spezifikation zu Beginn der Phase. Grobe PR-Folge:
