@@ -55,3 +55,4 @@ tmp/
 *.xlsx
 
 /generated/prisma
+.worktrees/
