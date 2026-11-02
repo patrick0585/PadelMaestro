@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Group, Player } from "@prisma/client";
+import type { GameDay, Group, Player, Prisma, Season } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
@@ -57,6 +57,42 @@ export function sessionFor(
       role,
     },
   };
+}
+
+export async function createTestSeason(
+  groupId: string,
+  overrides: Partial<Prisma.SeasonUncheckedCreateInput> = {},
+): Promise<Season> {
+  const year = new Date().getUTCFullYear();
+  return prisma.season.create({
+    data: {
+      groupId,
+      name: `Saison ${year}-${randomBytes(3).toString("hex")}`,
+      year,
+      startDate: new Date(Date.UTC(year, 0, 1)),
+      endDate: new Date(Date.UTC(year, 11, 31)),
+      isActive: true,
+      ...overrides,
+    },
+  });
+}
+
+export async function createTestGameDay(
+  groupId: string,
+  seasonId: string,
+  overrides: Partial<Prisma.GameDayUncheckedCreateInput> = {},
+): Promise<GameDay> {
+  const now = new Date();
+  return prisma.gameDay.create({
+    data: {
+      groupId,
+      seasonId,
+      date: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
+      status: "planned",
+      playerCount: 4,
+      ...overrides,
+    },
+  });
 }
 
 export async function setupGroupWithAdmin(

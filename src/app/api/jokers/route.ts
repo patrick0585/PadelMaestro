@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { guardMember } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import {
   recordJokerUse,
   cancelJokerUse,
@@ -13,15 +14,19 @@ import {
 const Schema = z.object({ gameDayId: z.string().uuid() });
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  const g = await guardMember();
+  if (g.response) return g.response;
 
   const body = Schema.safeParse(await req.json().catch(() => null));
   if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
+  if (!(await findGroupGameDay(g.ctx.groupId, body.data.gameDayId))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   try {
     const jokerUse = await recordJokerUse({
-      playerId: session.user.id,
+      playerId: g.ctx.userId,
       gameDayId: body.data.gameDayId,
     });
     revalidatePath("/");
@@ -38,15 +43,19 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  const g = await guardMember();
+  if (g.response) return g.response;
 
   const body = Schema.safeParse(await req.json().catch(() => null));
   if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
+  if (!(await findGroupGameDay(g.ctx.groupId, body.data.gameDayId))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   try {
     await cancelJokerUse({
-      playerId: session.user.id,
+      playerId: g.ctx.userId,
       gameDayId: body.data.gameDayId,
     });
     revalidatePath("/");

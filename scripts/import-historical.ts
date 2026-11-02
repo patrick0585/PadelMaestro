@@ -27,9 +27,9 @@ async function main() {
     process.exit(1);
   }
   const data = JSON.parse(readFileSync(path, "utf-8")) as HistoricalExport;
-  const season = await getOrCreateActiveSeason();
-
   const group = await getSoleGroup();
+  const season = await getOrCreateActiveSeason(group.id);
+
   const playerByName = new Map<string, string>();
   for (const raw of data.players) {
     const p = await prisma.player.upsert({
@@ -48,7 +48,7 @@ async function main() {
   for (const gd of data.gameDays) {
     const day = await prisma.gameDay.create({
       data: {
-        groupId: season.groupId ?? (await getSoleGroup()).id,
+        groupId: season.groupId,
         seasonId: season.id,
         date: new Date(gd.date),
         playerCount: gd.playerCount,

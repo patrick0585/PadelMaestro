@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { guardMember } from "@/lib/auth/route-guard";
+import { isAdminRole } from "@/lib/auth/roles";
+import { findGroupMatchGameDay } from "@/lib/game-day/group-scope";
 import {
   enterScore,
   ScoreConflictError,
@@ -31,17 +33,22 @@ export async function PUT(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const session = await auth();
-  if (!session?.user) {
-    diag(id, 401, "unauthenticated", null);
-    return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  const g = await guardMember();
+  if (g.response) {
+    diag(id, g.response.status, g.response.status === 401 ? "unauthenticated" : "no_group", null);
+    return g.response;
   }
 
-  const userId = session.user.id;
+  const userId = g.ctx.userId;
   const body = Schema.safeParse(await req.json().catch(() => null));
   if (!body.success) {
     diag(id, 400, "invalid_body", userId);
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+
+  if (!(await findGroupMatchGameDay(g.ctx.groupId, id))) {
+    diag(id, 404, "not_found", userId);
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
   try {
@@ -51,7 +58,7 @@ export async function PUT(
       team2Score: body.data.team2Score,
       scoredBy: userId,
       expectedVersion: body.data.expectedVersion,
-      isAdmin: session.user.isAdmin ?? false,
+      isAdmin: isAdminRole(g.ctx.role),
     });
     return NextResponse.json({ match });
   } catch (err) {

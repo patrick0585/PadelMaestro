@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import {
   shufflePreviewSeed,
   GameDayNotPlannedError,
@@ -9,13 +10,15 @@ export async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-  if (!session.user.isAdmin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
 
   const { id } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   try {
-    const result = await shufflePreviewSeed(id, session.user.id);
+    const result = await shufflePreviewSeed(id, g.ctx.userId);
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof GameDayNotPlannedError) {

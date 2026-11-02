@@ -2,11 +2,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { recordJokerUse, recordJokerUseAsAdmin, cancelJokerUse, cancelJokerUseAsAdmin, JokerNotFoundError, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 import { resetDb } from "../helpers/reset-db";
+import { createTestGroup } from "../helpers/group";
 
 async function setup() {
   const year = new Date().getFullYear();
+  const group = await createTestGroup();
   const season = await prisma.season.create({
     data: {
+      groupId: group.id,
       name: `Saison ${year}`,
       year,
       startDate: new Date(year, 0, 1),
@@ -18,7 +21,7 @@ async function setup() {
     data: { name: "X", email: "x@x", passwordHash: "x" },
   });
   const gameDay = await prisma.gameDay.create({
-    data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
+    data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
   });
   await prisma.gameDayParticipant.create({
     data: { gameDayId: gameDay.id, playerId: player.id, attendance: "pending" },
@@ -55,7 +58,7 @@ describe("recordJokerUse", () => {
       data: { name: "O2", email: "o2@x", passwordHash: "x" },
     });
     const earlier = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-14"), playerCount: 4 },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-14"), playerCount: 4 },
     });
     await prisma.match.create({
       data: {
@@ -79,7 +82,7 @@ describe("recordJokerUse", () => {
     const { season, player, gameDay } = await setup();
     for (let i = 0; i < MAX_JOKERS_PER_SEASON; i++) {
       const g = await prisma.gameDay.create({
-        data: { seasonId: season.id, date: new Date(`2026-04-${22 + i}`) },
+        data: { groupId: season.groupId, seasonId: season.id, date: new Date(`2026-04-${22 + i}`) },
       });
       await prisma.gameDayParticipant.create({
         data: { gameDayId: g.id, playerId: player.id },
@@ -109,6 +112,7 @@ describe("recordJokerUse", () => {
       Array.from({ length: 5 }, (_, i) =>
         prisma.gameDay.create({
           data: {
+            groupId: season.groupId,
             seasonId: season.id,
             date: new Date(`2026-05-0${i + 1}`),
             status: "planned",
@@ -217,7 +221,7 @@ describe("recordJokerUseAsAdmin", () => {
     });
     for (let i = 0; i < MAX_JOKERS_PER_SEASON; i++) {
       const g = await prisma.gameDay.create({
-        data: { seasonId: season.id, date: new Date(`2026-04-${22 + i}`) },
+        data: { groupId: season.groupId, seasonId: season.id, date: new Date(`2026-04-${22 + i}`) },
       });
       await prisma.gameDayParticipant.create({
         data: { gameDayId: g.id, playerId: player.id },

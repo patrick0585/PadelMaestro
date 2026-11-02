@@ -6,24 +6,29 @@ import { setAttendance } from "@/lib/game-day/attendance";
 import { startGameDay } from "@/lib/game-day/start";
 import { addExtraMatch } from "@/lib/game-day/add-extra-match";
 import { resetDb } from "../helpers/reset-db";
+import { createMember, createTestGroup, sessionFor } from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 async function setupFive() {
+  const group = await createTestGroup();
   const players = [];
   for (let i = 1; i <= 5; i++) {
     players.push(
-      await prisma.player.create({
-        data: { name: `P${i}`, email: `p${i}@example.com`, passwordHash: "x", isAdmin: i === 1 },
+      await createMember(group.id, {
+        name: `P${i}`,
+        email: `p${i}@example.com`,
+        passwordHash: "x",
+        role: i === 1 ? "owner" : "member",
       }),
     );
   }
-  const day = await createGameDay(new Date("2026-06-09"), players[0].id);
+  const day = await createGameDay(group.id, new Date("2026-06-09"), players[0].id);
   for (const p of players) await setAttendance(day.id, p.id, "confirmed");
   await startGameDay(day.id, players[0].id);
-  return { players, day };
+  return { group, players, day };
 }
 
 function delReq(id: string, matchId: string) {
@@ -35,8 +40,12 @@ async function call(id: string, matchId: string) {
   return DELETE(delReq(id, matchId), { params: Promise.resolve({ id, matchId }) });
 }
 
-function asUser(p: { id: string; email: string; name: string }, isAdmin: boolean) {
-  authMock.mockResolvedValue({ user: { id: p.id, isAdmin, email: p.email, name: p.name } });
+function asUser(
+  p: { id: string; email: string; name: string },
+  groupId: string,
+  isAdmin: boolean,
+) {
+  authMock.mockResolvedValue(sessionFor(p, groupId, isAdmin ? "owner" : "member"));
 }
 
 describe("DELETE /api/game-days/[id]/matches/[matchId]", () => {
@@ -46,9 +55,9 @@ describe("DELETE /api/game-days/[id]/matches/[matchId]", () => {
   });
 
   it("lets an admin remove an extra match", async () => {
-    const { players, day } = await setupFive();
+    const { group, players, day } = await setupFive();
     const extra = await addExtraMatch(day.id, players[0].id);
-    asUser(players[0], true);
+    asUser(players[0], group.id, true);
 
     const res = await call(day.id, extra.id);
     expect(res.status).toBe(200);
@@ -67,9 +76,9 @@ describe("DELETE /api/game-days/[id]/matches/[matchId]", () => {
   });
 
   it("returns 403 for a non-admin participant", async () => {
-    const { players, day } = await setupFive();
+    const { group, players, day } = await setupFive();
     const extra = await addExtraMatch(day.id, players[0].id);
-    asUser(players[1], false);
+    asUser(players[1], group.id, false);
 
     const res = await call(day.id, extra.id);
     expect(res.status).toBe(403);
@@ -78,36 +87,36 @@ describe("DELETE /api/game-days/[id]/matches/[matchId]", () => {
   });
 
   it("returns 422 when targeting a template match", async () => {
-    const { players, day } = await setupFive();
+    const { group, players, day } = await setupFive();
     const template = await prisma.match.findFirstOrThrow({
       where: { gameDayId: day.id, matchNumber: 1 },
     });
-    asUser(players[0], true);
+    asUser(players[0], group.id, true);
 
     const res = await call(day.id, template.id);
     expect(res.status).toBe(422);
   });
 
   it("returns 404 for an unknown match id", async () => {
-    const { players, day } = await setupFive();
-    asUser(players[0], true);
+    const { group, players, day } = await setupFive();
+    asUser(players[0], group.id, true);
 
     const res = await call(day.id, "00000000-0000-0000-0000-000000000000");
     expect(res.status).toBe(404);
   });
 
   it("returns 409 when the game day is finished", async () => {
-    const { players, day } = await setupFive();
+    const { group, players, day } = await setupFive();
     const extra = await addExtraMatch(day.id, players[0].id);
     await prisma.gameDay.update({ where: { id: day.id }, data: { status: "finished" } });
-    asUser(players[0], true);
+    asUser(players[0], group.id, true);
 
     const res = await call(day.id, extra.id);
     expect(res.status).toBe(409);
   });
 
   it("reopens the finish path: after removing the only unscored extra, every match is scored", async () => {
-    const { players, day } = await setupFive();
+    const { group, players, day } = await setupFive();
     // Score all 15 template matches.
     const templates = await prisma.match.findMany({ where: { gameDayId: day.id } });
     for (const m of templates) {
@@ -118,7 +127,7 @@ describe("DELETE /api/game-days/[id]/matches/[matchId]", () => {
     }
     // Add an extra match and leave it unscored — this is what blocked finish.
     const extra = await addExtraMatch(day.id, players[0].id);
-    asUser(players[0], true);
+    asUser(players[0], group.id, true);
 
     const res = await call(day.id, extra.id);
     expect(res.status).toBe(200);
@@ -126,5 +135,22 @@ describe("DELETE /api/game-days/[id]/matches/[matchId]", () => {
     const remaining = await prisma.match.findMany({ where: { gameDayId: day.id } });
     expect(remaining).toHaveLength(15);
     expect(remaining.every((m) => m.team1Score !== null && m.team2Score !== null)).toBe(true);
+  });
+
+  it("returns 404 für Spieltag einer anderen Gruppe and keeps the match", async () => {
+    const { players, day } = await setupFive();
+    const extra = await addExtraMatch(day.id, players[0].id);
+    const otherGroup = await createTestGroup("Andere");
+    const otherAdmin = await createMember(otherGroup.id, {
+      name: "Other",
+      email: "other@example.com",
+      role: "owner",
+      passwordHash: "x",
+    });
+    asUser(otherAdmin, otherGroup.id, true);
+
+    const res = await call(day.id, extra.id);
+    expect(res.status).toBe(404);
+    expect(await prisma.match.findUnique({ where: { id: extra.id } })).not.toBeNull();
   });
 });

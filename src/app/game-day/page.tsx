@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { NoGroupNotice } from "@/components/no-group-notice";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
 import { MatchInlineCard } from "./match-inline-card";
@@ -18,7 +20,7 @@ import { ShufflePreviewButton } from "./shuffle-preview-button";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { GameDayLiveUpdates } from "./live-updates";
 import { RefreshButton } from "./refresh-button";
-import { assignPlayersToTemplate } from "@/lib/pairings/assign";
+import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
 import { loadTemplate } from "@/lib/pairings/load";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,8 @@ function normalizeAttendance(value: string): RosterAttendance {
 export default async function GameDayPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const ctx = contextFromSession(session);
+  if (!ctx) return <NoGroupNotice />;
 
   const dayInclude = {
     participants: { include: { player: { select: { id: true, name: true } } } },
@@ -48,7 +52,7 @@ export default async function GameDayPage() {
   };
 
   const activeDay = await prisma.gameDay.findFirst({
-    where: { status: { in: ["planned", "in_progress"] } },
+    where: { groupId: ctx.groupId, status: { in: ["planned", "in_progress"] } },
     orderBy: { date: "desc" },
     include: dayInclude,
   });
@@ -57,6 +61,7 @@ export default async function GameDayPage() {
     ? null
     : await prisma.gameDay.findFirst({
         where: {
+          groupId: ctx.groupId,
           status: "finished",
           date: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         },
@@ -122,7 +127,9 @@ export default async function GameDayPage() {
   const previewSeed = day.seed ?? day.id;
   const previewPlans = showPreview
     ? assignPlayersToTemplate(
-        confirmedPlayers.map((p) => ({ id: p.playerId, name: p.name })),
+        sortPlayersForAssignment(
+          confirmedPlayers.map((p) => ({ id: p.playerId, name: p.name })),
+        ),
         previewSeed,
       )
     : [];

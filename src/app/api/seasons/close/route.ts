@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import {
   closeSeasonAndStartNext,
   InvalidSeasonNamesError,
@@ -15,18 +15,18 @@ const CloseSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-  if (!session.user.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
 
   const parsed = CloseSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
   try {
     const result = await closeSeasonAndStartNext({
+      groupId: g.ctx.groupId,
       closedName: parsed.data.closedName,
       nextName: parsed.data.nextName,
-      actorId: session.user.id,
+      actorId: g.ctx.userId,
     });
     return NextResponse.json(result);
   } catch (e) {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { prisma } from "@/lib/db";
 import { createGameDay, GameDayDateExistsError } from "@/lib/game-day/create";
 import { resetDb } from "../helpers/reset-db";
+import { setupGroupWithAdmin } from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
@@ -12,22 +12,18 @@ describe("createGameDay — unique date constraint", () => {
   beforeEach(resetDb);
 
   it("throws GameDayDateExistsError when a day for the same date already exists", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
-    });
-    await createGameDay(new Date("2026-04-21"), admin.id);
+    const { group, admin } = await setupGroupWithAdmin();
+    await createGameDay(group.id, new Date("2026-04-21"), admin.id);
 
-    await expect(createGameDay(new Date("2026-04-21"), admin.id)).rejects.toBeInstanceOf(
+    await expect(createGameDay(group.id, new Date("2026-04-21"), admin.id)).rejects.toBeInstanceOf(
       GameDayDateExistsError,
     );
   });
 
   it("allows different dates in the same season", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
-    });
-    await createGameDay(new Date("2026-04-21"), admin.id);
-    await expect(createGameDay(new Date("2026-04-22"), admin.id)).resolves.toBeDefined();
+    const { group, admin } = await setupGroupWithAdmin();
+    await createGameDay(group.id, new Date("2026-04-21"), admin.id);
+    await expect(createGameDay(group.id, new Date("2026-04-22"), admin.id)).resolves.toBeDefined();
   });
 });
 
@@ -46,13 +42,9 @@ describe("POST /api/game-days — duplicate date", () => {
   });
 
   it("returns 409 date_exists when the date is taken", async () => {
-    const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
-    });
-    authMock.mockResolvedValue({
-      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
-    });
-    await createGameDay(new Date("2026-04-21"), admin.id);
+    const { group, admin, session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    await createGameDay(group.id, new Date("2026-04-21"), admin.id);
 
     const res = await POST(postReq({ date: "2026-04-21" }));
     expect(res.status).toBe(409);

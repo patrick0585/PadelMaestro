@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
+import { findGroupMembership } from "@/lib/group/active-membership";
+import { prisma } from "@/lib/db";
 import {
   recordJokerUseAsAdmin,
   cancelJokerUseAsAdmin,
@@ -11,25 +14,20 @@ import {
 
 type Params = { params: Promise<{ id: string; playerId: string }> };
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return { error: NextResponse.json({ error: "unauthenticated" }, { status: 401 }), session: null };
-  }
-  if (!session.user.isAdmin) {
-    return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }), session: null };
-  }
-  return { error: null, session };
-}
-
 export async function POST(_req: Request, ctx: Params) {
-  const gate = await requireAdmin();
-  if (gate.error) return gate.error;
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   const { id, playerId } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (!(await findGroupMembership(prisma, g.ctx.groupId, playerId))) {
+    return NextResponse.json({ error: "player_not_found" }, { status: 404 });
+  }
 
   try {
     await recordJokerUseAsAdmin({
-      actorId: gate.session!.user!.id,
+      actorId: g.ctx.userId,
       playerId,
       gameDayId: id,
     });
@@ -48,13 +46,19 @@ export async function POST(_req: Request, ctx: Params) {
 }
 
 export async function DELETE(_req: Request, ctx: Params) {
-  const gate = await requireAdmin();
-  if (gate.error) return gate.error;
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   const { id, playerId } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (!(await findGroupMembership(prisma, g.ctx.groupId, playerId))) {
+    return NextResponse.json({ error: "player_not_found" }, { status: 404 });
+  }
 
   try {
     await cancelJokerUseAsAdmin({
-      actorId: gate.session!.user!.id,
+      actorId: g.ctx.userId,
       playerId,
       gameDayId: id,
     });

@@ -2,23 +2,26 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { POST } from "@/app/api/game-days/[id]/attendance/route";
 import { resetDb } from "../helpers/reset-db";
+import {
+  createMember,
+  createTestGameDay,
+  createTestGroup,
+  createTestSeason,
+  sessionFor,
+} from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 async function setup() {
-  const year = new Date().getFullYear();
-  const season = await prisma.season.create({
-    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
+  const group = await createTestGroup();
+  const season = await createTestSeason(group.id);
+  const player = await createMember(group.id, { name: "P", email: "p@x", passwordHash: "x" });
+  const gameDay = await createTestGameDay(group.id, season.id, {
+    date: new Date("2026-04-21"),
   });
-  const player = await prisma.player.create({
-    data: { name: "P", email: "p@x", passwordHash: "x" },
-  });
-  const gameDay = await prisma.gameDay.create({
-    data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
-  });
-  return { season, player, gameDay };
+  return { group, season, player, gameDay };
 }
 
 function req(gameDayId: string, body: unknown) {
@@ -46,12 +49,37 @@ describe("POST /api/game-days/[id]/attendance", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 200 with the updated participant when the player is on the roster", async () => {
+  it("returns 403 without a group", async () => {
     const { player, gameDay } = await setup();
+    authMock.mockResolvedValue(sessionFor(player, null, null));
+    const res = await POST(req(gameDay.id, { status: "confirmed" }), ctx(gameDay.id));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for a game day of another group", async () => {
+    const { group, player } = await setup();
+    const other = await createTestGroup("Andere");
+    const otherSeason = await createTestSeason(other.id);
+    const otherDay = await createTestGameDay(other.id, otherSeason.id);
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: otherDay.id, playerId: player.id, attendance: "pending" },
+    });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
+    const res = await POST(req(otherDay.id, { status: "confirmed" }), ctx(otherDay.id));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ code: "ATTENDANCE_GAME_DAY_NOT_FOUND" });
+    const p = await prisma.gameDayParticipant.findUniqueOrThrow({
+      where: { gameDayId_playerId: { gameDayId: otherDay.id, playerId: player.id } },
+    });
+    expect(p.attendance).toBe("pending");
+  });
+
+  it("returns 200 with the updated participant when the player is on the roster", async () => {
+    const { group, player, gameDay } = await setup();
     await prisma.gameDayParticipant.create({
       data: { gameDayId: gameDay.id, playerId: player.id, attendance: "pending" },
     });
-    authMock.mockResolvedValue({ user: { id: player.id } });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await POST(req(gameDay.id, { status: "confirmed" }), ctx(gameDay.id));
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -61,8 +89,8 @@ describe("POST /api/game-days/[id]/attendance", () => {
   });
 
   it("returns 403 with code ATTENDANCE_NOT_PARTICIPANT when the player is not on the roster", async () => {
-    const { player, gameDay } = await setup();
-    authMock.mockResolvedValue({ user: { id: player.id } });
+    const { group, player, gameDay } = await setup();
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await POST(req(gameDay.id, { status: "confirmed" }), ctx(gameDay.id));
     expect(res.status).toBe(403);
     const body = await res.json();
@@ -70,12 +98,12 @@ describe("POST /api/game-days/[id]/attendance", () => {
   });
 
   it("returns 409 with code ATTENDANCE_LOCKED when the day is in_progress", async () => {
-    const { player, gameDay } = await setup();
+    const { group, player, gameDay } = await setup();
     await prisma.gameDayParticipant.create({
       data: { gameDayId: gameDay.id, playerId: player.id, attendance: "pending" },
     });
     await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
-    authMock.mockResolvedValue({ user: { id: player.id } });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await POST(req(gameDay.id, { status: "confirmed" }), ctx(gameDay.id));
     expect(res.status).toBe(409);
     const body = await res.json();
@@ -83,8 +111,8 @@ describe("POST /api/game-days/[id]/attendance", () => {
   });
 
   it("returns 404 with code ATTENDANCE_GAME_DAY_NOT_FOUND for an unknown game day", async () => {
-    const { player } = await setup();
-    authMock.mockResolvedValue({ user: { id: player.id } });
+    const { group, player } = await setup();
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const unknown = "00000000-0000-0000-0000-000000000000";
     const res = await POST(req(unknown, { status: "confirmed" }), ctx(unknown));
     expect(res.status).toBe(404);
@@ -93,8 +121,8 @@ describe("POST /api/game-days/[id]/attendance", () => {
   });
 
   it("returns 400 on invalid body", async () => {
-    const { player, gameDay } = await setup();
-    authMock.mockResolvedValue({ user: { id: player.id } });
+    const { group, player, gameDay } = await setup();
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await POST(req(gameDay.id, { status: "foo" }), ctx(gameDay.id));
     expect(res.status).toBe(400);
   });

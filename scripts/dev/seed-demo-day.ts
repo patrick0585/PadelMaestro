@@ -1,5 +1,4 @@
 import { prisma } from "../../src/lib/db";
-import { getSoleGroup } from "../../src/lib/group/sole-group";
 
 async function main() {
   const season = await prisma.season.findFirstOrThrow({ where: { isActive: true } });
@@ -21,7 +20,7 @@ async function main() {
 
   const day = await prisma.gameDay.create({
     data: {
-      groupId: season.groupId ?? (await getSoleGroup()).id,
+      groupId: season.groupId,
       seasonId: season.id,
       date: today,
       playerCount: 6,

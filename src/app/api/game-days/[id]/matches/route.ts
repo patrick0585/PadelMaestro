@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { guardMember } from "@/lib/auth/route-guard";
+import { isAdminRole } from "@/lib/auth/roles";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import {
   addExtraMatch,
   GameDayNotActiveError,
@@ -11,29 +13,32 @@ export async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  const g = await guardMember();
+  if (g.response) return g.response;
 
   const { id } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
 
-  if (!session.user.isAdmin) {
+  if (!isAdminRole(g.ctx.role)) {
     // Excluding soft-deleted players defends against a stale account whose
     // GameDayParticipant row still exists.
     const participant = await prisma.gameDayParticipant.findFirst({
       where: {
         gameDayId: id,
-        playerId: session.user.id,
+        playerId: g.ctx.userId,
         player: { deletedAt: null },
       },
       select: { attendance: true },
     });
     const isOnRoster =
       participant?.attendance === "confirmed" || participant?.attendance === "joker";
-    if (!isOnRoster) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!isOnRoster) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   try {
-    const match = await addExtraMatch(id, session.user.id);
+    const match = await addExtraMatch(id, g.ctx.userId);
     return NextResponse.json({ match }, { status: 201 });
   } catch (e) {
     if (e instanceof GameDayNotFoundError) {

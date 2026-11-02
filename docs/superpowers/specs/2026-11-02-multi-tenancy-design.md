@@ -126,6 +126,9 @@ Semantik:
   entspricht dem heutigen Verhalten „gelöschter Spieler kann nicht
   mehr rein“ in abgeschwächter Form; genügt, weil Phase 2 hier
   „Gruppe gründen oder Einladung annehmen“ anbietet.
+  Der Leerzustand „Du bist in keiner Gruppe“ kommt als einfache
+  Komponente bereits mit PR 4, weil Seiten ohne Gruppe keine Saison mehr
+  laden können; Feinschliff in PR 6.
 
 ## Migration der Live-Daten
 

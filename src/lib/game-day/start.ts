@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { assignPlayersToTemplate } from "@/lib/pairings/assign";
+import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
 
 export class GameDayAlreadyStartedError extends Error {
   constructor() {
@@ -39,7 +39,9 @@ export async function startGameDay(gameDayId: string, actorId: string) {
   if (confirmed.length < 4) throw new InsufficientPlayersError();
   if (confirmed.length > 6) throw new TooManyPlayersError();
 
-  const players = confirmed.map((p) => ({ id: p.player.id, name: p.player.name }));
+  const players = sortPlayersForAssignment(
+    confirmed.map((p) => ({ id: p.player.id, name: p.player.name })),
+  );
 
   return prisma.$transaction(async (tx) => {
     // Re-read inside the transaction so a concurrent

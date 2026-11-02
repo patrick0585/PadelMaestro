@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import {
   removeExtraMatch,
   MatchNotFoundError,
@@ -11,21 +12,16 @@ export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string; matchId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-  }
-
-  // Removal is destructive and can change the day's standings — admin only,
-  // unlike adding a match which confirmed/joker players may also do.
-  if (!session.user.isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
 
   const { id, matchId } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
 
   try {
-    await removeExtraMatch(id, matchId, session.user.id);
+    await removeExtraMatch(id, matchId, g.ctx.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof MatchNotFoundError) {

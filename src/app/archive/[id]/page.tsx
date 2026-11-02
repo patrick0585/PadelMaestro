@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { NoGroupNotice } from "@/components/no-group-notice";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -16,6 +18,8 @@ export default async function ArchiveDetailPage({
 }) {
   const session = await auth();
   if (!session) redirect("/login");
+  const ctx = contextFromSession(session);
+  if (!ctx) return <NoGroupNotice />;
 
   const { id } = await params;
 
@@ -38,7 +42,7 @@ export default async function ArchiveDetailPage({
     },
   });
 
-  if (!day || day.status !== "finished") notFound();
+  if (!day || day.status !== "finished" || day.groupId !== ctx.groupId) notFound();
 
   const scoredMatchCount = day.matches.filter(
     (m) => m.team1Score !== null && m.team2Score !== null,

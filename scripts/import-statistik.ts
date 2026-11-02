@@ -224,7 +224,7 @@ async function importDay(day: ParsedGameDay, playerIdByName: Map<string, string>
 
   const gameDay = await prisma.gameDay.create({
     data: {
-      groupId: season.groupId ?? (await getSoleGroup()).id,
+      groupId: season.groupId,
       seasonId: season.id,
       date: day.date,
       status: "finished",

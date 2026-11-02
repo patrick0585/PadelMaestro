@@ -13,6 +13,12 @@ export interface MatchPlan {
   sitting: PlayerRef[];
 }
 
+// Fixed input order so the seeded shuffle does not depend on DB row order
+// (preview and start must produce the same plan).
+export function sortPlayersForAssignment<T extends PlayerRef>(players: readonly T[]): T[] {
+  return [...players].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
 export function assignPlayersToTemplate(players: PlayerRef[], seed: string): MatchPlan[] {
   const template = loadTemplate(players.length);
   const ordered = seededShuffle(players, seed);
