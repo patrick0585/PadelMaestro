@@ -18,6 +18,7 @@ export async function createGameDay(date: Date, actorId: string) {
       const day = await tx.gameDay.create({
         data: {
           seasonId: season.id,
+          groupId: season.groupId,
           date,
           status: "planned",
           participants: {
@@ -30,6 +31,7 @@ export async function createGameDay(date: Date, actorId: string) {
       await tx.auditLog.create({
         data: {
           actorId,
+          groupId: season.groupId,
           action: "game_day.create",
           entityType: "GameDay",
           entityId: day.id,

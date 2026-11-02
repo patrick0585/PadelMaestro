@@ -47,6 +47,32 @@ describe("closeSeasonAndStartNext", () => {
     expect((log?.payload as { previousName?: string } | null)?.previousName).toBe(season.name);
   });
 
+  it("new season inherits groupId of the closed season", async () => {
+    const admin = await makeAdmin();
+    await prisma.group.create({ data: { name: "A", slug: "a" } });
+    const groupB = await prisma.group.create({ data: { name: "B", slug: "b" } });
+    await prisma.season.create({
+      data: {
+        name: "Saison B",
+        year: 2026,
+        startDate: new Date("2026-01-01"),
+        endDate: new Date("2026-12-31"),
+        isActive: true,
+        groupId: groupB.id,
+      },
+    });
+
+    const { newSeason } = await closeSeasonAndStartNext({
+      closedName: "Hinrunde B",
+      nextName: "Rückrunde B",
+      actorId: admin.id,
+    });
+
+    expect(newSeason.groupId).toBe(groupB.id);
+    const log = await prisma.auditLog.findFirst({ where: { action: "season.close" } });
+    expect(log?.groupId).toBe(groupB.id);
+  });
+
   it("starts the new season with an empty ranking and a fresh joker budget", async () => {
     const admin = await makeAdmin();
     const season = await getOrCreateActiveSeason();

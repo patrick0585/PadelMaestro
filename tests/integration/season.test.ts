@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
+import { getSoleGroup } from "@/lib/group/sole-group";
 
 describe("getOrCreateActiveSeason", () => {
   beforeEach(async () => {
@@ -10,6 +11,8 @@ describe("getOrCreateActiveSeason", () => {
     await prisma.gameDayParticipant.deleteMany();
     await prisma.gameDay.deleteMany();
     await prisma.season.deleteMany();
+    await prisma.membership.deleteMany();
+    await prisma.group.deleteMany();
   });
 
   it("creates the current-year season if none exists", async () => {
@@ -18,6 +21,7 @@ describe("getOrCreateActiveSeason", () => {
     expect(s.year).toBe(year);
     expect(s.isActive).toBe(true);
     expect(s.name).toBe(`Saison ${year}`);
+    expect(s.groupId).toBe((await getSoleGroup()).id);
   });
 
   it("returns the existing active season on subsequent calls", async () => {

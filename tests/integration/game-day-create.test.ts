@@ -15,6 +15,13 @@ describe("createGameDay", () => {
     const day = await createGameDay(new Date("2026-04-21"), admin.id);
 
     expect(day.status).toBe("planned");
+    const season = await prisma.season.findUniqueOrThrow({ where: { id: day.seasonId } });
+    expect(season.groupId).not.toBeNull();
+    expect(day.groupId).toBe(season.groupId);
+    const log = await prisma.auditLog.findFirst({
+      where: { action: "game_day.create", entityId: day.id },
+    });
+    expect(log?.groupId).toBe(season.groupId);
     const parts = await prisma.gameDayParticipant.findMany({ where: { gameDayId: day.id } });
     expect(parts).toHaveLength(2);
     expect(parts.every((p) => p.attendance === "pending")).toBe(true);
