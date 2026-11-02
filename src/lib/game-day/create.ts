@@ -11,8 +11,8 @@ export class GameDayDateExistsError extends Error {
 }
 
 export async function createGameDay(date: Date, actorId: string) {
-  const season = await getOrCreateActiveSeason();
-  const groupId = season.groupId ?? (await getSoleGroup()).id;
+  const groupId = (await getSoleGroup()).id;
+  const season = await getOrCreateActiveSeason(groupId);
   const players = await prisma.player.findMany({ where: { deletedAt: null } });
 
   try {

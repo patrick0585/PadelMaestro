@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { contextFromSession } from "@/lib/auth/group-context";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
@@ -9,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
 import { DayPpgStrip } from "@/components/day-ppg-strip";
+import { NoGroupNotice } from "@/components/no-group-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,8 @@ function ppgFromStats(
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const ctx = contextFromSession(session);
+  if (!ctx) return <NoGroupNotice />;
 
   const me = await prisma.player.findUnique({
     where: { id: session.user.id },
@@ -30,11 +34,11 @@ export default async function DashboardPage() {
   });
   const meAvatarVersion = me?.avatarVersion ?? 0;
 
-  const season = await getOrCreateActiveSeason();
+  const season = await getOrCreateActiveSeason(ctx.groupId);
   const [ranking, plannedDay, stats] = await Promise.all([
     computeRanking(season.id),
     prisma.gameDay.findFirst({
-      where: { status: "planned", seasonId: season.id },
+      where: { status: "planned", seasonId: season.id, groupId: ctx.groupId },
       orderBy: { date: "asc" },
       include: { participants: { select: { playerId: true, attendance: true } } },
     }),

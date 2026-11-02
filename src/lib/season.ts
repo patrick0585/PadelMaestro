@@ -1,22 +1,31 @@
+import { Prisma, type Season } from "@prisma/client";
 import { prisma } from "./db";
-import { getSoleGroup } from "./group/sole-group";
 
-export async function getOrCreateActiveSeason() {
-  const year = new Date().getFullYear();
-  const existing = await prisma.season.findFirst({ where: { isActive: true } });
+export async function getOrCreateActiveSeason(groupId: string): Promise<Season> {
+  const findActive = () => prisma.season.findFirst({ where: { groupId, isActive: true } });
+  const existing = await findActive();
   if (existing) return existing;
 
-  const group = await getSoleGroup();
-  return prisma.season.create({
-    data: {
-      groupId: group.id,
-      name: `Saison ${year}`,
-      year,
-      startDate: new Date(year, 0, 1),
-      endDate: new Date(year, 11, 31),
-      isActive: true,
-    },
-  });
+  const year = new Date().getFullYear();
+  try {
+    return await prisma.season.create({
+      data: {
+        groupId,
+        name: `Saison ${year}`,
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    });
+  } catch (e) {
+    // A concurrent call created it first.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const created = await findActive();
+      if (created) return created;
+    }
+    throw e;
+  }
 }
 
 export class NoActiveSeasonError extends Error {
@@ -50,6 +59,7 @@ export class SeasonNameConflictError extends Error {
 }
 
 export async function closeSeasonAndStartNext(args: {
+  groupId: string;
   closedName: string;
   nextName: string;
   actorId: string;
@@ -62,7 +72,8 @@ export async function closeSeasonAndStartNext(args: {
     throw new InvalidSeasonNamesError("names must differ");
 
   return prisma.$transaction(async (tx) => {
-    const active = await tx.season.findFirst({ where: { isActive: true } });
+    const { groupId } = args;
+    const active = await tx.season.findFirst({ where: { groupId, isActive: true } });
     if (!active) throw new NoActiveSeasonError();
 
     const openDays = await tx.gameDay.findMany({
@@ -73,12 +84,11 @@ export async function closeSeasonAndStartNext(args: {
     if (openDays.length > 0) throw new OpenGameDaysError(openDays);
 
     const clash = await tx.season.findFirst({
-      where: { name: { in: [closedName, nextName] }, id: { not: active.id } },
+      where: { groupId, name: { in: [closedName, nextName] }, id: { not: active.id } },
       select: { name: true },
     });
     if (clash) throw new SeasonNameConflictError(clash.name);
 
-    const groupId = active.groupId ?? (await getSoleGroup(tx)).id;
     const now = new Date();
     const year = now.getFullYear();
     const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));

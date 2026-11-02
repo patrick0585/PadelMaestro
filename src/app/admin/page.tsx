@@ -70,7 +70,7 @@ export default async function AdminPage() {
     },
   });
 
-  const season = await getOrCreateActiveSeason();
+  const season = await getOrCreateActiveSeason(ctx.groupId);
   const jokerCounts = await prisma.jokerUse.groupBy({
     by: ["playerId"],
     where: { seasonId: season.id },

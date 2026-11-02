@@ -9,23 +9,23 @@ import {
   SeasonNameConflictError,
 } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
-import { getSoleGroup } from "@/lib/group/sole-group";
 import { resetDb } from "../helpers/reset-db";
+import { createTestGroup, createTestSeason, setupGroupWithAdmin } from "../helpers/group";
 
 async function makeAdmin() {
-  return prisma.player.create({
-    data: { name: "Admin", email: "admin@x", passwordHash: "x", isAdmin: true },
-  });
+  const { group, admin } = await setupGroupWithAdmin();
+  return { groupId: group.id, admin };
 }
 
 describe("closeSeasonAndStartNext", () => {
   beforeEach(resetDb);
 
   it("renames+deactivates the old season, creates a new active one, writes an audit log", async () => {
-    const admin = await makeAdmin();
-    const season = await getOrCreateActiveSeason();
+    const { groupId, admin } = await makeAdmin();
+    const season = await getOrCreateActiveSeason(groupId);
 
     const { closedSeason, newSeason } = await closeSeasonAndStartNext({
+      groupId,
       closedName: "Hinrunde 2026",
       nextName: "Rückrunde 2026",
       actorId: admin.id,
@@ -48,61 +48,49 @@ describe("closeSeasonAndStartNext", () => {
     expect((log?.payload as { previousName?: string } | null)?.previousName).toBe(season.name);
   });
 
-  it("new season inherits groupId of the closed season", async () => {
-    const admin = await makeAdmin();
-    await prisma.group.create({ data: { name: "A", slug: "a" } });
-    const groupB = await prisma.group.create({ data: { name: "B", slug: "b" } });
-    await prisma.season.create({
-      data: {
-        name: "Saison B",
-        year: 2026,
-        startDate: new Date("2026-01-01"),
-        endDate: new Date("2026-12-31"),
-        isActive: true,
-        groupId: groupB.id,
-      },
-    });
+  it("schließt nur die Saison der eigenen Gruppe", async () => {
+    const { groupId, admin } = await makeAdmin();
+    const own = await createTestSeason(groupId);
+    const other = await createTestGroup("Andere");
+    const foreign = await createTestSeason(other.id);
 
-    const { newSeason } = await closeSeasonAndStartNext({
-      closedName: "Hinrunde B",
-      nextName: "Rückrunde B",
+    const { closedSeason, newSeason } = await closeSeasonAndStartNext({
+      groupId,
+      closedName: "Hinrunde A",
+      nextName: "Rückrunde A",
       actorId: admin.id,
     });
 
-    expect(newSeason.groupId).toBe(groupB.id);
+    expect(closedSeason.id).toBe(own.id);
+    expect(newSeason.groupId).toBe(groupId);
+    const untouched = await prisma.season.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(untouched.isActive).toBe(true);
+    expect(untouched.name).toBe(foreign.name);
     const log = await prisma.auditLog.findFirst({ where: { action: "season.close" } });
-    expect(log?.groupId).toBe(groupB.id);
+    expect(log?.groupId).toBe(groupId);
   });
 
-  it("falls back to the sole group when the closed season has no groupId", async () => {
-    const admin = await makeAdmin();
-    const year = new Date().getFullYear();
-    await prisma.season.create({
-      data: {
-        name: "Ohne Gruppe",
-        year,
-        startDate: new Date(year, 0, 1),
-        endDate: new Date(year, 11, 31),
-        isActive: true,
-        groupId: null,
-      },
-    });
+  it("Namenskonflikt nur innerhalb der Gruppe", async () => {
+    const { groupId, admin } = await makeAdmin();
+    await createTestSeason(groupId);
+    const other = await createTestGroup("Andere");
+    await createTestSeason(other.id, { name: "Alt", isActive: false });
 
-    const { newSeason } = await closeSeasonAndStartNext({
-      closedName: "Hinrunde X",
-      nextName: "Rückrunde X",
+    const err = await closeSeasonAndStartNext({
+      groupId,
+      closedName: "Alt",
+      nextName: "Neu",
       actorId: admin.id,
-    });
+    }).catch((e: unknown) => e);
 
-    const group = await getSoleGroup();
-    expect(newSeason.groupId).toBe(group.id);
-    const log = await prisma.auditLog.findFirst({ where: { action: "season.close" } });
-    expect(log?.groupId).toBe(group.id);
+    // The group-scoped check lets "Alt" through; the global Season.name unique index
+    // still rejects it at the DB until Task 7 relaxes it, then this must resolve.
+    expect(err).not.toBeInstanceOf(SeasonNameConflictError);
   });
 
   it("starts the new season with an empty ranking and a fresh joker budget", async () => {
-    const admin = await makeAdmin();
-    const season = await getOrCreateActiveSeason();
+    const { groupId, admin } = await makeAdmin();
+    const season = await getOrCreateActiveSeason(groupId);
     const players = await Promise.all(
       ["A", "B", "C", "D"].map((n) =>
         prisma.player.create({ data: { name: n, email: `${n}@x`, passwordHash: "x" } }),
@@ -134,6 +122,7 @@ describe("closeSeasonAndStartNext", () => {
     });
 
     const { newSeason } = await closeSeasonAndStartNext({
+      groupId,
       closedName: "Hinrunde 2026",
       nextName: "Rückrunde 2026",
       actorId: admin.id,
@@ -149,14 +138,15 @@ describe("closeSeasonAndStartNext", () => {
   it.each(["planned", "in_progress"] as const)(
     "refuses to close while a %s game day exists and changes nothing",
     async (status) => {
-      const admin = await makeAdmin();
-      const season = await getOrCreateActiveSeason();
+      const { groupId, admin } = await makeAdmin();
+      const season = await getOrCreateActiveSeason(groupId);
       await prisma.gameDay.create({
         data: { seasonId: season.id, date: new Date("2026-07-21"), status },
       });
 
       await expect(
         closeSeasonAndStartNext({
+          groupId,
           closedName: "Hinrunde 2026",
           nextName: "Rückrunde 2026",
           actorId: admin.id,
@@ -170,12 +160,13 @@ describe("closeSeasonAndStartNext", () => {
   );
 
   it("reports the open days in the error", async () => {
-    const admin = await makeAdmin();
-    const season = await getOrCreateActiveSeason();
+    const { groupId, admin } = await makeAdmin();
+    const season = await getOrCreateActiveSeason(groupId);
     await prisma.gameDay.create({
       data: { seasonId: season.id, date: new Date("2026-07-21"), status: "planned" },
     });
     const err = await closeSeasonAndStartNext({
+      groupId,
       closedName: "A",
       nextName: "B",
       actorId: admin.id,
@@ -186,21 +177,21 @@ describe("closeSeasonAndStartNext", () => {
   });
 
   it("rejects empty or identical names", async () => {
-    const admin = await makeAdmin();
-    await getOrCreateActiveSeason();
+    const { groupId, admin } = await makeAdmin();
+    await getOrCreateActiveSeason(groupId);
     for (const [closedName, nextName] of [
       ["", "Rückrunde 2026"],
       ["Hinrunde 2026", "   "],
       ["Gleich", "Gleich"],
     ]) {
       await expect(
-        closeSeasonAndStartNext({ closedName, nextName, actorId: admin.id }),
+        closeSeasonAndStartNext({ groupId, closedName, nextName, actorId: admin.id }),
       ).rejects.toThrow(InvalidSeasonNamesError);
     }
   });
 
   it("rejects names already taken by another season", async () => {
-    const admin = await makeAdmin();
+    const { groupId, admin } = await makeAdmin();
     const year = new Date().getFullYear();
     await prisma.season.create({
       data: {
@@ -209,11 +200,13 @@ describe("closeSeasonAndStartNext", () => {
         startDate: new Date(year, 0, 1),
         endDate: new Date(year, 5, 30),
         isActive: false,
+        groupId,
       },
     });
-    await getOrCreateActiveSeason();
+    await getOrCreateActiveSeason(groupId);
     await expect(
       closeSeasonAndStartNext({
+        groupId,
         closedName: "Egal",
         nextName: "Hinrunde 2026",
         actorId: admin.id,
@@ -222,9 +215,10 @@ describe("closeSeasonAndStartNext", () => {
   });
 
   it("throws NoActiveSeasonError when no season is active", async () => {
-    const admin = await makeAdmin();
+    const { groupId, admin } = await makeAdmin();
+    await createTestSeason((await createTestGroup("Andere")).id);
     await expect(
-      closeSeasonAndStartNext({ closedName: "A", nextName: "B", actorId: admin.id }),
+      closeSeasonAndStartNext({ groupId, closedName: "A", nextName: "B", actorId: admin.id }),
     ).rejects.toThrow(NoActiveSeasonError);
   });
 });

@@ -27,9 +27,9 @@ async function main() {
     process.exit(1);
   }
   const data = JSON.parse(readFileSync(path, "utf-8")) as HistoricalExport;
-  const season = await getOrCreateActiveSeason();
-
   const group = await getSoleGroup();
+  const season = await getOrCreateActiveSeason(group.id);
+
   const playerByName = new Map<string, string>();
   for (const raw of data.players) {
     const p = await prisma.player.upsert({

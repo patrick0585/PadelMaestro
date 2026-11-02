@@ -1,19 +1,23 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { contextFromSession } from "@/lib/auth/group-context";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { buildSeasonTrend } from "@/lib/ranking/season-trend";
 import { RankingTable } from "@/components/ranking-table";
 import { Card, CardBody } from "@/components/ui/card";
 import { SeasonTrendChart } from "@/components/season-trend-chart";
+import { NoGroupNotice } from "@/components/no-group-notice";
 
 export const dynamic = "force-dynamic";
 
 export default async function RankingPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const ctx = contextFromSession(session);
+  if (!ctx) return <NoGroupNotice />;
 
-  const season = await getOrCreateActiveSeason();
+  const season = await getOrCreateActiveSeason(ctx.groupId);
   const [ranking, trend] = await Promise.all([
     computeRanking(season.id),
     buildSeasonTrend(season.id),

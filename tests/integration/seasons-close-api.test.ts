@@ -3,6 +3,13 @@ import { prisma } from "@/lib/db";
 import { POST } from "@/app/api/seasons/close/route";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { resetDb } from "../helpers/reset-db";
+import {
+  createMember,
+  createTestGroup,
+  createTestSeason,
+  sessionFor,
+  setupGroupWithAdmin,
+} from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
@@ -17,9 +24,9 @@ function req(body: unknown) {
 }
 
 async function makeAdmin() {
-  return prisma.player.create({
-    data: { name: "Admin", email: "admin@x", passwordHash: "x", isAdmin: true },
-  });
+  const { group, session } = await setupGroupWithAdmin();
+  authMock.mockResolvedValue(session);
+  return group.id;
 }
 
 describe("POST /api/seasons/close", () => {
@@ -34,40 +41,51 @@ describe("POST /api/seasons/close", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 403 for non-admins", async () => {
+  it("returns 403 for members", async () => {
+    const group = await createTestGroup();
+    const player = await createMember(group.id, { name: "P", email: "p@x" });
+    await getOrCreateActiveSeason(group.id);
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
+    const res = await POST(req({ closedName: "A", nextName: "B" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 403 without a group", async () => {
     const player = await prisma.player.create({
       data: { name: "P", email: "p@x", passwordHash: "x" },
     });
-    authMock.mockResolvedValue({ user: { id: player.id, isAdmin: false } });
+    authMock.mockResolvedValue(sessionFor(player, null, null));
     const res = await POST(req({ closedName: "A", nextName: "B" }));
     expect(res.status).toBe(403);
   });
 
   it("returns 400 for an invalid body", async () => {
-    const admin = await makeAdmin();
-    authMock.mockResolvedValue({ user: { id: admin.id, isAdmin: true } });
+    await makeAdmin();
     const res = await POST(req({ closedName: "A" }));
     expect(res.status).toBe(400);
   });
 
   it("closes the season and returns both seasons", async () => {
-    const admin = await makeAdmin();
-    await getOrCreateActiveSeason();
-    authMock.mockResolvedValue({ user: { id: admin.id, isAdmin: true } });
+    const groupId = await makeAdmin();
+    const own = await getOrCreateActiveSeason(groupId);
+    const foreign = await createTestSeason((await createTestGroup("Andere")).id);
     const res = await POST(req({ closedName: "Hinrunde 2026", nextName: "Rückrunde 2026" }));
     expect(res.status).toBe(200);
     const body = await res.json();
+    expect(body.closedSeason.id).toBe(own.id);
     expect(body.closedSeason.name).toBe("Hinrunde 2026");
     expect(body.newSeason.name).toBe("Rückrunde 2026");
+    expect(body.newSeason.groupId).toBe(groupId);
+    const untouched = await prisma.season.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(untouched.isActive).toBe(true);
   });
 
   it("returns 409 open_game_days with the blocking dates", async () => {
-    const admin = await makeAdmin();
-    const season = await getOrCreateActiveSeason();
+    const groupId = await makeAdmin();
+    const season = await getOrCreateActiveSeason(groupId);
     await prisma.gameDay.create({
       data: { seasonId: season.id, date: new Date("2026-07-21"), status: "planned" },
     });
-    authMock.mockResolvedValue({ user: { id: admin.id, isAdmin: true } });
     const res = await POST(req({ closedName: "A", nextName: "B" }));
     expect(res.status).toBe(409);
     const body = await res.json();
@@ -76,9 +94,8 @@ describe("POST /api/seasons/close", () => {
   });
 
   it("returns 400 invalid_names for identical names", async () => {
-    const admin = await makeAdmin();
-    await getOrCreateActiveSeason();
-    authMock.mockResolvedValue({ user: { id: admin.id, isAdmin: true } });
+    const groupId = await makeAdmin();
+    await getOrCreateActiveSeason(groupId);
     const res = await POST(req({ closedName: "X", nextName: "X" }));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("invalid_names");
