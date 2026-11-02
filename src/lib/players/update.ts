@@ -3,9 +3,13 @@ import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
-import { OwnerProtectedError } from "./owner-protected-error";
-import { PlayerNotFoundError, DuplicateEmailError, DuplicateUsernameError, LastAdminError } from "./errors";
-export { PlayerNotFoundError, DuplicateEmailError, DuplicateUsernameError, LastAdminError } from "./errors";
+import {
+  DuplicateEmailError,
+  DuplicateUsernameError,
+  LastAdminError,
+  OwnerProtectedError,
+  PlayerNotFoundError,
+} from "./errors";
 
 export class NoFieldsError extends Error {
   constructor() {

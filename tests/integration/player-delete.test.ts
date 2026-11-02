@@ -7,7 +7,7 @@ import {
   LastAdminError,
   ActiveParticipationError,
 } from "@/lib/players/delete";
-import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
+import { OwnerProtectedError } from "@/lib/players/errors";
 import { resetDb } from "../helpers/reset-db";
 import { createMember, createTestGroup, setupGroupWithAdmin } from "../helpers/group";
 

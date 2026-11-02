@@ -1,1 +1,0 @@
-export { OwnerProtectedError } from "./errors";

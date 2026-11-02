@@ -3,7 +3,7 @@ import { z } from "zod";
 import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import { resetPlayerPassword, PlayerNotFoundError } from "@/lib/players/reset-password";
-import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
+import { OwnerProtectedError } from "@/lib/players/errors";
 
 // Cap at 72 bytes — bcrypt silently truncates longer inputs.
 const Schema = z.object({ password: z.string().min(8).max(72) });

@@ -15,6 +15,8 @@ import { auth } from "@/auth";
 import RankingPage from "@/app/ranking/page";
 import GameDayPage from "@/app/game-day/page";
 import ArchivePage from "@/app/archive/page";
+import DashboardPage from "@/app/page";
+import AdminPage from "@/app/admin/page";
 
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
@@ -34,6 +36,7 @@ describe.each([
   ["RankingPage", RankingPage],
   ["GameDayPage", GameDayPage],
   ["ArchivePage", ArchivePage],
+  ["DashboardPage", DashboardPage],
 ])("%s ohne Gruppe", (_name, Page) => {
   it("zeigt den Leerzustand", async () => {
     authMock.mockResolvedValue(groupless);
@@ -44,5 +47,12 @@ describe.each([
   it("leitet ohne Session zum Login", async () => {
     authMock.mockResolvedValue(null);
     await expect(Page()).rejects.toThrow("REDIRECT:/login");
+  });
+});
+
+describe("AdminPage ohne Gruppe", () => {
+  it("leitet zur Rangliste", async () => {
+    authMock.mockResolvedValue(groupless);
+    await expect(AdminPage()).rejects.toThrow("REDIRECT:/ranking");
   });
 });

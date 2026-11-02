@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
-import { OwnerProtectedError } from "./owner-protected-error";
-import { PlayerNotFoundError, LastAdminError } from "./errors";
+import { OwnerProtectedError, PlayerNotFoundError, LastAdminError } from "./errors";
 export { PlayerNotFoundError, LastAdminError } from "./errors";
 
 export class SelfDeleteError extends Error {
