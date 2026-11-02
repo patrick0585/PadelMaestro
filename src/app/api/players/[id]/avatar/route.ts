@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { findGroupMembership } from "@/lib/group/active-membership";
 import {
   setPlayerAvatar,
   deletePlayerAvatar,
@@ -20,19 +23,21 @@ function tooLargeByContentLength(req: Request): boolean {
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
+async function targetNotFound(groupId: string, id: string): Promise<NextResponse | null> {
+  if (await findGroupMembership(prisma, groupId, id)) return null;
+  return NextResponse.json({ error: "not_found" }, { status: 404 });
+}
+
 export async function PUT(req: Request, ctx: RouteCtx) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!session.user.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   if (tooLargeByContentLength(req)) {
     return NextResponse.json({ error: "file_too_large" }, { status: 413 });
   }
 
   const { id } = await ctx.params;
+  const notFound = await targetNotFound(g.ctx.groupId, id);
+  if (notFound) return notFound;
 
   let form: FormData;
   try {
@@ -47,7 +52,7 @@ export async function PUT(req: Request, ctx: RouteCtx) {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   try {
-    await setPlayerAvatar({ playerId: id, actorId: session.user.id, file: buffer });
+    await setPlayerAvatar({ playerId: id, actorId: g.ctx.userId, file: buffer });
   } catch (e) {
     if (e instanceof FileTooLargeError) {
       return NextResponse.json({ error: "file_too_large" }, { status: 413 });
@@ -69,16 +74,13 @@ export async function PUT(req: Request, ctx: RouteCtx) {
 }
 
 export async function DELETE(_req: Request, ctx: RouteCtx) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!session.user.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   const { id } = await ctx.params;
+  const notFound = await targetNotFound(g.ctx.groupId, id);
+  if (notFound) return notFound;
   try {
-    await deletePlayerAvatar({ playerId: id, actorId: session.user.id });
+    await deletePlayerAvatar({ playerId: id, actorId: g.ctx.userId });
   } catch (e) {
     if (e instanceof PlayerNotFoundError) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -94,6 +96,12 @@ export async function GET(_req: Request, ctx: RouteCtx) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await ctx.params;
+  if (id !== session.user.id) {
+    const viewer = contextFromSession(session);
+    if (!viewer || !(await findGroupMembership(prisma, viewer.groupId, id))) {
+      return new NextResponse(null, { status: 404 });
+    }
+  }
   const avatar = await getPlayerAvatar(id);
   if (!avatar) return new NextResponse(null, { status: 404 });
   return new NextResponse(new Uint8Array(avatar.data), {

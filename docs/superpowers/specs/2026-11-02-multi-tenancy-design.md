@@ -114,6 +114,12 @@ Semantik:
   (`removedAt` setzen). Historie (Matches, Joker, Ränge) bleibt. Der
   bisherige Soft-Delete des Players wird dafür nicht mehr benutzt;
   bestehende `deletedAt`-Werte werden migriert (siehe unten).
+  Übergang: Bis PR 6 setzt „Spieler entfernen“ zusätzlich
+  `Player.deletedAt`, damit der Login gesperrt bleibt; PR 6 nimmt das
+  mit dem Leerzustand heraus.
+  Passwort und E-Mail des Besitzers kann nur der Besitzer selbst ändern
+  (sonst 409 `owner_protected`), damit kein Admin das Besitzerkonto
+  übernehmen kann.
 - Spieler ohne aktive Mitgliedschaft in der Session-Gruppe können sich
   einloggen, sehen aber eine leere Zustandsseite „Du bist in keiner
   Gruppe“. In Phase 1 kann das nur durch Entfernen entstehen und
@@ -251,8 +257,8 @@ Rangliste kurz prüfen.
    Setzen von NOT NULL die `groupId`-NULLs erneut füllen und fehlende
    Mitgliedschaften anlegen (nur diese beiden Teile der
    Abgleich-Migration aus PR 2; Rolle und `removedAt` nicht mehr aus
-   `Player` spiegeln, weil „Spieler entfernen“ ab PR 3 nur die
-   Mitgliedschaft beendet).
+   `Player` spiegeln, weil Rolle und Entfernen ab PR 3 auf der
+   Mitgliedschaft geführt werden).
 5. **Rangliste, Profil, Live.** Ranking-SQL, Profil-Statistiken, SSE-
    Autorisierung, Ranking-API.
 6. **Aufräumen.** `Player.isAdmin` entfernen, letzte `findFirst`-Reste

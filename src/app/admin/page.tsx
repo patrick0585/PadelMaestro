@@ -1,6 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { isAdminRole } from "@/lib/auth/roles";
+import { listActiveMembers } from "@/lib/group/members";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
@@ -52,21 +55,10 @@ function buildRosterRows(
 export default async function AdminPage() {
   const session = await auth();
   if (!session) redirect("/login");
-  if (!session.user.isAdmin) redirect("/ranking");
+  const ctx = contextFromSession(session);
+  if (!ctx || !isAdminRole(ctx.role)) redirect("/ranking");
 
-  const players = await prisma.player.findMany({
-    where: { deletedAt: null },
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      username: true,
-      isAdmin: true,
-      passwordHash: true,
-      avatarVersion: true,
-    },
-  });
+  const players = await listActiveMembers(ctx.groupId);
   const manageableDay = await prisma.gameDay.findFirst({
     where: { status: "planned" },
     orderBy: { date: "desc" },
@@ -97,8 +89,9 @@ export default async function AdminPage() {
     name: p.name,
     email: p.email,
     username: p.username,
-    isAdmin: p.isAdmin,
-    hasPassword: p.passwordHash !== null,
+    isAdmin: isAdminRole(p.role),
+    role: p.role,
+    hasPassword: p.hasPassword,
     avatarVersion: p.avatarVersion,
   }));
 

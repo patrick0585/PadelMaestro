@@ -3,14 +3,14 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { createPlayer } from "@/lib/players/create";
 import { resetDb } from "../../helpers/reset-db";
+import { createTestGroup, setupGroupWithAdmin } from "../../helpers/group";
 
 describe("createPlayer", () => {
   beforeEach(resetDb);
 
   async function makeAdmin() {
-    return prisma.player.create({
-      data: { name: "Admin", email: "admin@example.com", isAdmin: true, passwordHash: "x" },
-    });
+    const { group, admin } = await setupGroupWithAdmin();
+    return { ...admin, groupId: group.id };
   }
 
   it("creates a player with bcrypt-hashed password", async () => {
@@ -21,6 +21,7 @@ describe("createPlayer", () => {
       password: "hunter22extra",
       isAdmin: false,
       actorId: actor.id,
+      groupId: actor.groupId,
     });
     expect(player.email).toBe("new@example.com");
     expect(player.name).toBe("Newbie");
@@ -38,6 +39,7 @@ describe("createPlayer", () => {
       password: "hunter22extra",
       isAdmin: true,
       actorId: actor.id,
+      groupId: actor.groupId,
     });
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { action: "player.create" },
@@ -54,6 +56,7 @@ describe("createPlayer", () => {
       password: "hunter22extra",
       isAdmin: false,
       actorId: actor.id,
+      groupId: actor.groupId,
     });
     await expect(
       createPlayer({
@@ -62,23 +65,26 @@ describe("createPlayer", () => {
         password: "hunter22extra",
         isAdmin: false,
         actorId: actor.id,
+        groupId: actor.groupId,
       }),
     ).rejects.toThrow(/duplicate/i);
   });
 
-  it("creates a membership in the sole group with role admin/member", async () => {
+  it("creates a membership in the given group, not in another one", async () => {
     const actor = await makeAdmin();
+    const other = await createTestGroup("Andere");
     const a = await createPlayer({
-      email: "a@example.com", name: "A", password: "hunter22extra", isAdmin: true, actorId: actor.id,
+      email: "a@example.com", name: "A", password: "hunter22extra", isAdmin: true,
+      actorId: actor.id, groupId: actor.groupId,
     });
     const m = await createPlayer({
-      email: "m@example.com", name: "M", password: "hunter22extra", isAdmin: false, actorId: actor.id,
+      email: "m@example.com", name: "M", password: "hunter22extra", isAdmin: false,
+      actorId: actor.id, groupId: actor.groupId,
     });
-    const groups = await prisma.group.findMany();
-    expect(groups).toHaveLength(1);
     const rows = await prisma.membership.findMany({ where: { playerId: { in: [a.id, m.id] } } });
     expect(rows).toHaveLength(2);
-    expect(rows.every((r) => r.groupId === groups[0].id && r.removedAt === null)).toBe(true);
+    expect(rows.every((r) => r.groupId === actor.groupId && r.removedAt === null)).toBe(true);
+    expect(rows.some((r) => r.groupId === other.id)).toBe(false);
     expect(rows.find((r) => r.playerId === a.id)!.role).toBe("admin");
     expect(rows.find((r) => r.playerId === m.id)!.role).toBe("member");
   });

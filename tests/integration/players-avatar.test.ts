@@ -269,6 +269,9 @@ describe("DELETE /api/profile/avatar", () => {
 });
 
 import { PUT as adminPut, DELETE as adminDelete, GET as adminGet } from "@/app/api/players/[id]/avatar/route";
+import { createMember, createTestGroup, sessionFor, setupGroupWithAdmin } from "../helpers/group";
+
+const UNKNOWN_ID = "00000000-0000-0000-0000-000000000000";
 
 function adminMultipart(url: string, file: Buffer): Request {
   const body = new FormData();
@@ -276,57 +279,96 @@ function adminMultipart(url: string, file: Buffer): Request {
   return new Request(url, { method: "PUT", body });
 }
 
+function putAvatar(targetId: string, file: Buffer = FIXTURE) {
+  return adminPut(adminMultipart(`http://test/api/players/${targetId}/avatar`, file), {
+    params: Promise.resolve({ id: targetId }),
+  });
+}
+
+function deleteAvatar(targetId: string) {
+  return adminDelete(
+    new Request(`http://test/api/players/${targetId}/avatar`, { method: "DELETE" }),
+    { params: Promise.resolve({ id: targetId }) },
+  );
+}
+
+function getAvatar(targetId: string) {
+  return adminGet(new Request(`http://test/api/players/${targetId}/avatar`), {
+    params: Promise.resolve({ id: targetId }),
+  });
+}
+
+async function setupForeignTarget() {
+  const other = await createTestGroup("Andere");
+  return createMember(other.id, { name: "Fremd", email: "fremd@example.com" });
+}
+
+async function removeMembership(groupId: string, playerId: string) {
+  await prisma.membership.updateMany({
+    where: { groupId, playerId },
+    data: { removedAt: new Date() },
+  });
+}
+
 describe("PUT /api/players/[id]/avatar (admin)", () => {
   beforeEach(resetDb);
 
   it("returns 401 without a session", async () => {
-    const target = await makePlayer("Target");
+    const { group } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
     authMock.mockResolvedValueOnce(null);
-    const res = await adminPut(
-      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
-      { params: Promise.resolve({ id: target.id }) },
-    );
-    expect(res.status).toBe(401);
+    expect((await putAvatar(target.id)).status).toBe(401);
   });
 
   it("returns 403 for a non-admin user", async () => {
-    const admin = await makePlayer("NotAdmin");
-    const target = await makePlayer("Target");
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: false } });
-    const res = await adminPut(
-      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
-      { params: Promise.resolve({ id: target.id }) },
-    );
-    expect(res.status).toBe(403);
+    const { group } = await setupGroupWithAdmin();
+    const member = await createMember(group.id, { name: "Member", email: "member@example.com" });
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
+    authMock.mockResolvedValueOnce(sessionFor(member, group.id, "member"));
+    expect((await putAvatar(target.id)).status).toBe(403);
   });
 
   it("returns 404 for a missing player", async () => {
-    const admin = await makePlayer("Admin", { isAdmin: true });
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
-    const unknown = "00000000-0000-0000-0000-000000000000";
-    const res = await adminPut(
-      adminMultipart(`http://test/api/players/${unknown}/avatar`, FIXTURE),
-      { params: Promise.resolve({ id: unknown }) },
-    );
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValueOnce(session);
+    expect((await putAvatar(UNKNOWN_ID)).status).toBe(404);
+  });
+
+  it("returns 404 for a player of another group", async () => {
+    const { session } = await setupGroupWithAdmin();
+    const foreign = await setupForeignTarget();
+    authMock.mockResolvedValueOnce(session);
+    const res = await putAvatar(foreign.id);
     expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "not_found" });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(after.avatarVersion).toBe(0);
+  });
+
+  it("returns 404 for a removed member of the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const gone = await createMember(group.id, { name: "Gone", email: "gone@example.com" });
+    await removeMembership(group.id, gone.id);
+    authMock.mockResolvedValueOnce(session);
+    const res = await putAvatar(gone.id);
+    expect(res.status).toBe(404);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: gone.id } });
+    expect(after.deletedAt).toBeNull();
+    expect(after.avatarVersion).toBe(0);
   });
 
   it("returns 413 for a > 5 MB file", async () => {
-    const admin = await makePlayer("Admin", { isAdmin: true });
-    const target = await makePlayer("Target");
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
-    const big = Buffer.alloc(5 * 1024 * 1024 + 1);
-    const res = await adminPut(
-      adminMultipart(`http://test/api/players/${target.id}/avatar`, big),
-      { params: Promise.resolve({ id: target.id }) },
-    );
+    const { group, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
+    authMock.mockResolvedValueOnce(session);
+    const res = await putAvatar(target.id, Buffer.alloc(5 * 1024 * 1024 + 1));
     expect(res.status).toBe(413);
   });
 
   it("returns 413 immediately via Content-Length fast-reject without reading the body", async () => {
-    const admin = await makePlayer("Admin", { isAdmin: true });
-    const target = await makePlayer("Target");
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
+    const { group, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
+    authMock.mockResolvedValueOnce(session);
     const req = new Request(`http://test/api/players/${target.id}/avatar`, {
       method: "PUT",
       headers: { "content-length": String(5 * 1024 * 1024 + 1) },
@@ -339,13 +381,10 @@ describe("PUT /api/players/[id]/avatar (admin)", () => {
   });
 
   it("returns 200 with { version } on success and records admin as actor", async () => {
-    const admin = await makePlayer("Admin", { isAdmin: true });
-    const target = await makePlayer("Target");
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
-    const res = await adminPut(
-      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
-      { params: Promise.resolve({ id: target.id }) },
-    );
+    const { group, admin, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
+    authMock.mockResolvedValueOnce(session);
+    const res = await putAvatar(target.id);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ version: 1 });
 
@@ -361,20 +400,13 @@ describe("DELETE /api/players/[id]/avatar (admin)", () => {
   beforeEach(resetDb);
 
   it("clears the target avatar and records the admin as actor", async () => {
-    const admin = await makePlayer("Admin", { isAdmin: true });
-    const target = await makePlayer("Target");
-    // seed
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
-    await adminPut(
-      adminMultipart(`http://test/api/players/${target.id}/avatar`, FIXTURE),
-      { params: Promise.resolve({ id: target.id }) },
-    );
+    const { group, admin, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
+    authMock.mockResolvedValueOnce(session);
+    await putAvatar(target.id);
 
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
-    const res = await adminDelete(
-      new Request(`http://test/api/players/${target.id}/avatar`, { method: "DELETE" }),
-      { params: Promise.resolve({ id: target.id }) },
-    );
+    authMock.mockResolvedValueOnce(session);
+    const res = await deleteAvatar(target.id);
     expect(res.status).toBe(204);
 
     const after = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
@@ -389,35 +421,49 @@ describe("DELETE /api/players/[id]/avatar (admin)", () => {
   });
 
   it("returns 403 for non-admin", async () => {
-    const nobody = await makePlayer("Nobody");
-    const target = await makePlayer("Target");
-    authMock.mockResolvedValueOnce({ user: { id: nobody.id, isAdmin: false } });
-    const res = await adminDelete(
-      new Request(`http://test/api/players/${target.id}/avatar`, { method: "DELETE" }),
-      { params: Promise.resolve({ id: target.id }) },
-    );
-    expect(res.status).toBe(403);
+    const { group } = await setupGroupWithAdmin();
+    const nobody = await createMember(group.id, { name: "Nobody", email: "nobody@example.com" });
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
+    authMock.mockResolvedValueOnce(sessionFor(nobody, group.id, "member"));
+    expect((await deleteAvatar(target.id)).status).toBe(403);
   });
 
   it("returns 401 without a session", async () => {
-    const target = await makePlayer("Target");
+    const { group } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Target", email: "target@example.com" });
     authMock.mockResolvedValueOnce(null);
-    const res = await adminDelete(
-      new Request(`http://test/api/players/${target.id}/avatar`, { method: "DELETE" }),
-      { params: Promise.resolve({ id: target.id }) },
-    );
-    expect(res.status).toBe(401);
+    expect((await deleteAvatar(target.id)).status).toBe(401);
   });
 
   it("returns 404 for a missing player", async () => {
-    const admin = await makePlayer("Admin", { isAdmin: true });
-    authMock.mockResolvedValueOnce({ user: { id: admin.id, isAdmin: true } });
-    const unknown = "00000000-0000-0000-0000-000000000000";
-    const res = await adminDelete(
-      new Request(`http://test/api/players/${unknown}/avatar`, { method: "DELETE" }),
-      { params: Promise.resolve({ id: unknown }) },
-    );
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValueOnce(session);
+    expect((await deleteAvatar(UNKNOWN_ID)).status).toBe(404);
+  });
+
+  it("returns 404 for a player of another group", async () => {
+    const { session } = await setupGroupWithAdmin();
+    const foreign = await setupForeignTarget();
+    await setPlayerAvatar({ playerId: foreign.id, actorId: foreign.id, file: FIXTURE });
+    authMock.mockResolvedValueOnce(session);
+    const res = await deleteAvatar(foreign.id);
     expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "not_found" });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(after.avatarVersion).toBe(1);
+  });
+
+  it("returns 404 for a removed member of the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const gone = await createMember(group.id, { name: "Gone", email: "gone@example.com" });
+    await setPlayerAvatar({ playerId: gone.id, actorId: gone.id, file: FIXTURE });
+    await removeMembership(group.id, gone.id);
+    authMock.mockResolvedValueOnce(session);
+    const res = await deleteAvatar(gone.id);
+    expect(res.status).toBe(404);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: gone.id } });
+    expect(after.deletedAt).toBeNull();
+    expect(after.avatarVersion).toBe(1);
   });
 });
 
@@ -425,23 +471,18 @@ describe("GET /api/players/[id]/avatar", () => {
   beforeEach(resetDb);
 
   it("returns 404 when the player has no avatar", async () => {
-    const me = await makePlayer("Me");
-    authMock.mockResolvedValueOnce({ user: { id: me.id } });
-    const res = await adminGet(
-      new Request(`http://test/api/players/${me.id}/avatar`),
-      { params: Promise.resolve({ id: me.id }) },
-    );
-    expect(res.status).toBe(404);
+    const { group, admin } = await setupGroupWithAdmin();
+    const me = await createMember(group.id, { name: "Me", email: "me@example.com" });
+    authMock.mockResolvedValueOnce(sessionFor(admin, group.id, "owner"));
+    expect((await getAvatar(me.id)).status).toBe(404);
   });
 
   it("returns the bytes with Content-Type image/webp and an immutable Cache-Control", async () => {
-    const me = await makePlayer("Me");
+    const { group } = await setupGroupWithAdmin();
+    const me = await createMember(group.id, { name: "Me", email: "me@example.com" });
     await setPlayerAvatar({ playerId: me.id, actorId: me.id, file: FIXTURE });
-    authMock.mockResolvedValueOnce({ user: { id: me.id } });
-    const res = await adminGet(
-      new Request(`http://test/api/players/${me.id}/avatar`),
-      { params: Promise.resolve({ id: me.id }) },
-    );
+    authMock.mockResolvedValueOnce(sessionFor(me, group.id, "member"));
+    const res = await getAvatar(me.id);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/webp");
     expect(res.headers.get("cache-control")).toContain("immutable");
@@ -451,14 +492,55 @@ describe("GET /api/players/[id]/avatar", () => {
     expect(body.length).toBeGreaterThan(0);
   });
 
+  it("serves another active member's avatar within the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const other = await createMember(group.id, { name: "Other", email: "other@example.com" });
+    await setPlayerAvatar({ playerId: other.id, actorId: other.id, file: FIXTURE });
+    authMock.mockResolvedValueOnce(session);
+    expect((await getAvatar(other.id)).status).toBe(200);
+  });
+
   it("returns 401 when not logged in", async () => {
-    const me = await makePlayer("Me");
+    const { group } = await setupGroupWithAdmin();
+    const me = await createMember(group.id, { name: "Me", email: "me@example.com" });
     await setPlayerAvatar({ playerId: me.id, actorId: me.id, file: FIXTURE });
     authMock.mockResolvedValueOnce(null);
-    const res = await adminGet(
-      new Request(`http://test/api/players/${me.id}/avatar`),
-      { params: Promise.resolve({ id: me.id }) },
-    );
-    expect(res.status).toBe(401);
+    expect((await getAvatar(me.id)).status).toBe(401);
+  });
+
+  it("returns 404 for a player of another group", async () => {
+    const { session } = await setupGroupWithAdmin();
+    const foreign = await setupForeignTarget();
+    await setPlayerAvatar({ playerId: foreign.id, actorId: foreign.id, file: FIXTURE });
+    authMock.mockResolvedValueOnce(session);
+    expect((await getAvatar(foreign.id)).status).toBe(404);
+  });
+
+  it("returns 404 for a removed member of the group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const gone = await createMember(group.id, { name: "Gone", email: "gone@example.com" });
+    await setPlayerAvatar({ playerId: gone.id, actorId: gone.id, file: FIXTURE });
+    await prisma.membership.updateMany({
+      where: { groupId: group.id, playerId: gone.id },
+      data: { removedAt: new Date() },
+    });
+    authMock.mockResolvedValueOnce(session);
+    expect((await getAvatar(gone.id)).status).toBe(404);
+  });
+
+  it("returns 200 for the own avatar without a group", async () => {
+    const me = await makePlayer("Me");
+    await setPlayerAvatar({ playerId: me.id, actorId: me.id, file: FIXTURE });
+    authMock.mockResolvedValueOnce(sessionFor(me, null, null));
+    expect((await getAvatar(me.id)).status).toBe(200);
+  });
+
+  it("returns 404 for a foreign avatar without a group", async () => {
+    const { group } = await setupGroupWithAdmin();
+    const other = await createMember(group.id, { name: "Other", email: "other@example.com" });
+    await setPlayerAvatar({ playerId: other.id, actorId: other.id, file: FIXTURE });
+    const loner = await makePlayer("Loner");
+    authMock.mockResolvedValueOnce(sessionFor(loner, null, null));
+    expect((await getAvatar(other.id)).status).toBe(404);
   });
 });

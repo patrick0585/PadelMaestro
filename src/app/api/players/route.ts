@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/db";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { isAdminRole } from "@/lib/auth/roles";
+import { listActiveMembers } from "@/lib/group/members";
 import {
   createPlayer,
   DuplicateEmailError,
@@ -22,10 +23,8 @@ const CreateSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   const body = await req.json().catch(() => null);
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) {
@@ -38,7 +37,8 @@ export async function POST(req: Request) {
       password: parsed.data.password,
       isAdmin: parsed.data.isAdmin ?? false,
       username: parsed.data.username,
-      actorId: session.user.id,
+      actorId: g.ctx.userId,
+      groupId: g.ctx.groupId,
     });
     return NextResponse.json(player, { status: 201 });
   } catch (e) {
@@ -53,30 +53,13 @@ export async function POST(req: Request) {
 }
 
 export async function GET(_req: Request) {
-  const session = await auth();
-  if (!session?.user?.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-  const players = await prisma.player.findMany({
-    where: { deletedAt: null },
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      username: true,
-      isAdmin: true,
-      passwordHash: true,
-    },
-  });
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
+  const members = await listActiveMembers(g.ctx.groupId);
   return NextResponse.json(
-    players.map((p) => ({
-      id: p.id,
-      email: p.email,
-      username: p.username,
-      name: p.name,
-      isAdmin: p.isAdmin,
-      hasPassword: p.passwordHash !== null,
+    members.map(({ avatarVersion: _avatarVersion, ...m }) => ({
+      ...m,
+      isAdmin: isAdminRole(m.role),
     })),
   );
 }

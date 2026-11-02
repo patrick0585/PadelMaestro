@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import type { GroupRole } from "@/lib/auth/roles";
 import { isValidUsername, normaliseUsername } from "@/lib/auth/username";
 
 export interface EditablePlayer {
@@ -12,6 +13,7 @@ export interface EditablePlayer {
   email: string;
   username: string | null;
   isAdmin: boolean;
+  role: GroupRole;
 }
 
 export function EditPlayerDialog({
@@ -30,6 +32,7 @@ export function EditPlayerDialog({
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isOwner = player?.role === "owner";
 
   useEffect(() => {
     if (open && player) {
@@ -95,7 +98,9 @@ export function EditPlayerDialog({
     } else if (res.status === 409 && body.error === "last_admin") {
       setError("Der letzte verbleibende Admin kann nicht degradiert werden");
     } else if (res.status === 409 && body.error === "owner_protected") {
-      setError("Der Besitzer der Gruppe kann nicht herabgestuft oder entfernt werden");
+      setError(
+        "Der Besitzer ist geschützt: Er kann nicht herabgestuft oder entfernt werden, und seine E-Mail kann nur er selbst ändern.",
+      );
     } else if (res.status === 400) {
       setError("Eingabe ungültig");
     } else if (res.status === 404) {
@@ -142,18 +147,27 @@ export function EditPlayerDialog({
             autoComplete="off"
           />
         </div>
-        <label
-          htmlFor="edit-player-is-admin"
-          className="flex items-center gap-2 text-sm text-foreground"
-        >
-          <input
-            id="edit-player-is-admin"
-            type="checkbox"
-            checked={isAdmin}
-            onChange={(e) => setIsAdmin(e.target.checked)}
-          />
-          Admin-Rechte
-        </label>
+        <div className="space-y-1">
+          <label
+            htmlFor="edit-player-is-admin"
+            className={`flex items-center gap-2 text-sm text-foreground${isOwner ? " cursor-not-allowed opacity-60" : ""}`}
+          >
+            <input
+              id="edit-player-is-admin"
+              type="checkbox"
+              checked={isOwner || isAdmin}
+              disabled={isOwner}
+              aria-describedby={isOwner ? "edit-player-is-admin-hint" : undefined}
+              onChange={(e) => setIsAdmin(e.target.checked)}
+            />
+            Admin-Rechte
+          </label>
+          {isOwner && (
+            <p id="edit-player-is-admin-hint" className="text-xs text-foreground-muted">
+              Der Besitzer behält immer Admin-Rechte.
+            </p>
+          )}
+        </div>
         {error && (
           <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
             {error}

@@ -16,3 +16,29 @@ export async function findActiveMembership(
     select: { groupId: true, role: true },
   });
 }
+
+export async function countOtherAdmins(
+  db: Prisma.TransactionClient | PrismaClient,
+  groupId: string,
+  playerId: string,
+): Promise<number> {
+  return db.membership.count({
+    where: {
+      groupId,
+      removedAt: null,
+      role: { in: ["admin", "owner"] },
+      playerId: { not: playerId },
+    },
+  });
+}
+
+export async function findGroupMembership(
+  db: Prisma.TransactionClient | PrismaClient,
+  groupId: string,
+  playerId: string,
+): Promise<{ role: GroupRole } | null> {
+  return db.membership.findFirst({
+    where: { groupId, playerId, removedAt: null },
+    select: { role: true },
+  });
+}

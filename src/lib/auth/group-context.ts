@@ -1,3 +1,4 @@
+import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { isAdminRole, type GroupRole } from "./roles";
 
@@ -17,11 +18,14 @@ export class ForbiddenError extends Error {
   }
 }
 
-export async function getGroupContext(): Promise<GroupContext | null> {
-  const session = await auth();
+export function contextFromSession(session: Session | null): GroupContext | null {
   const user = session?.user;
   if (!user?.id || !user.groupId || !user.role) return null;
   return { userId: user.id, groupId: user.groupId, role: user.role };
+}
+
+export async function getGroupContext(): Promise<GroupContext | null> {
+  return contextFromSession(await auth());
 }
 
 export async function requireMember(): Promise<GroupContext> {

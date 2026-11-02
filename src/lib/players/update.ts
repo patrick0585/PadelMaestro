@@ -1,9 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
-import { findActiveMembership } from "@/lib/group/active-membership";
+import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { roleForAdminFlag } from "@/lib/auth/roles";
-import { getSoleGroup } from "@/lib/group/sole-group";
 import { OwnerProtectedError } from "./owner-protected-error";
 
 export class PlayerNotFoundError extends Error {
@@ -45,6 +44,7 @@ export interface UpdatablePlayerFields {
 }
 
 export interface UpdatePlayerInput {
+  groupId: string;
   playerId: string;
   actorId: string;
   fields: UpdatablePlayerFields;
@@ -84,28 +84,29 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
           deletedAt: true,
         },
       });
-      if (!existing || existing.deletedAt) {
+      const membership = await findGroupMembership(tx, input.groupId, input.playerId);
+      if (!existing || existing.deletedAt || !membership) {
         throw new PlayerNotFoundError(input.playerId);
       }
 
-      let membershipSync: { groupId: string; role: "admin" | "member" } | null = null;
-      if (definedFields.isAdmin !== undefined) {
-        const membership = await findActiveMembership(tx, existing.id);
-        if (membership?.role === "owner") {
-          if (definedFields.isAdmin === false) throw new OwnerProtectedError();
-        } else {
-          membershipSync = {
-            groupId: membership?.groupId ?? (await getSoleGroup(tx)).id,
-            role: roleForAdminFlag(definedFields.isAdmin),
-          };
-        }
+      if (
+        definedFields.email !== undefined &&
+        membership.role === "owner" &&
+        input.actorId !== input.playerId
+      ) {
+        throw new OwnerProtectedError("only the owner may change the owner's email");
       }
 
-      if (definedFields.isAdmin === false && existing.isAdmin === true) {
-        const remaining = await tx.player.count({
-          where: { isAdmin: true, deletedAt: null, id: { not: existing.id } },
-        });
-        if (remaining === 0) throw new LastAdminError();
+      const newIsAdmin = definedFields.isAdmin;
+      if (newIsAdmin === false && membership.role === "owner") {
+        throw new OwnerProtectedError();
+      }
+      if (
+        newIsAdmin === false &&
+        membership.role === "admin" &&
+        (await countOtherAdmins(tx, input.groupId, existing.id)) === 0
+      ) {
+        throw new LastAdminError();
       }
 
       const updated = await tx.player.update({
@@ -120,12 +121,10 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         },
       });
 
-      if (membershipSync) {
-        const { groupId, role } = membershipSync;
-        await tx.membership.upsert({
-          where: { groupId_playerId: { groupId, playerId: existing.id } },
-          update: { role },
-          create: { groupId, playerId: existing.id, role },
+      if (newIsAdmin !== undefined && membership.role !== "owner") {
+        await tx.membership.update({
+          where: { groupId_playerId: { groupId: input.groupId, playerId: existing.id } },
+          data: { role: roleForAdminFlag(newIsAdmin) },
         });
       }
 
