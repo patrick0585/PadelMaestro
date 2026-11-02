@@ -248,7 +248,11 @@ Rangliste kurz prüfen.
 4. **Saison und Spieltag.** Aktive Saison und aktiver Spieltag pro
    Gruppe, Teilnehmer aus Mitgliedern, Archiv, Joker, Saison schließen,
    Druckansicht, alle `game-days`-Routen mit Gruppenprüfung. Vor dem
-   Setzen von NOT NULL die `groupId`-NULLs erneut füllen.
+   Setzen von NOT NULL die `groupId`-NULLs erneut füllen und fehlende
+   Mitgliedschaften anlegen (nur diese beiden Teile der
+   Abgleich-Migration aus PR 2; Rolle und `removedAt` nicht mehr aus
+   `Player` spiegeln, weil „Spieler entfernen“ ab PR 3 nur die
+   Mitgliedschaft beendet).
 5. **Rangliste, Profil, Live.** Ranking-SQL, Profil-Statistiken, SSE-
    Autorisierung, Ranking-API.
 6. **Aufräumen.** `Player.isAdmin` entfernen, letzte `findFirst`-Reste
