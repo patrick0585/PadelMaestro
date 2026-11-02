@@ -88,13 +88,15 @@ model Membership {
 
 Geändert:
 
-- `Season.groupId` (Pflicht). `@@unique([groupId, name])` statt
-  `name @unique`. Zusätzlich ein partieller Unique-Index per SQL:
-  höchstens eine aktive Saison pro Gruppe
-  (`CREATE UNIQUE INDEX ... ON "Season"("groupId") WHERE "isActive"`).
-- `GameDay.groupId` (Pflicht, denormalisiert aus der Saison, damit
-  Spieltag-Routen mit einer Abfrage prüfen können). `@@unique([seasonId,
-  date])` bleibt.
+- `Season.groupId`. In PR 1 optional im Prisma-Schema, in der DB
+  vollständig befüllt; ab PR 4 Pflicht (dann werden auch die rund 100
+  direkten `create`-Aufrufe in Tests umgestellt). `@@unique([groupId,
+  name])` ersetzt `name @unique` in PR 4. „Eine aktive Saison pro
+  Gruppe“ wird in der Anwendung (Transaktion) gesichert, nicht per
+  partiellem Index, weil Prisma solche Indizes als Drift behandelt.
+- `GameDay.groupId` (denormalisiert aus der Saison, damit
+  Spieltag-Routen mit einer Abfrage prüfen können; optional bis PR 4
+  wie oben). `@@unique([seasonId, date])` bleibt.
 - `AuditLog.groupId` (optional; Konto-Aktionen ohne Gruppe bleiben
   leer).
 - `Player.isAdmin` wird in PR 6 entfernt. Bis dahin bleibt die Spalte,
