@@ -20,10 +20,11 @@ export interface ArchivedGameDayRow {
 }
 
 export async function listArchivedGameDays(
+  groupId: string,
   currentPlayerId: string | null,
 ): Promise<ArchivedGameDayRow[]> {
   const days = await prisma.gameDay.findMany({
-    where: { status: "finished" },
+    where: { groupId, status: "finished" },
     orderBy: [{ date: "desc" }, { id: "desc" }],
     select: {
       id: true,

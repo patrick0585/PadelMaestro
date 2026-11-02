@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { NoGroupNotice } from "@/components/no-group-notice";
 import { prisma } from "@/lib/db";
 import { PrintSheet } from "./print-sheet";
 
@@ -9,9 +11,11 @@ export default async function GameDayPrintPage() {
   const session = await auth();
   if (!session) redirect("/login");
   if (!session.user.isAdmin) redirect("/game-day");
+  const ctx = contextFromSession(session);
+  if (!ctx) return <NoGroupNotice />;
 
   const day = await prisma.gameDay.findFirst({
-    where: { status: { in: ["planned", "in_progress"] } },
+    where: { groupId: ctx.groupId, status: { in: ["planned", "in_progress"] } },
     orderBy: { date: "desc" },
     include: {
       participants: {

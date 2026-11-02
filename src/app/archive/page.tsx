@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { NoGroupNotice } from "@/components/no-group-notice";
 import Link from "next/link";
 import { Archive } from "lucide-react";
 import { listArchivedGameDays, type ArchivedGameDayRow } from "@/lib/archive/list";
@@ -40,8 +42,10 @@ function groupBySeason(rows: ArchivedGameDayRow[]): SeasonSection[] {
 export default async function ArchivePage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const ctx = contextFromSession(session);
+  if (!ctx) return <NoGroupNotice />;
 
-  const rows = await listArchivedGameDays(session.user.id);
+  const rows = await listArchivedGameDays(ctx.groupId, session.user.id);
 
   if (rows.length === 0) {
     return (
