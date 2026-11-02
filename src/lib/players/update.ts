@@ -87,11 +87,14 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       }
 
       const { username, name, email } = definedFields;
-      const updatedPlayer = await tx.player.update({
-        where: { id: existing.id },
-        data: { username, name, email },
-        select: { id: true, email: true, name: true, username: true },
-      });
+      const hasPlayerChanges = username !== undefined || name !== undefined || email !== undefined;
+      const updatedPlayer = hasPlayerChanges
+        ? await tx.player.update({
+            where: { id: existing.id },
+            data: { username, name, email },
+            select: { id: true, email: true, name: true, username: true },
+          })
+        : { id: existing.id, email: existing.email, name: existing.name, username: existing.username };
 
       let role = membership.role;
       if (newIsAdmin !== undefined && role !== "owner") {

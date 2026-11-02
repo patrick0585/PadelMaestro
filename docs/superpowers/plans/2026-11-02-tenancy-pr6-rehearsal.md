@@ -55,10 +55,11 @@ Alle Prüfungen bestanden, Zeilenzahlen und Rollen unverändert, `isAdmin` entfe
 
 ## Deploy-Ablauf
 
-1. Manueller Dump nach `/root/backups/<datum>-pre-tenancy-6/db.dump` (`sudo -u postgres pg_dump -Fc padel_tracker`).
-2. Während des Deploys keine Admin-Aktionen ausführen: der alte Code schreibt bis zum Neustart noch `isAdmin`.
-3. `deploy.sh` ausführen. Der Health-Check auf :3000 schlägt fälschlich fehl; stattdessen `systemctl is-active padel` und `curl http://127.0.0.1:8080/login` prüfen.
-4. Prüf-SQL ausführen: Spalte `Player.isAdmin` weg, Rollen unverändert, Memberships mit role=owner = 1, Zeilenzahlen wie vor dem Deploy.
-5. Seitencheck: Login, Admin-Seite mit Rollen-Badges, Spieler hoch- und herabstufen, Dashboard, Rangliste.
+1. Ruhige Zeit wählen und 2–3 Minuten Downtime ankündigen. Die Migration löscht eine Spalte: zwischen `migrate deploy` und dem Neustart scheitert der alte Code (während `pnpm build`) bei jedem vollständigen Player-Lesezugriff (Login, Spieltag starten, Passwort-/Avatar-Änderung) mit Prisma P2022. Außerdem schreibt der alte Code bis zum Neustart noch `isAdmin`.
+2. Dump nach `/root/backups/<datum>-pre-tenancy-6/db.dump` (`sudo -u postgres pg_dump -Fc padel_tracker`). Das Löschen der Spalte ist nicht umkehrbar, der Dump ist der einzige Rückweg.
+3. `systemctl stop padel` VOR `deploy.sh`. Das Skript zieht, migriert, baut und startet den Dienst neu; sein Health-Check auf :3000 schlägt fälschlich fehl.
+4. Prüfen: `systemctl is-active padel` und `curl http://127.0.0.1:8080/login`.
+5. Prüf-SQL: Spalte `Player.isAdmin` weg, Rollen unverändert, Memberships mit role=owner = 1, Zeilenzahlen wie vor dem Deploy.
+6. Seitencheck: Login, Admin-Seite mit Rollen-Badges, Spieler hoch- und herabstufen, Dashboard, Rangliste.
 
 Rollback: Schlägt die Migration fehl: `prisma migrate resolve --rolled-back 20261102180000_drop_player_is_admin` (als padel im App-Verzeichnis mit geladener .env), Ursache beheben, erneut deployen. Nach erfolgreicher Migration ist die Spalte weg; der Rückweg führt nur über den Dump (Restore aus `/root/backups/<datum>-pre-tenancy-6/` und vorherige Version deployen).

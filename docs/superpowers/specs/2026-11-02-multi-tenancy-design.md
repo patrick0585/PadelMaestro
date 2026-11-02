@@ -196,9 +196,9 @@ und nach). Direkt vor dem Deploy ein manueller Dump nach dem Muster in
   `role` ab: `true` → `admin`, `false` → `member`. Der Besitzer kann
   weder herabgestuft noch entfernt werden (409 `owner_protected`); die
   „letzter Admin“-Prüfung zählt den Besitzer mit.
-- Übergang: Ab PR 2 werden `Player.isAdmin` und `Membership.role`
-  parallel geschrieben, gelesen wird nur noch die Rolle. PR 6 entfernt
-  die Spalte.
+- Übergang: Von PR 2 bis PR 5 wurden `Player.isAdmin` und
+  `Membership.role` parallel geschrieben, gelesen wurde nur noch die
+  Rolle. PR 6 hat die Spalte entfernt.
 - Ranking-SQL, Verlaufsdiagramm, Partner-Statistik, Spieltag-Roster:
   Spielerquelle wird `Membership` der Saison-Gruppe mit
   `removedAt IS NULL` statt `Player WHERE deletedAt IS NULL`. Entfernte
