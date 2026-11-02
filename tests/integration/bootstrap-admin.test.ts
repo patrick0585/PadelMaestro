@@ -36,4 +36,21 @@ describe("bootstrapAdmin", () => {
       bootstrapAdmin({ email: "dup@x", name: "Y", password: "pw-123456" }),
     ).rejects.toBeInstanceOf(PlayerExistsError);
   });
+
+  it("becomes owner when the only existing owner membership is removed", async () => {
+    const group = await getSoleGroup();
+    const old = await createMember(group.id, { name: "Chef", email: "o@x", role: "owner" });
+    const removedAt = new Date();
+    await prisma.membership.update({
+      where: { groupId_playerId: { groupId: group.id, playerId: old.id } },
+      data: { removedAt },
+    });
+    const res = await bootstrapAdmin({ email: "n@x", name: "N", password: "pw-123456" });
+    expect(res.role).toBe("owner");
+    const oldRow = await prisma.membership.findUniqueOrThrow({
+      where: { groupId_playerId: { groupId: group.id, playerId: old.id } },
+    });
+    expect(oldRow.role).toBe("owner");
+    expect(oldRow.removedAt?.getTime()).toBe(removedAt.getTime());
+  });
 });

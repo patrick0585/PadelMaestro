@@ -18,12 +18,16 @@ export async function bootstrapAdmin(input: {
   const existing = await prisma.player.findUnique({ where: { email: input.email } });
   if (existing) throw new PlayerExistsError(input.email);
   const passwordHash = await hashPassword(input.password);
-  const group = await getSoleGroup();
-  const hasOwner = await prisma.membership.count({ where: { groupId: group.id, role: "owner" } });
-  const role: GroupRole = hasOwner > 0 ? "admin" : "owner";
-  const player = await prisma.player.create({
-    data: { name: input.name, email: input.email, passwordHash, isAdmin: true },
+  return prisma.$transaction(async (tx) => {
+    const group = await getSoleGroup(tx);
+    const hasOwner = await tx.membership.count({
+      where: { groupId: group.id, role: "owner", removedAt: null },
+    });
+    const role: GroupRole = hasOwner > 0 ? "admin" : "owner";
+    const player = await tx.player.create({
+      data: { name: input.name, email: input.email, passwordHash, isAdmin: true },
+    });
+    await tx.membership.create({ data: { groupId: group.id, playerId: player.id, role } });
+    return { playerId: player.id, groupId: group.id, role };
   });
-  await prisma.membership.create({ data: { groupId: group.id, playerId: player.id, role } });
-  return { playerId: player.id, groupId: group.id, role };
 }
