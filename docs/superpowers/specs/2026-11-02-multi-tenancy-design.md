@@ -300,10 +300,10 @@ bereits gruppengeprüfte Beziehung gescoped oder bewusst konto-global.
 | --- | --- | --- |
 | src/lib/season.ts:79 | `gameDay.findMany` offene Spieltage | gescoped über `seasonId` der aktiven Saison, die per `groupId` ermittelt wird (Zeile 76) |
 | src/lib/season.ts:86 | `season.findFirst` Namenskonflikt | groupId in where (nächste Zeile) |
-| src/lib/ranking/season-trend.ts:61 | `gameDay.findMany` | gescoped über `seasonId`; Saison gehört der Session-Gruppe (PR 4) |
-| src/lib/ranking/season-trend.ts:70 | `match.findMany` | gescoped über `gameDay.seasonId`, Saison der Session-Gruppe |
-| src/lib/ranking/season-trend.ts:93 | `jokerUse.findMany` | gescoped über `seasonId`, Saison der Session-Gruppe |
-| src/lib/ranking/compute.ts:25 | `gameDay.findMany` | gescoped über `seasonId`; Aufrufer übergeben nur Saisons der Session-Gruppe (Startseite, Rangliste, API) bzw. aus dem gruppengescopten Archiv |
+| src/lib/ranking/season-trend.ts:62 | `gameDay.findMany` | gescoped über `seasonId`; Saison gehört der Session-Gruppe (PR 4) |
+| src/lib/ranking/season-trend.ts:71 | `match.findMany` | gescoped über `gameDay.seasonId`, Saison der Session-Gruppe |
+| src/lib/ranking/season-trend.ts:94 | `jokerUse.findMany` | gescoped über `seasonId`, Saison der Session-Gruppe |
+| src/lib/ranking/compute.ts:26 | `gameDay.findMany` | gescoped über `seasonId`; Aufrufer übergeben nur Saisons der Session-Gruppe (Startseite, Rangliste, API) bzw. aus dem gruppengescopten Archiv |
 | src/lib/archive/list.ts:26 | `gameDay.findMany` | groupId in where (nächste Zeile) |
 | src/lib/archive/list.ts:44 | `jokerUse.groupBy` | gescoped über `gameDayId in` die zuvor gruppengescopten Spieltage |
 | src/lib/auth/authorize.ts:41 | `player.findFirst` Login | Konto-global per Design (Login per E-Mail/Benutzername) |
@@ -315,8 +315,8 @@ bereits gruppengeprüfte Beziehung gescoped oder bewusst konto-global.
 | src/lib/group/active-membership.ts:13 | `membership.findFirst` | Membership-Abfrage ist selbst die Quelle der Gruppe der Session (Login/JWT) |
 | src/lib/group/active-membership.ts:25 | `membership.count` | groupId in where (Folgezeilen) |
 | src/lib/group/active-membership.ts:40 | `membership.findFirst` | groupId in where (nächste Zeile) |
-| src/lib/players/create.ts:73 | `gameDay.findMany` geplante Tage | groupId in where (nächste Zeile) |
-| src/lib/players/delete.ts:58 | `gameDayParticipant.findFirst` | gescoped über `gameDay: { groupId }` in der Folgezeile |
+| src/lib/players/create.ts:60 | `gameDay.findMany` geplante Tage | groupId in where (nächste Zeile) |
+| src/lib/players/delete.ts:48 | `gameDayParticipant.findFirst` | gescoped über `gameDay: { groupId }` in der Folgezeile |
 | src/lib/game-day/group-scope.ts:7 | `gameDay.findFirst` | groupId in where (nächste Zeile); Helfer für die Gruppenprüfung der Routen |
 | src/lib/game-day/group-scope.ts:17 | `match.findFirst` | gescoped über `gameDay: { groupId }` in der nächsten Zeile |
 | src/lib/game-day/live-standings.ts:206 | `player.findMany` Namen/Avatare | Spieler-IDs stammen aus Matches des bereits gruppengeprüften Spieltags; liefert nur Name und Avatar-Version |
@@ -326,9 +326,9 @@ bereits gruppengeprüfte Beziehung gescoped oder bewusst konto-global.
 | src/lib/game-day/create.ts:14 | `membership.findMany` | groupId in where (nächste Zeile) |
 | src/lib/joker/use.ts:73 | `jokerUse.count` | gescoped über `playerId` + `seasonId` des Spieltags, der zuvor per Route gruppengeprüft wird |
 | src/lib/joker/list.ts:15 | `jokerUse.findMany` | gescoped über `gameDayId` nach Gruppenprüfung der Route |
-| src/lib/player/season-stats.ts:89 | `match.findMany` | gescoped über `gameDay.seasonId` der Session-Gruppe und `playerId` |
-| src/lib/player/season-stats.ts:115 | `jokerUse.count` | gescoped über `seasonId` der Session-Gruppe und `playerId` |
-| src/lib/player/season-stats.ts:116 | `gameDay.count` | gescoped über `seasonId` der Session-Gruppe |
+| src/lib/player/season-stats.ts:90 | `match.findMany` | gescoped über `gameDay.seasonId` der Session-Gruppe und `playerId` |
+| src/lib/player/season-stats.ts:116 | `jokerUse.count` | gescoped über `seasonId` der Session-Gruppe und `playerId` |
+| src/lib/player/season-stats.ts:117 | `gameDay.count` | gescoped über `seasonId` der Session-Gruppe |
 | src/app/page.tsx:40 | `gameDay.findFirst` | groupId in where (nächste Zeile) |
 | src/app/game-day/page.tsx:54 | `gameDay.findFirst` | groupId in where (nächste Zeile) |
 | src/app/game-day/page.tsx:62 | `gameDay.findFirst` | groupId in where (Folgezeilen) |
