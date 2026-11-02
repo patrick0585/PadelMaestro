@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import type { GroupRole } from "@/lib/auth/roles";
 
 // Must stay edge-safe: this config is imported by src/middleware.ts which
 // runs in the Edge Runtime. No Prisma, no Node-only imports here — the
@@ -16,10 +17,11 @@ export const authConfig = {
   callbacks: {
     session({ session, token }) {
       if (session.user) {
-        const typedToken = token as { id?: string; isAdmin?: boolean; username?: string | null };
-        (session.user as { id: string }).id = typedToken.id ?? "";
-        (session.user as { isAdmin: boolean }).isAdmin = typedToken.isAdmin ?? false;
-        (session.user as { username: string | null }).username = typedToken.username ?? null;
+        (session.user as { id: string }).id = token.id ?? "";
+        (session.user as { isAdmin: boolean }).isAdmin = token.isAdmin ?? false;
+        (session.user as { username: string | null }).username = token.username ?? null;
+        (session.user as { groupId: string | null }).groupId = token.groupId ?? null;
+        (session.user as { role: GroupRole | null }).role = token.role ?? null;
       }
       return session;
     },

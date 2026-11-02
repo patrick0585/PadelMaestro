@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
-import { PATCH } from "@/app/api/players/[id]/route";
+import { PATCH, DELETE } from "@/app/api/players/[id]/route";
 import { resetDb } from "../helpers/reset-db";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -159,5 +159,58 @@ describe("PATCH /api/players/[id]", () => {
     expect(res.status).toBe(409);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("last_admin");
+  });
+
+  async function makeOwner() {
+    const owner = await makeAdmin(5);
+    const group = await prisma.group.create({ data: { name: "G", slug: "g" } });
+    await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+    return owner;
+  }
+
+  it("returns 409 owner_protected when demoting the owner", async () => {
+    const admin = await makeAdmin();
+    const owner = await makeOwner();
+    authMock.mockResolvedValue({
+      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
+    });
+    const res = await call(owner.id, { isAdmin: false });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe("owner_protected");
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(p.isAdmin).toBe(true);
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+    expect(m.role).toBe("owner");
+  });
+
+  it("returns 409 owner_protected, not last_admin, for the only admin who is owner", async () => {
+    const actor = await prisma.player.create({
+      data: { name: "Actor", email: "actor@x", passwordHash: "x" },
+    });
+    const owner = await makeOwner();
+    authMock.mockResolvedValue({
+      user: { id: actor.id, isAdmin: true, email: actor.email, name: actor.name },
+    });
+    const res = await call(owner.id, { isAdmin: false });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe("owner_protected");
+  });
+
+  it("returns 409 owner_protected when deleting the owner", async () => {
+    const admin = await makeAdmin();
+    const owner = await makeOwner();
+    authMock.mockResolvedValue({
+      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
+    });
+    const res = await DELETE(
+      new Request(`http://localhost/api/players/${owner.id}`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: owner.id }) },
+    );
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe("owner_protected");
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(p.deletedAt).toBeNull();
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+    expect(m.removedAt).toBeNull();
   });
 });

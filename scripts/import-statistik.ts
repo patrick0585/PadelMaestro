@@ -3,6 +3,7 @@ import XLSX from "xlsx";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../src/lib/db";
 import { seedInitial } from "./seed-initial";
+import { getSoleGroup } from "../src/lib/group/sole-group";
 import { computeRanking } from "../src/lib/ranking/compute";
 
 // XLSX uses "Michael"; our canonical player name is "Michi".
@@ -205,8 +206,10 @@ async function wipeAll() {
 async function getOrCreateSeasonByYear(year: number, activeYear: number) {
   const existing = await prisma.season.findFirst({ where: { year }, orderBy: { createdAt: "asc" } });
   if (existing) return existing;
+  const group = await getSoleGroup();
   return prisma.season.create({
     data: {
+      groupId: group.id,
       name: `Saison ${year}`,
       year,
       startDate: new Date(Date.UTC(year, 0, 1)),
@@ -221,6 +224,7 @@ async function importDay(day: ParsedGameDay, playerIdByName: Map<string, string>
 
   const gameDay = await prisma.gameDay.create({
     data: {
+      groupId: season.groupId ?? (await getSoleGroup()).id,
       seasonId: season.id,
       date: day.date,
       status: "finished",

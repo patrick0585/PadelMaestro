@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
+import { roleForAdminFlag } from "@/lib/auth/roles";
+import { getSoleGroup } from "@/lib/group/sole-group";
 
 export class DuplicateEmailError extends Error {
   constructor(email: string) {
@@ -49,6 +51,10 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           username,
         },
         select: { id: true, email: true, name: true, isAdmin: true, username: true },
+      });
+      const group = await getSoleGroup(tx);
+      await tx.membership.create({
+        data: { groupId: group.id, playerId: player.id, role: roleForAdminFlag(input.isAdmin) },
       });
       await tx.auditLog.create({
         data: {

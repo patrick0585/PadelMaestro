@@ -1,9 +1,10 @@
 import type { JWT } from "next-auth/jwt";
+import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
 export interface PlayerLookup {
-  isAdmin: boolean;
   username: string | null;
   deletedAt: Date | null;
+  membership: { groupId: string; role: GroupRole } | null;
 }
 
 export interface PlayerLookupClient {
@@ -22,29 +23,26 @@ export type RefreshOutcome =
 // upgrade and well below any realistic privilege-escalation window.
 export const STALE_REFRESH_AFTER_MS = 5 * 60 * 1000;
 
-interface TokenWithRefreshedAt extends JWT {
-  refreshedAt?: number;
-}
-
-// Refreshes mutable session fields (isAdmin, username) from the DB on every
-// JWT renewal. Keeps the existing token when the lookup fails *and* the
-// token was successfully refreshed within STALE_REFRESH_AFTER_MS, so users
-// are not logged out by transient infrastructure issues. Beyond that grace
-// window, a failed lookup invalidates the session — bounding the time a
-// stale `isAdmin` claim could survive.
+// Refreshes mutable session fields (isAdmin, username, groupId, role) from
+// the DB on every JWT renewal. Keeps the existing token when the lookup
+// fails *and* the token was successfully refreshed within
+// STALE_REFRESH_AFTER_MS, so users are not logged out by transient
+// infrastructure issues. Beyond that grace window, a failed lookup
+// invalidates the session, bounding the time a stale `isAdmin` claim could
+// survive.
 export async function refreshTokenFromPlayer(
   token: JWT,
   client: PlayerLookupClient,
   now: number = Date.now(),
 ): Promise<RefreshOutcome> {
-  const id = (token as { id?: string }).id;
+  const id = token.id;
   if (!id) return { kind: "ok", token };
 
   let player: PlayerLookup | null;
   try {
     player = await client.findUnique(id);
   } catch (err) {
-    const refreshedAt = (token as TokenWithRefreshedAt).refreshedAt ?? 0;
+    const refreshedAt = token.refreshedAt ?? 0;
     const ageMs = now - refreshedAt;
     if (ageMs > STALE_REFRESH_AFTER_MS) {
       console.warn(
@@ -64,9 +62,11 @@ export async function refreshTokenFromPlayer(
     return { kind: "invalidate" };
   }
 
-  const refreshed: TokenWithRefreshedAt = {
+  const refreshed: JWT = {
     ...token,
-    isAdmin: player.isAdmin,
+    isAdmin: isAdminRole(player.membership?.role),
+    groupId: player.membership?.groupId ?? null,
+    role: player.membership?.role ?? null,
     username: player.username,
     refreshedAt: now,
   };

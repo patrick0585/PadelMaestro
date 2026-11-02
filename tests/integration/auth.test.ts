@@ -69,3 +69,55 @@ describe("authorize (identifier-based)", () => {
     expect(byUsername).toBeNull();
   });
 });
+
+describe("authorize (group and role)", () => {
+  beforeEach(resetDb);
+
+  async function group(slug: string) {
+    return prisma.group.create({ data: { name: slug, slug } });
+  }
+
+  it("returns groupId and role of the active membership", async () => {
+    const p = await seedPlayer({ email: "g1@example.com", password: "pw12345678" });
+    const g = await group("grp-a");
+    await prisma.membership.create({ data: { groupId: g.id, playerId: p.id, role: "admin" } });
+    const user = await authorizeForTests({ identifier: "g1@example.com", password: "pw12345678" });
+    expect(user?.groupId).toBe(g.id);
+    expect(user?.role).toBe("admin");
+    expect(user?.isAdmin).toBe(true);
+  });
+
+  it("picks the most recently joined active membership", async () => {
+    const p = await seedPlayer({ email: "g2@example.com", password: "pw12345678" });
+    const older = await group("grp-old");
+    const newer = await group("grp-new");
+    const removed = await group("grp-removed");
+    await prisma.membership.create({
+      data: { groupId: older.id, playerId: p.id, role: "owner", joinedAt: new Date("2026-01-01") },
+    });
+    await prisma.membership.create({
+      data: { groupId: newer.id, playerId: p.id, role: "member", joinedAt: new Date("2026-03-01") },
+    });
+    await prisma.membership.create({
+      data: {
+        groupId: removed.id,
+        playerId: p.id,
+        role: "owner",
+        joinedAt: new Date("2026-06-01"),
+        removedAt: new Date("2026-07-01"),
+      },
+    });
+    const user = await authorizeForTests({ identifier: "g2@example.com", password: "pw12345678" });
+    expect(user?.groupId).toBe(newer.id);
+    expect(user?.role).toBe("member");
+    expect(user?.isAdmin).toBe(false);
+  });
+
+  it("without membership returns groupId null and isAdmin false", async () => {
+    await seedPlayer({ email: "g3@example.com", password: "pw12345678" });
+    const user = await authorizeForTests({ identifier: "g3@example.com", password: "pw12345678" });
+    expect(user?.groupId).toBeNull();
+    expect(user?.role).toBeNull();
+    expect(user?.isAdmin).toBe(false);
+  });
+});

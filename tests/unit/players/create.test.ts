@@ -65,4 +65,21 @@ describe("createPlayer", () => {
       }),
     ).rejects.toThrow(/duplicate/i);
   });
+
+  it("creates a membership in the sole group with role admin/member", async () => {
+    const actor = await makeAdmin();
+    const a = await createPlayer({
+      email: "a@example.com", name: "A", password: "hunter22extra", isAdmin: true, actorId: actor.id,
+    });
+    const m = await createPlayer({
+      email: "m@example.com", name: "M", password: "hunter22extra", isAdmin: false, actorId: actor.id,
+    });
+    const groups = await prisma.group.findMany();
+    expect(groups).toHaveLength(1);
+    const rows = await prisma.membership.findMany({ where: { playerId: { in: [a.id, m.id] } } });
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.groupId === groups[0].id && r.removedAt === null)).toBe(true);
+    expect(rows.find((r) => r.playerId === a.id)!.role).toBe("admin");
+    expect(rows.find((r) => r.playerId === m.id)!.role).toBe("member");
+  });
 });

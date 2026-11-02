@@ -11,6 +11,7 @@
 
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth/hash";
+import { getSoleGroup } from "../src/lib/group/sole-group";
 
 const DEMO_PASSWORD = "demo12345";
 const DUMMIES = [
@@ -24,12 +25,18 @@ const DUMMIES = [
 async function main() {
   const confirmAll = process.argv.includes("--confirm-all");
   const passwordHash = await hashPassword(DEMO_PASSWORD);
+  const group = await getSoleGroup();
 
   for (const d of DUMMIES) {
-    await prisma.player.upsert({
+    const player = await prisma.player.upsert({
       where: { email: d.email },
       update: {},
       create: { name: d.name, email: d.email, passwordHash, isAdmin: false },
+    });
+    await prisma.membership.upsert({
+      where: { groupId_playerId: { groupId: group.id, playerId: player.id } },
+      update: {},
+      create: { groupId: group.id, playerId: player.id, role: "member" },
     });
   }
   console.log(`Ensured ${DUMMIES.length} dummy players (password: ${DEMO_PASSWORD}).`);

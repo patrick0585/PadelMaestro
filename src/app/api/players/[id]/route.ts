@@ -15,6 +15,7 @@ import {
   LastAdminError as DeleteLastAdminError,
   ActiveParticipationError,
 } from "@/lib/players/delete";
+import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
 const PatchSchema = z
@@ -68,6 +69,9 @@ export async function PATCH(
     if (e instanceof LastAdminError) {
       return NextResponse.json({ error: "last_admin" }, { status: 409 });
     }
+    if (e instanceof OwnerProtectedError) {
+      return NextResponse.json({ error: "owner_protected" }, { status: 409 });
+    }
     throw e;
   }
 }
@@ -100,6 +104,12 @@ export async function DELETE(
     if (e instanceof DeleteLastAdminError) {
       return NextResponse.json(
         { error: "last_admin", message: "Der letzte verbleibende Admin kann nicht gelöscht werden" },
+        { status: 409 },
+      );
+    }
+    if (e instanceof OwnerProtectedError) {
+      return NextResponse.json(
+        { error: "owner_protected", message: "Der Besitzer der Gruppe kann nicht entfernt werden" },
         { status: 409 },
       );
     }

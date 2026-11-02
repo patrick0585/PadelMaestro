@@ -2,8 +2,10 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { authorizeCredentials } from "@/lib/auth/authorize";
+import { findPlayerForRefresh } from "@/lib/auth/refresh-lookup";
 import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 import { prisma } from "@/lib/db";
+import type { GroupRole } from "@/lib/auth/roles";
 
 const DEV_PLACEHOLDERS = new Set([
   "dev-secret-replace-me",
@@ -44,18 +46,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
-        token.username = (user as { username?: string | null }).username ?? null;
-        (token as { refreshedAt?: number }).refreshedAt = Date.now();
+        token.isAdmin = user.isAdmin ?? false;
+        token.username = user.username ?? null;
+        token.groupId = user.groupId ?? null;
+        token.role = user.role ?? null;
+        token.refreshedAt = Date.now();
         return token;
       }
 
       const result = await refreshTokenFromPlayer(token, {
-        findUnique: (id) =>
-          prisma.player.findUnique({
-            where: { id },
-            select: { isAdmin: true, deletedAt: true, username: true },
-          }),
+        findUnique: (id) => findPlayerForRefresh(prisma, id),
       });
       return result.kind === "ok" ? result.token : null;
     },
@@ -66,6 +66,8 @@ declare module "next-auth" {
   interface User {
     isAdmin?: boolean;
     username?: string | null;
+    groupId?: string | null;
+    role?: GroupRole | null;
   }
   interface Session {
     user: {
@@ -74,6 +76,19 @@ declare module "next-auth" {
       name: string;
       username: string | null;
       isAdmin: boolean;
+      groupId: string | null;
+      role: GroupRole | null;
     };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    isAdmin?: boolean;
+    username?: string | null;
+    groupId?: string | null;
+    role?: GroupRole | null;
+    refreshedAt?: number;
   }
 }

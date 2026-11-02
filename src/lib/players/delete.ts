@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { OwnerProtectedError } from "./owner-protected-error";
 
 export class PlayerNotFoundError extends Error {
   constructor(id: string) {
@@ -40,6 +41,12 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
 
     if (target.id === input.actorId) throw new SelfDeleteError();
 
+    const ownerMembership = await tx.membership.findFirst({
+      where: { playerId: target.id, removedAt: null, role: "owner" },
+      select: { id: true },
+    });
+    if (ownerMembership) throw new OwnerProtectedError();
+
     if (target.isAdmin) {
       const remainingAdmins = await tx.player.count({
         where: { isAdmin: true, deletedAt: null, id: { not: target.id } },
@@ -57,9 +64,14 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
     });
     if (activeParticipation) throw new ActiveParticipationError();
 
+    const now = new Date();
     await tx.player.update({
       where: { id: target.id },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: now },
+    });
+    await tx.membership.updateMany({
+      where: { playerId: target.id, removedAt: null },
+      data: { removedAt: now },
     });
 
     await tx.auditLog.create({

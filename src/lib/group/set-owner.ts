@@ -40,6 +40,8 @@ export async function setGroupOwner(args: {
       update: { role: "owner", removedAt: null },
     });
 
+    await tx.player.update({ where: { id: player.id }, data: { isAdmin: true } });
+
     return { newOwnerId: player.id, previousOwnerId: previous?.playerId ?? null };
   });
 }

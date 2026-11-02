@@ -7,6 +7,7 @@ import {
   LastAdminError,
   ActiveParticipationError,
 } from "@/lib/players/delete";
+import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
 import { resetDb } from "../helpers/reset-db";
 
 async function makeAdmin(i = 1) {
@@ -191,5 +192,41 @@ describe("deletePlayer", () => {
     await deletePlayer({ playerId: p1.id, actorId: admin.id });
     const match = await prisma.match.findFirst({ where: { team1PlayerAId: p1.id } });
     expect(match).not.toBeNull();
+  });
+
+  it("sets removedAt on active memberships", async () => {
+    const admin = await makeAdmin();
+    const target = await makeUser();
+    const group = await prisma.group.create({ data: { name: "G", slug: "g" } });
+    await prisma.membership.create({ data: { groupId: group.id, playerId: target.id, role: "member" } });
+    await deletePlayer({ playerId: target.id, actorId: admin.id });
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: target.id } });
+    expect(m.removedAt).not.toBeNull();
+  });
+
+  it("rejects deleting the owner", async () => {
+    const admin = await makeAdmin();
+    const owner = await makeAdmin(2);
+    const group = await prisma.group.create({ data: { name: "G", slug: "g" } });
+    await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+    await expect(deletePlayer({ playerId: owner.id, actorId: admin.id })).rejects.toBeInstanceOf(
+      OwnerProtectedError,
+    );
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(p.deletedAt).toBeNull();
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+    expect(m.removedAt).toBeNull();
+  });
+
+  it("deletes a player whose owner membership was removed", async () => {
+    const admin = await makeAdmin();
+    const target = await makeUser();
+    const group = await prisma.group.create({ data: { name: "G", slug: "g" } });
+    await prisma.membership.create({
+      data: { groupId: group.id, playerId: target.id, role: "owner", removedAt: new Date() },
+    });
+    await expect(deletePlayer({ playerId: target.id, actorId: admin.id })).resolves.toBeUndefined();
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(p.deletedAt).not.toBeNull();
   });
 });

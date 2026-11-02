@@ -23,11 +23,13 @@ describe("setGroupOwner", () => {
     });
     expect(m.role).toBe("owner");
     expect(m.removedAt).toBeNull();
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).isAdmin).toBe(true);
   });
 
   it("demotes the previous owner to admin and reports them", async () => {
     const group = await getSoleGroup();
     const old = await mkPlayer("old@example.com", "Old");
+    await prisma.player.update({ where: { id: old.id }, data: { isAdmin: true } });
     const next = await mkPlayer("new@example.com", "New");
     await prisma.membership.create({
       data: { groupId: group.id, playerId: old.id, role: "owner" },
@@ -40,6 +42,8 @@ describe("setGroupOwner", () => {
       where: { groupId_playerId: { groupId: group.id, playerId: old.id } },
     });
     expect(oldM.role).toBe("admin");
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: next.id } })).isAdmin).toBe(true);
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: old.id } })).isAdmin).toBe(true);
   });
 
   it("reactivates a removed membership when promoting", async () => {

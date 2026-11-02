@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { prisma } from "../src/lib/db";
 import { getOrCreateActiveSeason } from "../src/lib/season";
+import { getSoleGroup } from "../src/lib/group/sole-group";
 
 interface HistoricalGameDay {
   date: string;
@@ -28,6 +29,7 @@ async function main() {
   const data = JSON.parse(readFileSync(path, "utf-8")) as HistoricalExport;
   const season = await getOrCreateActiveSeason();
 
+  const group = await getSoleGroup();
   const playerByName = new Map<string, string>();
   for (const raw of data.players) {
     const p = await prisma.player.upsert({
@@ -35,12 +37,18 @@ async function main() {
       create: { name: raw.name, email: raw.email, passwordHash: null },
       update: { name: raw.name },
     });
+    await prisma.membership.upsert({
+      where: { groupId_playerId: { groupId: group.id, playerId: p.id } },
+      create: { groupId: group.id, playerId: p.id, role: "member" },
+      update: {},
+    });
     playerByName.set(raw.name, p.id);
   }
 
   for (const gd of data.gameDays) {
     const day = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId ?? (await getSoleGroup()).id,
         seasonId: season.id,
         date: new Date(gd.date),
         playerCount: gd.playerCount,

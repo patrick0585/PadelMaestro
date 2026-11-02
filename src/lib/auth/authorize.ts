@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
 import { rateLimitRequest } from "@/lib/rate-limit";
+import { findActiveMembership } from "@/lib/group/active-membership";
+import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
 const CredentialsSchema = z.object({
   identifier: z.string().min(1),
@@ -20,6 +22,8 @@ export type AuthorizedUser = {
   name: string;
   username: string | null;
   isAdmin: boolean;
+  groupId: string | null;
+  role: GroupRole | null;
 };
 
 export async function authorizeCredentials(
@@ -43,11 +47,14 @@ export async function authorizeCredentials(
   const hash = player?.passwordHash ?? DUMMY_HASH;
   const ok = await verifyPassword(password, hash);
   if (!ok || !player) return null;
+  const membership = await findActiveMembership(prisma, player.id);
   return {
     id: player.id,
     email: player.email,
     name: player.name,
     username: player.username,
-    isAdmin: player.isAdmin,
+    isAdmin: isAdminRole(membership?.role),
+    groupId: membership?.groupId ?? null,
+    role: membership?.role ?? null,
   };
 }
