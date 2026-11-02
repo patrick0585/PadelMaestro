@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import type { GroupRole } from "@/lib/auth/roles";
 import { isValidUsername, normaliseUsername } from "@/lib/auth/username";
 
 export interface EditablePlayer {
@@ -12,6 +13,7 @@ export interface EditablePlayer {
   email: string;
   username: string | null;
   isAdmin: boolean;
+  role: GroupRole;
 }
 
 export function EditPlayerDialog({
@@ -150,6 +152,7 @@ export function EditPlayerDialog({
             id="edit-player-is-admin"
             type="checkbox"
             checked={isAdmin}
+            disabled={player?.role === "owner"}
             onChange={(e) => setIsAdmin(e.target.checked)}
           />
           Admin-Rechte

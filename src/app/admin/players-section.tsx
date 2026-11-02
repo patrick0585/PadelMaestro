@@ -9,6 +9,7 @@ import { ResetPasswordDialog } from "./reset-password-dialog";
 import { EditPlayerDialog, type EditablePlayer } from "./edit-player-dialog";
 import { DeletePlayerDialog } from "./delete-player-dialog";
 import { AvatarDialog } from "./avatar-dialog";
+import type { GroupRole } from "@/lib/auth/roles";
 
 export interface PlayerRow {
   id: string;
@@ -16,6 +17,7 @@ export interface PlayerRow {
   email: string;
   username: string | null;
   isAdmin: boolean;
+  role: GroupRole;
   hasPassword: boolean;
   avatarVersion: number;
 }
@@ -50,7 +52,11 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                {p.isAdmin && <Badge variant="primary">Admin</Badge>}
+                {p.role === "owner" ? (
+                  <Badge variant="primary">Besitzer</Badge>
+                ) : (
+                  p.isAdmin && <Badge variant="primary">Admin</Badge>
+                )}
                 {!p.hasPassword && <Badge variant="neutral">Nur Stats</Badge>}
                 <Button
                   variant="ghost"
@@ -63,6 +69,7 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                       email: p.email,
                       username: p.username,
                       isAdmin: p.isAdmin,
+                      role: p.role,
                     })
                   }
                 >
@@ -74,14 +81,16 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                 <Button variant="ghost" size="sm" onClick={() => setAvatarFor(p)}>
                   Avatar
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Spieler ${p.name} löschen`}
-                  onClick={() => setDeleteFor(p)}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                </Button>
+                {p.role !== "owner" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Spieler ${p.name} löschen`}
+                    onClick={() => setDeleteFor(p)}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                  </Button>
+                )}
               </div>
             </li>
           ))}
