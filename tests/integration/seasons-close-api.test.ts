@@ -67,8 +67,9 @@ describe("POST /api/seasons/close", () => {
 
   it("closes the season and returns both seasons", async () => {
     const groupId = await makeAdmin();
-    const own = await getOrCreateActiveSeason(groupId);
+    // Fremde Saison zuerst: ein Lookup ohne groupId würde sie treffen.
     const foreign = await createTestSeason((await createTestGroup("Andere")).id);
+    const own = await getOrCreateActiveSeason(groupId);
     const res = await POST(req({ closedName: "Hinrunde 2026", nextName: "Rückrunde 2026" }));
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -82,8 +83,9 @@ describe("POST /api/seasons/close", () => {
 
   it("closes only the active season of the admin's own group", async () => {
     const groupId = await makeAdmin();
-    const own = await createTestSeason(groupId);
+    // Fremde Saison zuerst: ein Lookup ohne groupId würde sie treffen.
     const foreign = await createTestSeason((await createTestGroup("Andere")).id);
+    const own = await createTestSeason(groupId);
     const res = await POST(req({ closedName: "Alt", nextName: "Neu" }));
     expect(res.status).toBe(200);
     expect((await prisma.season.findUniqueOrThrow({ where: { id: own.id } })).isActive).toBe(false);

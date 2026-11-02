@@ -62,7 +62,7 @@ Alle Prüfungen bestanden, Zeilenzahlen unverändert, Pflichtfelder und Fremdsch
 
 ## Deploy-Ablauf
 
-1. Pre-Check (Soll 0, vor dem Deploy): `SELECT count(*) FROM "GameDay" d JOIN "Season" s ON s.id=d."seasonId" WHERE d."groupId" <> s."groupId";`
+1. Pre-Check (Soll 0, vor dem Deploy): `SELECT count(*) FROM "GameDay" d JOIN "Season" s ON s.id=d."seasonId" WHERE d."groupId" <> s."groupId" OR d."groupId" IS NULL OR s."groupId" IS NULL;`
 2. Manueller Dump nach `/root/backups/<datum>-pre-tenancy-4/db.dump` (`sudo -u postgres pg_dump -Fc padel_tracker`).
 3. `deploy.sh` ausführen. Der Health-Check auf :3000 schlägt fälschlich fehl; stattdessen `systemctl is-active padel` und `curl http://127.0.0.1:8080/login` prüfen.
    Während des Deploys keine Admin-Aktionen (Spieler anlegen/ändern, Saison oder Spieltag anlegen) ausführen.
