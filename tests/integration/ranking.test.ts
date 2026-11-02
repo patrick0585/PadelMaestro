@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { computeRanking } from "@/lib/ranking/compute";
 import { resetDb } from "../helpers/reset-db";
-import { createTestGroup } from "../helpers/group";
+import { createMember, createTestGroup } from "../helpers/group";
 
 describe("computeRanking", () => {
   beforeEach(resetDb);
@@ -37,7 +37,7 @@ describe("computeRanking", () => {
     });
     const [p1, p2, p3, p4] = await Promise.all(
       [1, 2, 3, 4].map((i) =>
-        prisma.player.create({ data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
       ),
     );
     const gd = await prisma.gameDay.create({
@@ -82,7 +82,7 @@ describe("computeRanking", () => {
     });
     const [highPpg, highTotal] = await Promise.all(
       ["HighPpg", "HighTotal"].map((n) =>
-        prisma.player.create({ data: { name: n, email: `${n}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: n, email: `${n}@x`, passwordHash: "x" }),
       ),
     );
     const gd = await prisma.gameDay.create({
@@ -131,7 +131,7 @@ describe("computeRanking", () => {
     });
     const [p1, p2, p3, p4] = await Promise.all(
       [1, 2, 3, 4].map((i) =>
-        prisma.player.create({ data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
       ),
     );
 
@@ -240,7 +240,7 @@ describe("computeRanking", () => {
     // before "Bob" under de collation, "Carl" before "Dave".
     const [alice, bob, carl, dave] = await Promise.all(
       ["Älice", "Bob", "Carl", "Dave"].map((n) =>
-        prisma.player.create({ data: { name: n, email: `${n}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: n, email: `${n}@x`, passwordHash: "x" }),
       ),
     );
     const day = await prisma.gameDay.create({
@@ -288,7 +288,7 @@ describe("computeRanking", () => {
     });
     const [p1, p2] = await Promise.all(
       [1, 2].map((i) =>
-        prisma.player.create({ data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
       ),
     );
     const day = await prisma.gameDay.create({
@@ -335,7 +335,7 @@ describe("computeRanking", () => {
     });
     const [p1, p2, p3, p4] = await Promise.all(
       [1, 2, 3, 4].map((i) =>
-        prisma.player.create({ data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
       ),
     );
     const day = await prisma.gameDay.create({
@@ -359,6 +359,8 @@ describe("computeRanking", () => {
         team2Score: 0,
       },
     });
+    // Mirrors deletePlayer: membership removed and player soft-deleted.
+    await prisma.membership.updateMany({ where: { playerId: p1.id }, data: { removedAt: new Date() } });
     await prisma.player.update({ where: { id: p1.id }, data: { deletedAt: new Date() } });
 
     const ranking = await computeRanking(season.id);
@@ -381,7 +383,7 @@ describe("computeRanking", () => {
     });
     const [p1, p2, p3, p4] = await Promise.all(
       [1, 2, 3, 4].map((i) =>
-        prisma.player.create({ data: { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" } }),
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
       ),
     );
     const gd = await prisma.gameDay.create({
@@ -424,9 +426,7 @@ describe("computeRanking", () => {
         isActive: true,
       },
     });
-    const player = await prisma.player.create({
-      data: { name: "Joker User", email: "j@x", passwordHash: "x" },
-    });
+    const player = await createMember(season.groupId, { name: "Joker User", email: "j@x", passwordHash: "x" });
     const gd = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 5 },
     });
@@ -447,5 +447,102 @@ describe("computeRanking", () => {
     expect(ranking[0].points).toBeCloseTo(15);
     expect(ranking[0].pointsPerGame).toBeCloseTo(1.5);
     expect(ranking[0].jokersUsed).toBe(1);
+  });
+
+  async function seasonWithFourMembers() {
+    const year = new Date().getFullYear();
+    const season = await prisma.season.create({
+      data: {
+        groupId: (await createTestGroup()).id,
+        name: `Saison ${year}`,
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    });
+    const players = await Promise.all(
+      [1, 2, 3, 4].map((i) =>
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
+      ),
+    );
+    const day = await prisma.gameDay.create({
+      data: {
+        groupId: season.groupId,
+        seasonId: season.id,
+        date: new Date("2026-04-21"),
+        playerCount: 4,
+        status: "finished",
+      },
+    });
+    return { season, day, players };
+  }
+
+  it("excludes members of other groups", async () => {
+    const { season, day, players } = await seasonWithFourMembers();
+    const [p1, p2, p3] = players;
+    const otherGroup = await createTestGroup("Andere");
+    const outsider = await createMember(otherGroup.id, {
+      name: "Outsider",
+      email: "outsider@x",
+      passwordHash: "x",
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: p1.id,
+        team1PlayerBId: p2.id,
+        team2PlayerAId: p3.id,
+        team2PlayerBId: outsider.id,
+        team1Score: 3,
+        team2Score: 1,
+      },
+    });
+
+    const ranking = await computeRanking(season.id);
+    expect(ranking.map((r) => r.playerId).sort()).toEqual([p1.id, p2.id, p3.id].sort());
+  });
+
+  it("excludes removed members and leaves the others' totals unchanged", async () => {
+    const { season, day, players } = await seasonWithFourMembers();
+    const [p1, p2, p3, p4] = players;
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: p1.id,
+        team1PlayerBId: p2.id,
+        team2PlayerAId: p3.id,
+        team2PlayerBId: p4.id,
+        team1Score: 3,
+        team2Score: 1,
+      },
+    });
+    await prisma.jokerUse.create({
+      data: {
+        playerId: p1.id,
+        seasonId: season.id,
+        gameDayId: day.id,
+        ppgAtUse: "2",
+        gamesCredited: 2,
+        pointsCredited: "4.00",
+      },
+    });
+    const before = await computeRanking(season.id);
+    const othersBefore = before
+      .filter((r) => r.playerId !== p1.id)
+      .map(({ playerId, games, points, jokersUsed }) => ({ playerId, games, points, jokersUsed }));
+
+    await prisma.membership.updateMany({
+      where: { groupId: season.groupId, playerId: p1.id },
+      data: { removedAt: new Date() },
+    });
+
+    const after = await computeRanking(season.id);
+    expect(after.map((r) => r.playerId)).not.toContain(p1.id);
+    expect(
+      after.map(({ playerId, games, points, jokersUsed }) => ({ playerId, games, points, jokersUsed })),
+    ).toEqual(othersBefore);
   });
 });

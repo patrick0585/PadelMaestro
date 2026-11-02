@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { findGroupMembership } from "@/lib/group/active-membership";
-import { listActiveMembers } from "@/lib/group/members";
+import { activeMemberPlayers, listActiveMembers } from "@/lib/group/members";
 import { createMember, createTestGroup } from "../helpers/group";
 import { resetDb } from "../helpers/reset-db";
 
@@ -71,5 +71,20 @@ describe("members", () => {
         avatarVersion: zed.avatarVersion,
       },
     ]);
+  });
+
+  it("activeMemberPlayers liefert nur aktive Mitglieder der Gruppe", async () => {
+    const g1 = await createTestGroup("Eins");
+    const g2 = await createTestGroup("Zwei");
+    const amy = await createMember(g1.id, { name: "Amy", email: "amy@x.de" });
+    const gone = await createMember(g1.id, { name: "Bob", email: "b@x.de" });
+    const other = await createMember(g2.id, { name: "Other", email: "o@x.de" });
+    const notRequested = await createMember(g1.id, { name: "Zed", email: "z@x.de" });
+    await removeMember(g1.id, gone.id);
+
+    const rows = await activeMemberPlayers(g1.id, [amy.id, gone.id, other.id]);
+    expect(rows).toEqual([{ id: amy.id, name: "Amy", avatarVersion: amy.avatarVersion }]);
+    expect(rows.map((r) => r.id)).not.toContain(notRequested.id);
+    expect(await activeMemberPlayers(g1.id, [])).toEqual([]);
   });
 });

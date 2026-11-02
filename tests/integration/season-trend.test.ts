@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { buildSeasonTrend } from "@/lib/ranking/season-trend";
 import { resetDb } from "../helpers/reset-db";
-import { createTestGroup } from "../helpers/group";
+import { createMember, createTestGroup } from "../helpers/group";
 
 async function makeSeason() {
   const year = new Date().getFullYear();
@@ -12,10 +12,8 @@ async function makeSeason() {
   });
 }
 
-async function makeUser(name: string) {
-  return prisma.player.create({
-    data: { name, email: `${name.toLowerCase()}@x`, passwordHash: "x" },
-  });
+async function makeUser(season: { groupId: string }, name: string) {
+  return createMember(season.groupId, { name, email: `${name.toLowerCase()}@x`, passwordHash: "x" });
 }
 
 async function makeFinishedDay(season: { id: string; groupId: string }, date: Date) {
@@ -60,10 +58,10 @@ describe("buildSeasonTrend", () => {
   it("ranks by points DESC then ppg DESC, accumulating across days", async () => {
     const season = await makeSeason();
     const [paul, patrick, michi, thomas] = await Promise.all([
-      makeUser("Paul"),
-      makeUser("Patrick"),
-      makeUser("Michi"),
-      makeUser("Thomas"),
+      makeUser(season, "Paul"),
+      makeUser(season, "Patrick"),
+      makeUser(season, "Michi"),
+      makeUser(season, "Thomas"),
     ]);
     // Day A: tennis-set scoring (4 players, format flag is informational
     // here — buildSeasonTrend only reads team1/team2 scores).
@@ -106,11 +104,11 @@ describe("buildSeasonTrend", () => {
   it("emits null for a player who has not yet appeared by a given day", async () => {
     const season = await makeSeason();
     const [paul, patrick, michi, thomas, eva] = await Promise.all([
-      makeUser("Paul"),
-      makeUser("Patrick"),
-      makeUser("Michi"),
-      makeUser("Thomas"),
-      makeUser("Eva"),
+      makeUser(season, "Paul"),
+      makeUser(season, "Patrick"),
+      makeUser(season, "Michi"),
+      makeUser(season, "Thomas"),
+      makeUser(season, "Eva"),
     ]);
     // Day A: only Paul/Patrick/Michi/Thomas play. Eva has never appeared
     // in the season → null at the end of Day A.
@@ -156,11 +154,11 @@ describe("buildSeasonTrend", () => {
   it("places players with games but lower ppg above players with zero games (NULLS LAST)", async () => {
     const season = await makeSeason();
     const [active1, active2, active3, active4, joker] = await Promise.all([
-      makeUser("Anna"),
-      makeUser("Ben"),
-      makeUser("Clara"),
-      makeUser("Dirk"),
-      makeUser("Eva"),
+      makeUser(season, "Anna"),
+      makeUser(season, "Ben"),
+      makeUser(season, "Clara"),
+      makeUser(season, "Dirk"),
+      makeUser(season, "Eva"),
     ]);
     // Active players play one match. Eva uses a joker on the same day
     // (zero games credited so her ppg is undefined → NULLS LAST).
@@ -194,10 +192,10 @@ describe("buildSeasonTrend", () => {
   it("ignores planned/in-progress days and only reports finished ones", async () => {
     const season = await makeSeason();
     const [paul, patrick, michi, thomas] = await Promise.all([
-      makeUser("Paul"),
-      makeUser("Patrick"),
-      makeUser("Michi"),
-      makeUser("Thomas"),
+      makeUser(season, "Paul"),
+      makeUser(season, "Patrick"),
+      makeUser(season, "Michi"),
+      makeUser(season, "Thomas"),
     ]);
     const finished = await makeFinishedDay(season, new Date("2026-04-01"));
     await makeMatch(finished.id, 1, [paul.id, patrick.id], [michi.id, thomas.id], 2, 1);
@@ -214,5 +212,25 @@ describe("buildSeasonTrend", () => {
     const trend = await buildSeasonTrend(season.id);
     expect(trend.days).toHaveLength(1);
     expect(trend.players.every((p) => p.values.length === 1)).toBe(true);
+  });
+
+  it("omits a removed member from the trend", async () => {
+    const season = await makeSeason();
+    const [paul, patrick, michi, thomas] = await Promise.all([
+      makeUser(season, "Paul"),
+      makeUser(season, "Patrick"),
+      makeUser(season, "Michi"),
+      makeUser(season, "Thomas"),
+    ]);
+    const day = await makeFinishedDay(season, new Date("2026-04-01"));
+    await makeMatch(day.id, 1, [paul.id, patrick.id], [michi.id, thomas.id], 3, 1);
+    await prisma.membership.updateMany({
+      where: { groupId: season.groupId, playerId: paul.id },
+      data: { removedAt: new Date() },
+    });
+
+    const trend = await buildSeasonTrend(season.id);
+    expect(trend.players.map((p) => p.name).sort()).toEqual(["Michi", "Patrick", "Thomas"]);
+    expect(trend.totalPlayers).toBe(3);
   });
 });

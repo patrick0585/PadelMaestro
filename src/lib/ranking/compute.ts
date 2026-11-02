@@ -45,6 +45,10 @@ async function computeMedalsBySeason(
 }
 
 export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
+  const { groupId } = await prisma.season.findUniqueOrThrow({
+    where: { id: seasonId },
+    select: { groupId: true },
+  });
   const [rows, medalsByPlayer] = await Promise.all([
     prisma.$queryRaw<
       Array<{
@@ -64,13 +68,14 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
           ELSE m."team2Score"
         END AS points
       FROM "Player" p
+      JOIN "Membership" ms
+        ON ms."playerId" = p.id AND ms."groupId" = ${groupId} AND ms."removedAt" IS NULL
       JOIN "Match" m
         ON p.id IN (m."team1PlayerAId", m."team1PlayerBId",
                     m."team2PlayerAId", m."team2PlayerBId")
       JOIN "GameDay" gd ON gd.id = m."gameDayId"
       WHERE gd."seasonId" = ${seasonId}
         AND m."team1Score" IS NOT NULL
-        AND p."deletedAt" IS NULL
     ),
     jokers AS (
       SELECT j."playerId" AS player_id,
@@ -89,10 +94,11 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
       COALESCE(SUM(played.points), 0)::float + COALESCE(j.points_credited, 0)::float AS points,
       COALESCE(j.jokers_used, 0)::bigint AS jokers_used
     FROM "Player" p
+    JOIN "Membership" ms
+      ON ms."playerId" = p.id AND ms."groupId" = ${groupId} AND ms."removedAt" IS NULL
     LEFT JOIN played ON played.player_id = p.id
     LEFT JOIN jokers j ON j.player_id = p.id
-    WHERE p."deletedAt" IS NULL
-      AND (played.points IS NOT NULL OR j.jokers_used IS NOT NULL)
+    WHERE (played.points IS NOT NULL OR j.jokers_used IS NOT NULL)
     GROUP BY p.id, p.name, p."avatarVersion", j.games_credited, j.points_credited, j.jokers_used
     ORDER BY points DESC,
     (
