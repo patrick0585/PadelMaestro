@@ -27,6 +27,7 @@ model Player {
   matchesScored   Match[]      @relation("ScoredBy")
   jokersUsed      JokerUse[]
   auditLogs       AuditLog[]
+  memberships     Membership[]
 
   // All four player slots of a Match can reference a Player
   matchT1A Match[] @relation("MatchT1A")
@@ -40,6 +41,7 @@ model Player {
 
 model Season {
   id        String   @id @default(uuid())
+  groupId   String?
   name      String   @unique
   year      Int
   startDate DateTime @db.Date
@@ -48,8 +50,12 @@ model Season {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  group      Group?     @relation(fields: [groupId], references: [id])
   gameDays   GameDay[]
   jokerUses  JokerUse[]
+
+  @@unique([groupId, name])
+  @@index([groupId, isActive])
 }
 
 enum GameDayStatus {
@@ -60,6 +66,7 @@ enum GameDayStatus {
 
 model GameDay {
   id           String        @id @default(uuid())
+  groupId      String?
   seasonId     String
   date         DateTime      @db.Date
   playerCount  Int?
@@ -68,12 +75,14 @@ model GameDay {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  group        Group?        @relation(fields: [groupId], references: [id])
   season       Season        @relation(fields: [seasonId], references: [id])
   participants GameDayParticipant[]
   matches      Match[]
   jokers       JokerUse[]
 
   @@unique([seasonId, date])
+  @@index([groupId, status])
 }
 
 enum AttendanceStatus {
@@ -145,6 +154,7 @@ model JokerUse {
 
 model AuditLog {
   id         String   @id @default(uuid())
+  groupId    String?
   actorId    String
   action     String
   entityType String
@@ -152,8 +162,44 @@ model AuditLog {
   payload    Json?
   createdAt  DateTime @default(now())
 
+  group Group? @relation(fields: [groupId], references: [id])
   actor Player @relation(fields: [actorId], references: [id])
 
   @@index([actorId])
   @@index([entityType, entityId])
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  seasons     Season[]
+  gameDays    GameDay[]
+  auditLogs   AuditLog[]
+}
+
+enum MembershipRole {
+  owner
+  admin
+  member
+}
+
+model Membership {
+  id        String         @id @default(uuid())
+  groupId   String
+  playerId  String
+  role      MembershipRole @default(member)
+  joinedAt  DateTime       @default(now())
+  removedAt DateTime?
+
+  group  Group  @relation(fields: [groupId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([groupId, playerId])
+  @@index([playerId])
+  @@index([groupId, removedAt])
 }
