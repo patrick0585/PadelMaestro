@@ -7,6 +7,13 @@ export class PlayerNotFoundError extends Error {
   }
 }
 
+export class DeletedPlayerError extends Error {
+  constructor(email: string) {
+    super(`player ${email} is deleted`);
+    this.name = "DeletedPlayerError";
+  }
+}
+
 export async function setGroupOwner(args: {
   email: string;
   groupId: string;
@@ -15,6 +22,7 @@ export async function setGroupOwner(args: {
   return prisma.$transaction(async (tx) => {
     const player = await tx.player.findUnique({ where: { email } });
     if (!player) throw new PlayerNotFoundError(email);
+    if (player.deletedAt) throw new DeletedPlayerError(email);
 
     const previous = await tx.membership.findFirst({
       where: { groupId, role: "owner", playerId: { not: player.id } },

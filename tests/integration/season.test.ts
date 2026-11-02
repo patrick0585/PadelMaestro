@@ -1,19 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { getOrCreateActiveSeason } from "@/lib/season";
-import { getSoleGroup } from "@/lib/group/sole-group";
+import { AmbiguousGroupError, getSoleGroup } from "@/lib/group/sole-group";
+import { resetDb } from "../helpers/reset-db";
 
 describe("getOrCreateActiveSeason", () => {
-  beforeEach(async () => {
-    await prisma.auditLog.deleteMany();
-    await prisma.jokerUse.deleteMany();
-    await prisma.match.deleteMany();
-    await prisma.gameDayParticipant.deleteMany();
-    await prisma.gameDay.deleteMany();
-    await prisma.season.deleteMany();
-    await prisma.membership.deleteMany();
-    await prisma.group.deleteMany();
-  });
+  beforeEach(resetDb);
 
   it("creates the current-year season if none exists", async () => {
     const year = new Date().getFullYear();
@@ -28,5 +20,16 @@ describe("getOrCreateActiveSeason", () => {
     const first = await getOrCreateActiveSeason();
     const second = await getOrCreateActiveSeason();
     expect(second.id).toBe(first.id);
+  });
+
+  it("rejects with AmbiguousGroupError when two groups exist and no active season", async () => {
+    await prisma.group.createMany({
+      data: [
+        { name: "A", slug: "a" },
+        { name: "B", slug: "b" },
+      ],
+    });
+    await expect(getOrCreateActiveSeason()).rejects.toBeInstanceOf(AmbiguousGroupError);
+    expect(await prisma.season.count()).toBe(0);
   });
 });

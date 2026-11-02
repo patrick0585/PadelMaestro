@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { AmbiguousGroupError, getSoleGroup } from "@/lib/group/sole-group";
+import { AmbiguousGroupError, DEFAULT_GROUP_SLUG, getSoleGroup } from "@/lib/group/sole-group";
 import { resetDb } from "../helpers/reset-db";
 
 describe("getSoleGroup", () => {
@@ -8,7 +8,7 @@ describe("getSoleGroup", () => {
 
   it("creates the default group when none exists", async () => {
     const g = await getSoleGroup();
-    expect(g.slug).toBe("padelmaestro");
+    expect(g.slug).toBe(DEFAULT_GROUP_SLUG);
     expect(await prisma.group.count()).toBe(1);
   });
 
@@ -26,5 +26,15 @@ describe("getSoleGroup", () => {
       ],
     });
     await expect(getSoleGroup()).rejects.toBeInstanceOf(AmbiguousGroupError);
+  });
+
+  it("uses the supplied transaction client", async () => {
+    await prisma
+      .$transaction(async (tx) => {
+        await getSoleGroup(tx);
+        throw new Error("rollback");
+      })
+      .catch(() => undefined);
+    expect(await prisma.group.count()).toBe(0);
   });
 });

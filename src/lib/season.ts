@@ -78,6 +78,7 @@ export async function closeSeasonAndStartNext(args: {
     });
     if (clash) throw new SeasonNameConflictError(clash.name);
 
+    const groupId = active.groupId ?? (await getSoleGroup(tx)).id;
     const now = new Date();
     const year = now.getFullYear();
     const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -93,12 +94,12 @@ export async function closeSeasonAndStartNext(args: {
         startDate: today,
         endDate: new Date(year, 11, 31),
         isActive: true,
-        groupId: active.groupId,
+        groupId,
       },
     });
     await tx.auditLog.create({
       data: {
-        groupId: active.groupId,
+        groupId,
         actorId: args.actorId,
         action: "season.close",
         entityType: "Season",

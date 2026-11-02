@@ -9,6 +9,7 @@ import {
   SeasonNameConflictError,
 } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
+import { getSoleGroup } from "@/lib/group/sole-group";
 import { resetDb } from "../helpers/reset-db";
 
 async function makeAdmin() {
@@ -71,6 +72,32 @@ describe("closeSeasonAndStartNext", () => {
     expect(newSeason.groupId).toBe(groupB.id);
     const log = await prisma.auditLog.findFirst({ where: { action: "season.close" } });
     expect(log?.groupId).toBe(groupB.id);
+  });
+
+  it("falls back to the sole group when the closed season has no groupId", async () => {
+    const admin = await makeAdmin();
+    const year = new Date().getFullYear();
+    await prisma.season.create({
+      data: {
+        name: "Ohne Gruppe",
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+        groupId: null,
+      },
+    });
+
+    const { newSeason } = await closeSeasonAndStartNext({
+      closedName: "Hinrunde X",
+      nextName: "Rückrunde X",
+      actorId: admin.id,
+    });
+
+    const group = await getSoleGroup();
+    expect(newSeason.groupId).toBe(group.id);
+    const log = await prisma.auditLog.findFirst({ where: { action: "season.close" } });
+    expect(log?.groupId).toBe(group.id);
   });
 
   it("starts the new season with an empty ranking and a fresh joker budget", async () => {
