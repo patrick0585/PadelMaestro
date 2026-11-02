@@ -1,7 +1,7 @@
 {
   "name": "Padelmaestro",
   "short_name": "Padelmaestro",
-  "description": "Paarungen und Rangliste für unsere Padel-Gruppe",
+  "description": "Spieltage, Ergebnisse und Rangliste für deine Padel-Gruppe",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

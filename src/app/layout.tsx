@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 
 export const metadata: Metadata = {
   title: "Padelmaestro",
-  description: "Paarungen und Rangliste für unsere Padel-Gruppe",
+  description: "Spieltage, Ergebnisse und Rangliste für deine Padel-Gruppe",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     title: "Padelmaestro",
