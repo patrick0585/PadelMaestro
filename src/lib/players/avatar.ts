@@ -1,12 +1,7 @@
 import sharp from "sharp";
 import { prisma } from "@/lib/db";
-
-export class PlayerNotFoundError extends Error {
-  constructor(id: string) {
-    super(`player not found: ${id}`);
-    this.name = "PlayerNotFoundError";
-  }
-}
+import { PlayerNotFoundError } from "./errors";
+export { PlayerNotFoundError } from "./errors";
 
 export class InvalidImageError extends Error {
   constructor() {

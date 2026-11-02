@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getSeasonGroupId } from "@/lib/group/season-group";
 import { activeMemberPlayers } from "@/lib/group/members";
 
 export interface SeasonTrendDay {
@@ -110,10 +111,7 @@ export async function buildSeasonTrend(seasonId: string): Promise<SeasonTrend> {
   for (const j of jokerUses) playerIds.add(j.playerId);
 
   // Mirror computeRanking: only active members of the season's group count.
-  const { groupId } = await prisma.season.findUniqueOrThrow({
-    where: { id: seasonId },
-    select: { groupId: true },
-  });
+  const groupId = await getSeasonGroupId(seasonId);
   const activePlayers = await activeMemberPlayers(groupId, [...playerIds]);
   const validIds = new Set(activePlayers.map((p) => p.id));
   const nameById = new Map(activePlayers.map((p) => [p.id, p.name]));

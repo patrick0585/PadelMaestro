@@ -1,23 +1,13 @@
 import { prisma } from "@/lib/db";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { OwnerProtectedError } from "./owner-protected-error";
+import { PlayerNotFoundError, LastAdminError } from "./errors";
+export { PlayerNotFoundError, LastAdminError } from "./errors";
 
-export class PlayerNotFoundError extends Error {
-  constructor(id: string) {
-    super(`player not found: ${id}`);
-    this.name = "PlayerNotFoundError";
-  }
-}
 export class SelfDeleteError extends Error {
   constructor() {
     super("cannot delete yourself");
     this.name = "SelfDeleteError";
-  }
-}
-export class LastAdminError extends Error {
-  constructor() {
-    super("cannot delete the last remaining admin");
-    this.name = "LastAdminError";
   }
 }
 export class ActiveParticipationError extends Error {

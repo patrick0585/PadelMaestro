@@ -4,31 +4,9 @@ import { normaliseUsername } from "@/lib/auth/username";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
 import { OwnerProtectedError } from "./owner-protected-error";
+import { PlayerNotFoundError, DuplicateEmailError, DuplicateUsernameError, LastAdminError } from "./errors";
+export { PlayerNotFoundError, DuplicateEmailError, DuplicateUsernameError, LastAdminError } from "./errors";
 
-export class PlayerNotFoundError extends Error {
-  constructor(id: string) {
-    super(`player not found: ${id}`);
-    this.name = "PlayerNotFoundError";
-  }
-}
-export class DuplicateEmailError extends Error {
-  constructor(email: string) {
-    super(`duplicate email: ${email}`);
-    this.name = "DuplicateEmailError";
-  }
-}
-export class DuplicateUsernameError extends Error {
-  constructor(username: string) {
-    super(`duplicate username: ${username}`);
-    this.name = "DuplicateUsernameError";
-  }
-}
-export class LastAdminError extends Error {
-  constructor() {
-    super("cannot demote the last remaining admin");
-    this.name = "LastAdminError";
-  }
-}
 export class NoFieldsError extends Error {
   constructor() {
     super("no fields to update");

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getSeasonGroupId } from "@/lib/group/season-group";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 
 export interface RankingRow {
@@ -45,10 +46,7 @@ async function computeMedalsBySeason(
 }
 
 export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
-  const { groupId } = await prisma.season.findUniqueOrThrow({
-    where: { id: seasonId },
-    select: { groupId: true },
-  });
+  const groupId = await getSeasonGroupId(seasonId);
   const [rows, medalsByPlayer] = await Promise.all([
     prisma.$queryRaw<
       Array<{

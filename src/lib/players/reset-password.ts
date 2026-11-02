@@ -2,13 +2,8 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
 import { findGroupMembership } from "@/lib/group/active-membership";
 import { OwnerProtectedError } from "./owner-protected-error";
-
-export class PlayerNotFoundError extends Error {
-  constructor(id: string) {
-    super(`player not found: ${id}`);
-    this.name = "PlayerNotFoundError";
-  }
-}
+import { PlayerNotFoundError } from "./errors";
+export { PlayerNotFoundError } from "./errors";
 
 export interface ResetPlayerPasswordInput {
   groupId: string;
