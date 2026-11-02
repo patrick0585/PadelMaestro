@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import {
   updatePlayer,
   PlayerNotFoundError,
@@ -35,10 +35,8 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const parsed = PatchSchema.safeParse(body);
@@ -51,8 +49,9 @@ export async function PATCH(
   }
   try {
     const updated = await updatePlayer({
+      groupId: g.ctx.groupId,
       playerId: id,
-      actorId: session.user.id,
+      actorId: g.ctx.userId,
       fields: parsed.data,
     });
     return NextResponse.json(updated, { status: 200 });
@@ -80,16 +79,11 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-  }
-  if (!session.user.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
   const { id } = await params;
   try {
-    await deletePlayer({ playerId: id, actorId: session.user.id });
+    await deletePlayer({ groupId: g.ctx.groupId, playerId: id, actorId: g.ctx.userId });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     if (e instanceof DeletePlayerNotFoundError) {

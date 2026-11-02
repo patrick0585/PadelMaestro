@@ -10,20 +10,11 @@ import {
 } from "@/lib/players/update";
 import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
 import { resetDb } from "../../helpers/reset-db";
+import { createMember, createTestGroup, setupGroupWithAdmin } from "../../helpers/group";
 
-async function makeAdmin(i = 1) {
-  return prisma.player.create({
-    data: {
-      name: `Admin${i}`,
-      email: `a${i}@x`,
-      passwordHash: "x",
-      isAdmin: true,
-    },
-  });
-}
-async function makeUser(i = 1) {
-  return prisma.player.create({
-    data: { name: `U${i}`, email: `u${i}@x`, passwordHash: "x" },
+async function membershipOf(groupId: string, playerId: string) {
+  return prisma.membership.findUniqueOrThrow({
+    where: { groupId_playerId: { groupId, playerId } },
   });
 }
 
@@ -31,10 +22,11 @@ describe("updatePlayer", () => {
   beforeEach(resetDb);
 
   it("updates only the provided fields and writes an audit log with before/after/changedFields", async () => {
-    const admin = await makeAdmin();
-    const target = await makeUser();
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
 
     const updated = await updatePlayer({
+      groupId: group.id,
       playerId: target.id,
       actorId: admin.id,
       fields: { name: "New Name", username: "newname" },
@@ -42,7 +34,7 @@ describe("updatePlayer", () => {
 
     expect(updated.name).toBe("New Name");
     expect(updated.username).toBe("newname");
-    expect(updated.email).toBe("u1@x"); // unchanged
+    expect(updated.email).toBe("u1@x");
     expect(updated.isAdmin).toBe(false);
 
     const entries = await prisma.auditLog.findMany({
@@ -62,17 +54,18 @@ describe("updatePlayer", () => {
   });
 
   it("throws NoFieldsError when fields is empty", async () => {
-    const admin = await makeAdmin();
-    const target = await makeUser();
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
     await expect(
-      updatePlayer({ playerId: target.id, actorId: admin.id, fields: {} }),
+      updatePlayer({ groupId: group.id, playerId: target.id, actorId: admin.id, fields: {} }),
     ).rejects.toBeInstanceOf(NoFieldsError);
   });
 
   it("throws PlayerNotFoundError for unknown id", async () => {
-    const admin = await makeAdmin();
+    const { group, admin } = await setupGroupWithAdmin();
     await expect(
       updatePlayer({
+        groupId: group.id,
         playerId: "00000000-0000-0000-0000-000000000000",
         actorId: admin.id,
         fields: { name: "X" },
@@ -81,80 +74,148 @@ describe("updatePlayer", () => {
   });
 
   it("throws PlayerNotFoundError for soft-deleted players", async () => {
-    const admin = await makeAdmin();
-    const target = await makeUser();
-    await prisma.player.update({
-      where: { id: target.id },
-      data: { deletedAt: new Date() },
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
+    await prisma.player.update({ where: { id: target.id }, data: { deletedAt: new Date() } });
+    await expect(
+      updatePlayer({
+        groupId: group.id,
+        playerId: target.id,
+        actorId: admin.id,
+        fields: { name: "X" },
+      }),
+    ).rejects.toBeInstanceOf(PlayerNotFoundError);
+  });
+
+  it("throws PlayerNotFoundError for a member of another group", async () => {
+    const { group, admin } = await setupGroupWithAdmin();
+    const other = await createTestGroup("Andere");
+    const foreign = await createMember(other.id, { name: "F", email: "f@x" });
+    await expect(
+      updatePlayer({
+        groupId: group.id,
+        playerId: foreign.id,
+        actorId: admin.id,
+        fields: { name: "X" },
+      }),
+    ).rejects.toBeInstanceOf(PlayerNotFoundError);
+    const fresh = await prisma.player.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(fresh.name).toBe("F");
+  });
+
+  it("throws PlayerNotFoundError for a removed member", async () => {
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
+    await prisma.membership.update({
+      where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
+      data: { removedAt: new Date() },
     });
     await expect(
-      updatePlayer({ playerId: target.id, actorId: admin.id, fields: { name: "X" } }),
+      updatePlayer({
+        groupId: group.id,
+        playerId: target.id,
+        actorId: admin.id,
+        fields: { name: "X" },
+      }),
     ).rejects.toBeInstanceOf(PlayerNotFoundError);
   });
 
   it("throws DuplicateUsernameError on P2002 username collision", async () => {
-    const admin = await makeAdmin();
+    const { group, admin } = await setupGroupWithAdmin();
     await prisma.player.create({
       data: { name: "A", email: "aa@x", passwordHash: "x", username: "alice" },
     });
-    const b = await makeUser(2);
+    const b = await createMember(group.id, { name: "U2", email: "u2@x" });
     await expect(
-      updatePlayer({ playerId: b.id, actorId: admin.id, fields: { username: "alice" } }),
+      updatePlayer({
+        groupId: group.id,
+        playerId: b.id,
+        actorId: admin.id,
+        fields: { username: "alice" },
+      }),
     ).rejects.toBeInstanceOf(DuplicateUsernameError);
     const fresh = await prisma.player.findUniqueOrThrow({ where: { id: b.id } });
     expect(fresh.username).toBeNull();
   });
 
   it("throws DuplicateEmailError on P2002 email collision", async () => {
-    const admin = await makeAdmin();
-    await prisma.player.create({
-      data: { name: "A", email: "taken@x", passwordHash: "x" },
-    });
-    const b = await makeUser(2);
+    const { group, admin } = await setupGroupWithAdmin();
+    await prisma.player.create({ data: { name: "A", email: "taken@x", passwordHash: "x" } });
+    const b = await createMember(group.id, { name: "U2", email: "u2@x" });
     await expect(
-      updatePlayer({ playerId: b.id, actorId: admin.id, fields: { email: "taken@x" } }),
+      updatePlayer({
+        groupId: group.id,
+        playerId: b.id,
+        actorId: admin.id,
+        fields: { email: "taken@x" },
+      }),
     ).rejects.toBeInstanceOf(DuplicateEmailError);
   });
 
-  it("throws LastAdminError when demoting the only remaining admin", async () => {
-    const onlyAdmin = await makeAdmin();
+  it("throws LastAdminError when the player holds the only admin/owner role of the group", async () => {
+    const { group, admin } = await setupGroupWithAdmin("admin");
     await expect(
       updatePlayer({
-        playerId: onlyAdmin.id,
-        actorId: onlyAdmin.id,
+        groupId: group.id,
+        playerId: admin.id,
+        actorId: admin.id,
+        fields: { isAdmin: false },
+      }),
+    ).rejects.toBeInstanceOf(LastAdminError);
+    expect((await membershipOf(group.id, admin.id)).role).toBe("admin");
+  });
+
+  it("allows demoting the only admin when an owner exists", async () => {
+    const { group, admin: owner } = await setupGroupWithAdmin("owner");
+    const admin = await createMember(group.id, { name: "A2", email: "a2@x", role: "admin" });
+    const updated = await updatePlayer({
+      groupId: group.id,
+      playerId: admin.id,
+      actorId: owner.id,
+      fields: { isAdmin: false },
+    });
+    expect(updated.isAdmin).toBe(false);
+    expect((await membershipOf(group.id, admin.id)).role).toBe("member");
+    const row = await prisma.player.findUniqueOrThrow({ where: { id: admin.id } });
+    expect(row.isAdmin).toBe(false);
+  });
+
+  it("does not count an admin of another group as remaining admin", async () => {
+    const { group, admin } = await setupGroupWithAdmin("admin");
+    const other = await createTestGroup("Andere");
+    await createMember(other.id, { name: "Fremd", email: "fremd@x", role: "admin" });
+    await expect(
+      updatePlayer({
+        groupId: group.id,
+        playerId: admin.id,
+        actorId: admin.id,
         fields: { isAdmin: false },
       }),
     ).rejects.toBeInstanceOf(LastAdminError);
   });
 
-  it("allows demoting an admin when another admin exists", async () => {
-    const a1 = await makeAdmin(1);
-    const a2 = await makeAdmin(2);
+  it("sets the role to admin when promoting", async () => {
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "u1@x" });
     const updated = await updatePlayer({
-      playerId: a2.id,
-      actorId: a1.id,
-      fields: { isAdmin: false },
-    });
-    expect(updated.isAdmin).toBe(false);
-  });
-
-  it("promotes a non-admin even when only one admin exists (no guard)", async () => {
-    const admin = await makeAdmin();
-    const target = await makeUser();
-    const updated = await updatePlayer({
+      groupId: group.id,
       playerId: target.id,
       actorId: admin.id,
       fields: { isAdmin: true },
     });
     expect(updated.isAdmin).toBe(true);
+    expect((await membershipOf(group.id, target.id)).role).toBe("admin");
   });
 
   it("omits unchanged fields from changedFields", async () => {
-    const admin = await makeAdmin();
-    const target = await prisma.player.create({
-      data: { name: "Same", email: "same@x", passwordHash: "x", username: "same" },
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, {
+      name: "Same",
+      email: "same@x",
+      username: "same",
     });
     await updatePlayer({
+      groupId: group.id,
       playerId: target.id,
       actorId: admin.id,
       fields: { name: "Same", username: "different" },
@@ -162,17 +223,14 @@ describe("updatePlayer", () => {
     const entry = await prisma.auditLog.findFirstOrThrow({
       where: { entityId: target.id, action: "player.update" },
     });
-    expect((entry.payload as { changedFields: string[] }).changedFields).toEqual([
-      "username",
-    ]);
+    expect((entry.payload as { changedFields: string[] }).changedFields).toEqual(["username"]);
   });
 
   it("writes no audit log when all provided fields equal current values", async () => {
-    const admin = await makeAdmin();
-    const target = await prisma.player.create({
-      data: { name: "Same", email: "same@x", passwordHash: "x" },
-    });
+    const { group, admin } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "Same", email: "same@x" });
     await updatePlayer({
+      groupId: group.id,
       playerId: target.id,
       actorId: admin.id,
       fields: { name: "Same" },
@@ -183,85 +241,45 @@ describe("updatePlayer", () => {
     expect(entries).toHaveLength(0);
   });
 
-  describe("membership sync", () => {
-    async function makeGroup() {
-      return prisma.group.create({ data: { name: "G", slug: "g" } });
-    }
-
-    it("syncs membership role when isAdmin toggles", async () => {
-      const admin = await makeAdmin();
-      const target = await makeUser();
-      const group = await makeGroup();
-      await prisma.membership.create({ data: { groupId: group.id, playerId: target.id, role: "member" } });
-      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: true } });
-      let m = await prisma.membership.findUniqueOrThrow({
-        where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
-      });
-      expect(m.role).toBe("admin");
-      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: false } });
-      m = await prisma.membership.findUniqueOrThrow({
-        where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
-      });
-      expect(m.role).toBe("member");
-    });
-
+  describe("owner protection", () => {
     it("keeps owner when isAdmin stays true", async () => {
-      const admin = await makeAdmin();
-      const owner = await makeAdmin(2);
-      const group = await makeGroup();
-      await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
-      await updatePlayer({ playerId: owner.id, actorId: admin.id, fields: { isAdmin: true } });
-      const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
-      expect(m.role).toBe("owner");
+      const { group, admin } = await setupGroupWithAdmin("admin");
+      const owner = await createMember(group.id, { name: "O", email: "o@x", role: "owner" });
+      await updatePlayer({
+        groupId: group.id,
+        playerId: owner.id,
+        actorId: admin.id,
+        fields: { isAdmin: true },
+      });
+      expect((await membershipOf(group.id, owner.id)).role).toBe("owner");
     });
 
     it("rejects demoting the owner with OwnerProtectedError", async () => {
-      const admin = await makeAdmin();
-      const owner = await makeAdmin(2);
-      const group = await makeGroup();
-      await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+      const { group, admin } = await setupGroupWithAdmin("admin");
+      const owner = await createMember(group.id, { name: "O", email: "o@x", role: "owner" });
       await expect(
-        updatePlayer({ playerId: owner.id, actorId: admin.id, fields: { isAdmin: false } }),
+        updatePlayer({
+          groupId: group.id,
+          playerId: owner.id,
+          actorId: admin.id,
+          fields: { isAdmin: false },
+        }),
       ).rejects.toBeInstanceOf(OwnerProtectedError);
       const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
       expect(p.isAdmin).toBe(true);
-      const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
-      expect(m.role).toBe("owner");
+      expect((await membershipOf(group.id, owner.id)).role).toBe("owner");
     });
 
-    it("owner who is the only admin gets OwnerProtectedError, not LastAdminError", async () => {
-      const actor = await makeUser();
-      const owner = await makeAdmin(2);
-      const group = await makeGroup();
-      await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+    it("sole owner gets OwnerProtectedError, not LastAdminError", async () => {
+      const { group, admin } = await setupGroupWithAdmin("owner");
       await expect(
-        updatePlayer({ playerId: owner.id, actorId: actor.id, fields: { isAdmin: false } }),
+        updatePlayer({
+          groupId: group.id,
+          playerId: admin.id,
+          actorId: admin.id,
+          fields: { isAdmin: false },
+        }),
       ).rejects.toBeInstanceOf(OwnerProtectedError);
-    });
-
-    it("demoting a player whose only membership is removed keeps removedAt", async () => {
-      const admin = await makeAdmin();
-      const target = await makeAdmin(2);
-      const group = await makeGroup();
-      const removedAt = new Date("2026-01-01T00:00:00Z");
-      await prisma.membership.create({
-        data: { groupId: group.id, playerId: target.id, role: "owner", removedAt },
-      });
-      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: false } });
-      const m = await prisma.membership.findFirstOrThrow({ where: { playerId: target.id } });
-      expect(m.role).toBe("member");
-      expect(m.removedAt).toEqual(removedAt);
-    });
-
-    it("creates the membership if missing", async () => {
-      const admin = await makeAdmin();
-      const target = await makeUser();
-      const group = await makeGroup();
-      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: true } });
-      const m = await prisma.membership.findUniqueOrThrow({
-        where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
-      });
-      expect(m.role).toBe("admin");
     });
   });
 });

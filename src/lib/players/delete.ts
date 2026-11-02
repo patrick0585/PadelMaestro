@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { OwnerProtectedError } from "./owner-protected-error";
 
 export class PlayerNotFoundError extends Error {
@@ -27,6 +28,7 @@ export class ActiveParticipationError extends Error {
 }
 
 export interface DeletePlayerInput {
+  groupId: string;
   playerId: string;
   actorId: string;
 }
@@ -35,43 +37,42 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const target = await tx.player.findUnique({
       where: { id: input.playerId },
-      select: { id: true, name: true, email: true, isAdmin: true, deletedAt: true },
+      select: { id: true, name: true, email: true, deletedAt: true },
     });
-    if (!target || target.deletedAt) throw new PlayerNotFoundError(input.playerId);
+    const membership = await findGroupMembership(tx, input.groupId, input.playerId);
+    if (!target || target.deletedAt || !membership) {
+      throw new PlayerNotFoundError(input.playerId);
+    }
 
     if (target.id === input.actorId) throw new SelfDeleteError();
 
-    const ownerMembership = await tx.membership.findFirst({
-      where: { playerId: target.id, removedAt: null, role: "owner" },
-      select: { id: true },
-    });
-    if (ownerMembership) throw new OwnerProtectedError();
+    if (membership.role === "owner") throw new OwnerProtectedError();
 
-    if (target.isAdmin) {
-      const remainingAdmins = await tx.player.count({
-        where: { isAdmin: true, deletedAt: null, id: { not: target.id } },
-      });
-      if (remainingAdmins === 0) throw new LastAdminError();
+    if (
+      membership.role === "admin" &&
+      (await countOtherAdmins(tx, input.groupId, target.id)) === 0
+    ) {
+      throw new LastAdminError();
     }
 
     const activeParticipation = await tx.gameDayParticipant.findFirst({
       where: {
         playerId: target.id,
         attendance: { in: ["confirmed", "joker"] },
-        gameDay: { status: { in: ["planned", "in_progress"] } },
+        gameDay: { groupId: input.groupId, status: { in: ["planned", "in_progress"] } },
       },
       select: { id: true },
     });
     if (activeParticipation) throw new ActiveParticipationError();
 
     const now = new Date();
+    await tx.membership.update({
+      where: { groupId_playerId: { groupId: input.groupId, playerId: target.id } },
+      data: { removedAt: now },
+    });
     await tx.player.update({
       where: { id: target.id },
       data: { deletedAt: now },
-    });
-    await tx.membership.updateMany({
-      where: { playerId: target.id, removedAt: null },
-      data: { removedAt: now },
     });
 
     await tx.auditLog.create({
