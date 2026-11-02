@@ -3,6 +3,13 @@ import { prisma } from "@/lib/db";
 import { DELETE, POST } from "@/app/api/jokers/route";
 import { recordJokerUse } from "@/lib/joker/use";
 import { resetDb } from "../helpers/reset-db";
+import {
+  createMember,
+  createTestGameDay,
+  createTestGroup,
+  createTestSeason,
+  sessionFor,
+} from "../helpers/group";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -11,20 +18,22 @@ import { auth } from "@/auth";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
 async function setup() {
-  const year = new Date().getFullYear();
-  const season = await prisma.season.create({
-    data: { name: `Saison ${year}`, year, startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), isActive: true },
-  });
-  const player = await prisma.player.create({
-    data: { name: "P", email: "p@x", passwordHash: "x" },
-  });
-  const gameDay = await prisma.gameDay.create({
-    data: { seasonId: season.id, date: new Date("2026-04-21"), status: "planned" },
+  const group = await createTestGroup();
+  const season = await createTestSeason(group.id);
+  const player = await createMember(group.id, { name: "P", email: "p@x", passwordHash: "x" });
+  const gameDay = await createTestGameDay(group.id, season.id, {
+    date: new Date("2026-04-21"),
   });
   await prisma.gameDayParticipant.create({
     data: { gameDayId: gameDay.id, playerId: player.id, attendance: "pending" },
   });
-  return { season, player, gameDay };
+  return { group, season, player, gameDay };
+}
+
+async function setupOtherGroupDay() {
+  const other = await createTestGroup("Andere");
+  const otherSeason = await createTestSeason(other.id);
+  return createTestGameDay(other.id, otherSeason.id);
 }
 
 function req(body: unknown) {
@@ -56,34 +65,44 @@ describe("DELETE /api/jokers", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 204 and clears the joker on success", async () => {
+  it("returns 403 without a group", async () => {
     const { player, gameDay } = await setup();
+    authMock.mockResolvedValue(sessionFor(player, null, null));
+    const res = await DELETE(req({ gameDayId: gameDay.id }));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for a game day of another group", async () => {
+    const { group, player } = await setup();
+    const otherDay = await setupOtherGroupDay();
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
+    const res = await DELETE(req({ gameDayId: otherDay.id }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "not_found" });
+  });
+
+  it("returns 204 and clears the joker on success", async () => {
+    const { group, player, gameDay } = await setup();
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
-    authMock.mockResolvedValue({
-      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
-    });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await DELETE(req({ gameDayId: gameDay.id }));
     expect(res.status).toBe(204);
     expect(await prisma.jokerUse.count()).toBe(0);
   });
 
   it("returns 409 JOKER_NOT_FOUND when no joker is set", async () => {
-    const { player, gameDay } = await setup();
-    authMock.mockResolvedValue({
-      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
-    });
+    const { group, player, gameDay } = await setup();
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await DELETE(req({ gameDayId: gameDay.id }));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ code: "JOKER_NOT_FOUND" });
   });
 
   it("returns 409 JOKER_LOCKED when the day is no longer planned", async () => {
-    const { player, gameDay } = await setup();
+    const { group, player, gameDay } = await setup();
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay.id });
     await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
-    authMock.mockResolvedValue({
-      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
-    });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await DELETE(req({ gameDayId: gameDay.id }));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ code: "JOKER_LOCKED" });
@@ -103,23 +122,41 @@ describe("POST /api/jokers", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 409 JOKER_LOCKED when the game day is in_progress", async () => {
+  it("returns 403 without a group", async () => {
     const { player, gameDay } = await setup();
-    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
-    authMock.mockResolvedValue({
-      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
+    authMock.mockResolvedValue(sessionFor(player, null, null));
+    const res = await POST(postReq({ gameDayId: gameDay.id }));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for a game day of another group", async () => {
+    const { group, player } = await setup();
+    const otherDay = await setupOtherGroupDay();
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: otherDay.id, playerId: player.id, attendance: "pending" },
     });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
+    const res = await POST(postReq({ gameDayId: otherDay.id }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "not_found" });
+    expect(await prisma.jokerUse.count()).toBe(0);
+  });
+
+  it("returns 409 JOKER_LOCKED when the game day is in_progress", async () => {
+    const { group, player, gameDay } = await setup();
+    await prisma.gameDay.update({ where: { id: gameDay.id }, data: { status: "in_progress" } });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await POST(postReq({ gameDayId: gameDay.id }));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ code: "JOKER_LOCKED" });
   });
 
   it("returns 409 JOKER_CAP_EXCEEDED when the season cap is reached", async () => {
-    const { season, player, gameDay } = await setup();
+    const { group, season, player, gameDay } = await setup();
 
     // Create a second game day in the same season so we can use two jokers
-    const gameDay2 = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-04-28"), status: "planned" },
+    const gameDay2 = await createTestGameDay(group.id, season.id, {
+      date: new Date("2026-04-28"),
     });
     await prisma.gameDayParticipant.create({
       data: { gameDayId: gameDay2.id, playerId: player.id, attendance: "pending" },
@@ -130,16 +167,14 @@ describe("POST /api/jokers", () => {
     await recordJokerUse({ playerId: player.id, gameDayId: gameDay2.id });
 
     // Third game day to attempt the cap-exceeding POST
-    const gameDay3 = await prisma.gameDay.create({
-      data: { seasonId: season.id, date: new Date("2026-05-05"), status: "planned" },
+    const gameDay3 = await createTestGameDay(group.id, season.id, {
+      date: new Date("2026-05-05"),
     });
     await prisma.gameDayParticipant.create({
       data: { gameDayId: gameDay3.id, playerId: player.id, attendance: "pending" },
     });
 
-    authMock.mockResolvedValue({
-      user: { id: player.id, isAdmin: false, email: player.email, name: player.name },
-    });
+    authMock.mockResolvedValue(sessionFor(player, group.id, "member"));
     const res = await POST(postReq({ gameDayId: gameDay3.id }));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ code: "JOKER_CAP_EXCEEDED" });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { guardMember } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import {
   joinGameDay,
   GameDayNotFoundError,
@@ -11,14 +12,16 @@ export async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-  }
+  const g = await guardMember();
+  if (g.response) return g.response;
 
   const { id } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   try {
-    const participant = await joinGameDay(id, session.user.id);
+    const participant = await joinGameDay(id, g.ctx.userId);
     return NextResponse.json({ participant });
   } catch (e) {
     if (e instanceof GameDayNotFoundError) {

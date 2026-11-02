@@ -3,7 +3,13 @@ import { prisma } from "@/lib/db";
 import { createGameDay } from "@/lib/game-day/create";
 import { POST } from "@/app/api/game-days/[id]/join/route";
 import { resetDb } from "../helpers/reset-db";
-import { createMember, createTestGroup } from "../helpers/group";
+import {
+  createMember,
+  createTestGameDay,
+  createTestGroup,
+  createTestSeason,
+  sessionFor,
+} from "../helpers/group";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/auth";
@@ -18,11 +24,15 @@ async function setup() {
     passwordHash: "x",
   });
   const day = await createGameDay(group.id, new Date("2026-04-21"), admin.id);
-  return { admin, day };
+  return { group, admin, day };
 }
 
 function req(gameDayId: string) {
   return new Request(`http://localhost/api/game-days/${gameDayId}/join`, { method: "POST" });
+}
+
+function call(id: string) {
+  return POST(req(id), { params: Promise.resolve({ id }) });
 }
 
 describe("POST /api/game-days/[id]/join", () => {
@@ -32,15 +42,15 @@ describe("POST /api/game-days/[id]/join", () => {
   });
 
   it("adds the caller as a pending participant when they are not yet one", async () => {
-    const { day } = await setup();
+    const { group, day } = await setup();
     // stranger was created AFTER the game day, so they aren't a participant
-    const stranger = await prisma.player.create({
-      data: { name: "Stranger", email: "s@x", passwordHash: "x" },
+    const stranger = await createMember(group.id, {
+      name: "Stranger",
+      email: "s@x",
+      passwordHash: "x",
     });
-    authMock.mockResolvedValue({
-      user: { id: stranger.id, isAdmin: false, email: stranger.email, name: stranger.name },
-    });
-    const res = await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    authMock.mockResolvedValue(sessionFor(stranger, group.id, "member"));
+    const res = await call(day.id);
     expect(res.status).toBe(200);
     const p = await prisma.gameDayParticipant.findUnique({
       where: { gameDayId_playerId: { gameDayId: day.id, playerId: stranger.id } },
@@ -49,11 +59,9 @@ describe("POST /api/game-days/[id]/join", () => {
   });
 
   it("is idempotent when the caller is already a participant", async () => {
-    const { admin, day } = await setup();
-    authMock.mockResolvedValue({
-      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
-    });
-    const res = await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    const { group, admin, day } = await setup();
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
+    const res = await call(day.id);
     expect(res.status).toBe(200);
     const count = await prisma.gameDayParticipant.count({
       where: { gameDayId: day.id, playerId: admin.id },
@@ -67,17 +75,17 @@ describe("POST /api/game-days/[id]/join", () => {
   });
 
   it("writes an audit log only on actual insert", async () => {
-    const { day } = await setup();
-    const stranger = await prisma.player.create({
-      data: { name: "Stranger", email: "s@x", passwordHash: "x" },
+    const { group, day } = await setup();
+    const stranger = await createMember(group.id, {
+      name: "Stranger",
+      email: "s@x",
+      passwordHash: "x",
     });
-    authMock.mockResolvedValue({
-      user: { id: stranger.id, isAdmin: false, email: stranger.email, name: stranger.name },
-    });
+    authMock.mockResolvedValue(sessionFor(stranger, group.id, "member"));
     // First call: actual insert + audit log
-    await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    await call(day.id);
     // Second call: idempotent, no new audit log
-    await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    await call(day.id);
     const logs = await prisma.auditLog.findMany({
       where: { action: "game_day.self_join", actorId: stranger.id },
     });
@@ -85,46 +93,57 @@ describe("POST /api/game-days/[id]/join", () => {
   });
 
   it("returns 401 for a soft-deleted player", async () => {
-    const { day } = await setup();
-    const ghost = await prisma.player.create({
-      data: { name: "Ghost", email: "g@x", passwordHash: "x", deletedAt: new Date() },
-    });
-    authMock.mockResolvedValue({
-      user: { id: ghost.id, isAdmin: false, email: ghost.email, name: ghost.name },
-    });
-    const res = await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    const { group, day } = await setup();
+    const ghost = await createMember(group.id, { name: "Ghost", email: "g@x", passwordHash: "x" });
+    await prisma.player.update({ where: { id: ghost.id }, data: { deletedAt: new Date() } });
+    authMock.mockResolvedValue(sessionFor(ghost, group.id, "member"));
+    const res = await call(day.id);
     expect(res.status).toBe(401);
   });
 
   it("returns 401 when unauthenticated", async () => {
     const { day } = await setup();
     authMock.mockResolvedValue(null);
-    const res = await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    const res = await call(day.id);
     expect(res.status).toBe(401);
   });
 
+  it("returns 403 without a group", async () => {
+    const { admin, day } = await setup();
+    authMock.mockResolvedValue(sessionFor(admin, null, null));
+    const res = await call(day.id);
+    expect(res.status).toBe(403);
+  });
+
   it("returns 404 when the game day does not exist", async () => {
-    const { admin } = await setup();
-    authMock.mockResolvedValue({
-      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
-    });
-    const res = await POST(
-      req("00000000-0000-0000-0000-000000000000"),
-      { params: Promise.resolve({ id: "00000000-0000-0000-0000-000000000000" }) },
-    );
+    const { group, admin } = await setup();
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
+    const res = await call("00000000-0000-0000-0000-000000000000");
     expect(res.status).toBe(404);
   });
 
+  it("returns 404 for a game day of another group", async () => {
+    const { group, admin } = await setup();
+    const other = await createTestGroup("Andere");
+    const otherSeason = await createTestSeason(other.id);
+    const otherDay = await createTestGameDay(other.id, otherSeason.id);
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
+    const res = await call(otherDay.id);
+    expect(res.status).toBe(404);
+    const count = await prisma.gameDayParticipant.count({
+      where: { gameDayId: otherDay.id, playerId: admin.id },
+    });
+    expect(count).toBe(0);
+  });
+
   it("returns 409 when the game day is already locked", async () => {
-    const { admin, day } = await setup();
+    const { group, admin, day } = await setup();
     await prisma.gameDay.update({
       where: { id: day.id },
       data: { status: "in_progress" },
     });
-    authMock.mockResolvedValue({
-      user: { id: admin.id, isAdmin: true, email: admin.email, name: admin.name },
-    });
-    const res = await POST(req(day.id), { params: Promise.resolve({ id: day.id }) });
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "owner"));
+    const res = await call(day.id);
     expect(res.status).toBe(409);
   });
 });
