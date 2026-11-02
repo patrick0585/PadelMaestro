@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
 import { roleForAdminFlag } from "@/lib/auth/roles";
-import { getSoleGroup } from "@/lib/group/sole-group";
 
 export class DuplicateEmailError extends Error {
   constructor(email: string) {
@@ -25,6 +24,7 @@ export interface CreatePlayerInput {
   password: string;
   isAdmin: boolean;
   actorId: string;
+  groupId: string;
   username?: string;
 }
 
@@ -52,9 +52,8 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
         },
         select: { id: true, email: true, name: true, isAdmin: true, username: true },
       });
-      const group = await getSoleGroup(tx);
       await tx.membership.create({
-        data: { groupId: group.id, playerId: player.id, role: roleForAdminFlag(input.isAdmin) },
+        data: { groupId: input.groupId, playerId: player.id, role: roleForAdminFlag(input.isAdmin) },
       });
       await tx.auditLog.create({
         data: {
@@ -71,7 +70,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
         },
       });
       const plannedDays = await tx.gameDay.findMany({
-        where: { status: "planned" },
+        where: { status: "planned", groupId: input.groupId },
         select: { id: true },
       });
       if (plannedDays.length > 0) {

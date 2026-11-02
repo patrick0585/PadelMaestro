@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { POST, GET } from "@/app/api/players/route";
-import { createGameDay } from "@/lib/game-day/create";
 import { resetDb } from "../helpers/reset-db";
+import {
+  createMember,
+  createTestGroup,
+  sessionFor,
+  setupGroupWithAdmin,
+} from "../helpers/group";
 
 vi.mock("@/auth", () => ({
   auth: vi.fn(),
@@ -12,17 +17,28 @@ import { auth } from "@/auth";
 
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
-async function makeAdmin() {
-  return prisma.player.create({
-    data: { name: "Admin", email: "a@example.com", isAdmin: true, passwordHash: "x" },
+function postReq(body: unknown) {
+  return new Request("http://localhost/api/players", {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "content-type": "application/json" },
   });
 }
 
-function asAdmin(id: string) {
-  authMock.mockResolvedValue({ user: { id, isAdmin: true, email: "a@example.com", name: "Admin" } });
-}
-function asNonAdmin(id: string) {
-  authMock.mockResolvedValue({ user: { id, isAdmin: false, email: "u@example.com", name: "User" } });
+async function makePlannedDay(groupId: string, name: string, date: string) {
+  const season = await prisma.season.create({
+    data: {
+      groupId,
+      name,
+      year: 2026,
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-12-31"),
+      isActive: false,
+    },
+  });
+  return prisma.gameDay.create({
+    data: { groupId, seasonId: season.id, date: new Date(date), status: "planned", playerCount: 4 },
+  });
 }
 
 describe("POST /api/players", () => {
@@ -32,61 +48,53 @@ describe("POST /api/players", () => {
   });
 
   it("creates a player when admin", async () => {
-    const admin = await makeAdmin();
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({
-        email: "new@example.com",
-        name: "Newbie",
-        password: "hunter22extra",
-      }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({ email: "new@example.com", name: "Newbie", password: "hunter22extra" }),
+    );
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.email).toBe("new@example.com");
   });
 
   it("returns 403 for non-admin", async () => {
-    const admin = await makeAdmin();
-    const other = await prisma.player.create({
-      data: { name: "U", email: "u@example.com", passwordHash: "x" },
+    const { group } = await setupGroupWithAdmin();
+    const member = await createMember(group.id, { name: "U", email: "u@example.com" });
+    authMock.mockResolvedValue(sessionFor(member, group.id, "member"));
+    const res = await POST(postReq({ email: "x@example.com", name: "X", password: "pass1234" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 401 without a session", async () => {
+    authMock.mockResolvedValue(null);
+    const res = await POST(postReq({ email: "x@example.com", name: "X", password: "pass1234" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a session without a group", async () => {
+    const player = await prisma.player.create({
+      data: { name: "Loner", email: "loner@example.com", passwordHash: "x" },
     });
-    void admin;
-    asNonAdmin(other.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({ email: "x@example.com", name: "X", password: "pass1234" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    authMock.mockResolvedValue(sessionFor(player, null, null));
+    const res = await POST(postReq({ email: "x@example.com", name: "X", password: "pass1234" }));
     expect(res.status).toBe(403);
   });
 
   it("returns 400 for short password", async () => {
-    const admin = await makeAdmin();
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({ email: "x@example.com", name: "X", password: "short" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const res = await POST(postReq({ email: "x@example.com", name: "X", password: "short" }));
     expect(res.status).toBe(400);
   });
 
   it("attaches the new player to every planned game day as pending", async () => {
-    const admin = await makeAdmin();
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    const { group, session } = await setupGroupWithAdmin();
+    const day = await makePlannedDay(group.id, "S-own", "2026-04-21");
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
+    );
     expect(res.status).toBe(201);
     const body = await res.json();
     const p = await prisma.gameDayParticipant.findUnique({
@@ -96,20 +104,35 @@ describe("POST /api/players", () => {
     expect(p?.attendance).toBe("pending");
   });
 
+  it("attaches the new player only to planned game days of the own group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const foreign = await createTestGroup("Fremd");
+    const ownDay = await makePlannedDay(group.id, "S-own", "2026-04-21");
+    const foreignDay = await makePlannedDay(foreign.id, "S-foreign", "2026-04-21");
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    const own = await prisma.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId: ownDay.id, playerId: body.id } },
+    });
+    const other = await prisma.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId: foreignDay.id, playerId: body.id } },
+    });
+    expect(own).not.toBeNull();
+    expect(other).toBeNull();
+  });
+
   it("does not attach to locked or finished game days", async () => {
-    const admin = await makeAdmin();
-    const day = await createGameDay(new Date("2026-04-21"), admin.id);
-    await prisma.gameDay.update({
-      where: { id: day.id },
-      data: { status: "in_progress" },
-    });
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    const { group, session } = await setupGroupWithAdmin();
+    const day = await makePlannedDay(group.id, "S-own", "2026-04-21");
+    await prisma.gameDay.update({ where: { id: day.id }, data: { status: "in_progress" } });
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({ email: "late@example.com", name: "Late", password: "hunter22extra" }),
+    );
     expect(res.status).toBe(201);
     const body = await res.json();
     const p = await prisma.gameDayParticipant.findUnique({
@@ -119,91 +142,67 @@ describe("POST /api/players", () => {
   });
 
   it("returns 409 for duplicate email", async () => {
-    const admin = await makeAdmin();
-    asAdmin(admin.id);
-    const firstReq = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({ email: "dup@example.com", name: "A", password: "hunter22extra" }),
-      headers: { "content-type": "application/json" },
-    });
-    expect((await POST(firstReq)).status).toBe(201);
-    const secondReq = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({ email: "dup@example.com", name: "B", password: "hunter22extra" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(secondReq);
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const first = postReq({ email: "dup@example.com", name: "A", password: "hunter22extra" });
+    expect((await POST(first)).status).toBe(201);
+    const res = await POST(
+      postReq({ email: "dup@example.com", name: "B", password: "hunter22extra" }),
+    );
     expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body.error).toBe("email_taken");
+    expect((await res.json()).error).toBe("email_taken");
   });
 
   it("accepts an optional username and stores it lowercase", async () => {
-    const admin = await makeAdmin();
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({
         email: "alice@example.com",
         name: "Alice",
         password: "hunter22extra",
         username: "AliceSmith",
       }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    );
     expect(res.status).toBe(201);
-    const row = await prisma.player.findUniqueOrThrow({
-      where: { email: "alice@example.com" },
-    });
+    const row = await prisma.player.findUniqueOrThrow({ where: { email: "alice@example.com" } });
     expect(row.username).toBe("alicesmith");
   });
 
   it("returns 400 when username does not match the regex", async () => {
-    const admin = await makeAdmin();
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({
         email: "bad@example.com",
         name: "Bad",
         password: "hunter22extra",
         username: "no spaces",
       }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req);
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 409 with username_taken for duplicate username (case-insensitive)", async () => {
-    const admin = await makeAdmin();
-    asAdmin(admin.id);
-    const first = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({
-        email: "first@example.com",
-        name: "First",
-        password: "hunter22extra",
-        username: "shared",
-      }),
-      headers: { "content-type": "application/json" },
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const first = postReq({
+      email: "first@example.com",
+      name: "First",
+      password: "hunter22extra",
+      username: "shared",
     });
     expect((await POST(first)).status).toBe(201);
-    const second = new Request("http://localhost/api/players", {
-      method: "POST",
-      body: JSON.stringify({
+    const res = await POST(
+      postReq({
         email: "second@example.com",
         name: "Second",
         password: "hunter22extra",
         username: "SHARED",
       }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(second);
+    );
     expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body.error).toBe("username_taken");
+    expect((await res.json()).error).toBe("username_taken");
   });
 });
 
@@ -213,29 +212,52 @@ describe("GET /api/players", () => {
     await resetDb();
   });
 
-  it("returns all non-deleted players with hasPassword flag", async () => {
-    const admin = await makeAdmin();
-    await prisma.player.create({
-      data: { name: "Historical", email: "h@example.com", passwordHash: null },
-    });
-    asAdmin(admin.id);
-    const req = new Request("http://localhost/api/players", { method: "GET" });
-    const res = await GET(req);
+  const getReq = () => new Request("http://localhost/api/players", { method: "GET" });
+
+  it("returns members with hasPassword flag and role", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    await createMember(group.id, { name: "Historical", email: "h@example.com" });
+    authMock.mockResolvedValue(session);
+    const res = await GET(getReq());
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ email: string; hasPassword: boolean }>;
+    const body = (await res.json()) as Array<{
+      email: string;
+      hasPassword: boolean;
+      isAdmin: boolean;
+      role: string;
+    }>;
     const historical = body.find((p) => p.email === "h@example.com");
     expect(historical?.hasPassword).toBe(false);
-    const self = body.find((p) => p.email === "a@example.com");
+    expect(historical?.role).toBe("member");
+    expect(historical?.isAdmin).toBe(false);
+    const self = body.find((p) => p.email === "admin@example.com");
     expect(self?.hasPassword).toBe(true);
+    expect(self?.role).toBe("owner");
+    expect(self?.isAdmin).toBe(true);
+  });
+
+  it("lists only active members of the session group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const foreign = await createTestGroup("Fremd");
+    await createMember(group.id, { name: "Inside", email: "in@example.com" });
+    await createMember(foreign.id, { name: "Outside", email: "out@example.com" });
+    const removed = await createMember(group.id, { name: "Gone", email: "gone@example.com" });
+    await prisma.membership.update({
+      where: { groupId_playerId: { groupId: group.id, playerId: removed.id } },
+      data: { removedAt: new Date() },
+    });
+    authMock.mockResolvedValue(session);
+    const res = await GET(getReq());
+    const body = (await res.json()) as Array<{ email: string }>;
+    const emails = body.map((p) => p.email).sort();
+    expect(emails).toEqual(["admin@example.com", "in@example.com"]);
   });
 
   it("returns 403 for non-admin", async () => {
-    const u = await prisma.player.create({
-      data: { name: "U", email: "u@example.com", passwordHash: "x" },
-    });
-    asNonAdmin(u.id);
-    const req = new Request("http://localhost/api/players", { method: "GET" });
-    const res = await GET(req);
+    const { group } = await setupGroupWithAdmin();
+    const u = await createMember(group.id, { name: "U", email: "u@example.com" });
+    authMock.mockResolvedValue(sessionFor(u, group.id, "member"));
+    const res = await GET(getReq());
     expect(res.status).toBe(403);
   });
 });
