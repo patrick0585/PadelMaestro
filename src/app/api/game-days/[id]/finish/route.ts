@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import {
   finishGameDay,
   GameDayAlreadyFinishedError,
@@ -11,13 +12,15 @@ export async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-  if (!session.user.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const g = await guardGroupAdmin();
+  if (g.response) return g.response;
 
   const { id } = await ctx.params;
+  if (!(await findGroupGameDay(g.ctx.groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   try {
-    await finishGameDay(id, session.user.id);
+    await finishGameDay(id, g.ctx.userId);
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     if (e instanceof GameDayNotFoundError) {
