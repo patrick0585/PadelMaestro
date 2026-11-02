@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
+import { getSoleGroup } from "@/lib/group/sole-group";
+import { OwnerProtectedError } from "./owner-protected-error";
 
 export class PlayerNotFoundError extends Error {
   constructor(id: string) {
@@ -84,6 +86,23 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new PlayerNotFoundError(input.playerId);
       }
 
+      let membershipSync: { groupId: string; role: "admin" | "member" } | null = null;
+      if (definedFields.isAdmin !== undefined) {
+        const membership = await tx.membership.findFirst({
+          where: { playerId: existing.id, removedAt: null },
+          orderBy: { joinedAt: "desc" },
+          select: { groupId: true, role: true },
+        });
+        if (membership?.role === "owner") {
+          if (definedFields.isAdmin === false) throw new OwnerProtectedError();
+        } else {
+          membershipSync = {
+            groupId: membership?.groupId ?? (await getSoleGroup(tx)).id,
+            role: definedFields.isAdmin ? "admin" : "member",
+          };
+        }
+      }
+
       if (definedFields.isAdmin === false && existing.isAdmin === true) {
         const remaining = await tx.player.count({
           where: { isAdmin: true, deletedAt: null, id: { not: existing.id } },
@@ -102,6 +121,15 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
           username: true,
         },
       });
+
+      if (membershipSync) {
+        const { groupId, role } = membershipSync;
+        await tx.membership.upsert({
+          where: { groupId_playerId: { groupId, playerId: existing.id } },
+          update: { role },
+          create: { groupId, playerId: existing.id, role },
+        });
+      }
 
       const changedFields: TrackedField[] = [];
       const before: Record<TrackedField, string | boolean | null> = {

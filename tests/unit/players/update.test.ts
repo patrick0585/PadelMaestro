@@ -8,6 +8,7 @@ import {
   LastAdminError,
   NoFieldsError,
 } from "@/lib/players/update";
+import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
 import { resetDb } from "../../helpers/reset-db";
 
 async function makeAdmin(i = 1) {
@@ -180,5 +181,63 @@ describe("updatePlayer", () => {
       where: { entityId: target.id, action: "player.update" },
     });
     expect(entries).toHaveLength(0);
+  });
+
+  describe("membership sync", () => {
+    async function makeGroup() {
+      return prisma.group.create({ data: { name: "G", slug: "g" } });
+    }
+
+    it("syncs membership role when isAdmin toggles", async () => {
+      const admin = await makeAdmin();
+      const target = await makeUser();
+      const group = await makeGroup();
+      await prisma.membership.create({ data: { groupId: group.id, playerId: target.id, role: "member" } });
+      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: true } });
+      let m = await prisma.membership.findUniqueOrThrow({
+        where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
+      });
+      expect(m.role).toBe("admin");
+      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: false } });
+      m = await prisma.membership.findUniqueOrThrow({
+        where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
+      });
+      expect(m.role).toBe("member");
+    });
+
+    it("keeps owner when isAdmin stays true", async () => {
+      const admin = await makeAdmin();
+      const owner = await makeAdmin(2);
+      const group = await makeGroup();
+      await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+      await updatePlayer({ playerId: owner.id, actorId: admin.id, fields: { isAdmin: true } });
+      const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+      expect(m.role).toBe("owner");
+    });
+
+    it("rejects demoting the owner with OwnerProtectedError", async () => {
+      const admin = await makeAdmin();
+      const owner = await makeAdmin(2);
+      const group = await makeGroup();
+      await prisma.membership.create({ data: { groupId: group.id, playerId: owner.id, role: "owner" } });
+      await expect(
+        updatePlayer({ playerId: owner.id, actorId: admin.id, fields: { isAdmin: false } }),
+      ).rejects.toBeInstanceOf(OwnerProtectedError);
+      const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
+      expect(p.isAdmin).toBe(true);
+      const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+      expect(m.role).toBe("owner");
+    });
+
+    it("creates the membership if missing", async () => {
+      const admin = await makeAdmin();
+      const target = await makeUser();
+      const group = await makeGroup();
+      await updatePlayer({ playerId: target.id, actorId: admin.id, fields: { isAdmin: true } });
+      const m = await prisma.membership.findUniqueOrThrow({
+        where: { groupId_playerId: { groupId: group.id, playerId: target.id } },
+      });
+      expect(m.role).toBe("admin");
+    });
   });
 });
