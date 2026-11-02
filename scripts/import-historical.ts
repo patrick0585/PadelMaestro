@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { prisma } from "../src/lib/db";
 import { getOrCreateActiveSeason } from "../src/lib/season";
+import { getSoleGroup } from "../src/lib/group/sole-group";
 
 interface HistoricalGameDay {
   date: string;
@@ -41,6 +42,7 @@ async function main() {
   for (const gd of data.gameDays) {
     const day = await prisma.gameDay.create({
       data: {
+        groupId: season.groupId ?? (await getSoleGroup()).id,
         seasonId: season.id,
         date: new Date(gd.date),
         playerCount: gd.playerCount,

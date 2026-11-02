@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth/hash";
+import { getSoleGroup } from "../src/lib/group/sole-group";
 
 const ADMIN_NAME = "Patrick";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "patrick@padel.local";
@@ -27,9 +28,11 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
     );
   }
 
+  const group = await getSoleGroup();
   const year = new Date().getFullYear();
   const season = await prisma.season.create({
     data: {
+      groupId: group.id,
       name: `Saison ${year}`,
       year,
       startDate: new Date(Date.UTC(year, 0, 1)),
@@ -50,10 +53,13 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
     },
   });
 
+  await prisma.membership.create({ data: { groupId: group.id, playerId: admin.id, role: "admin" } });
+
   for (const p of NON_ADMIN_PLAYERS) {
-    await prisma.player.create({
+    const player = await prisma.player.create({
       data: { name: p.name, email: p.email, passwordHash: null, isAdmin: false },
     });
+    await prisma.membership.create({ data: { groupId: group.id, playerId: player.id, role: "member" } });
   }
 
   return { adminPassword, adminId: admin.id, seasonId: season.id };
