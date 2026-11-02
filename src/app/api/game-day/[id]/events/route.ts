@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { guardMember } from "@/lib/auth/route-guard";
 import { findGroupGameDay } from "@/lib/game-day/group-scope";
 import { subscribeToGameDay } from "@/lib/game-day/live-broadcast";
@@ -20,7 +21,7 @@ export async function GET(
 
   const { id: gameDayId } = await ctx.params;
   if (!(await findGroupGameDay(g.ctx.groupId, gameDayId))) {
-    return new Response("Not Found", { status: 404 });
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   const encoder = new TextEncoder();
 

@@ -657,4 +657,36 @@ describe("computePlayerSeasonStats", () => {
       { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1 },
     ]);
   });
+
+  it("shows a partner who is a member only of another group as Unbekannt", async () => {
+    const season = await makeSeason();
+    const [me, anna, x, y] = await Promise.all(["Me", "Anna", "X", "Y"].map((n) => makePlayer(season, n)));
+    const otherGroup = await createTestGroup("Andere");
+    const outsider = await createMember(otherGroup.id, { name: "Olaf", email: "olaf@x", passwordHash: "x" });
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: outsider.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 2,
+        team1PlayerAId: me.id, team1PlayerBId: anna.id,
+        team2PlayerAId: x.id, team2PlayerBId: y.id,
+        team1Score: 2, team2Score: 1,
+      },
+    });
+
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.partners).toEqual([
+      { playerId: outsider.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1 },
+      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1 },
+    ]);
+  });
 });

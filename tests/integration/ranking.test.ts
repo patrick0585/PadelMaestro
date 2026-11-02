@@ -545,4 +545,54 @@ describe("computeRanking", () => {
       after.map(({ playerId, games, points, jokersUsed }) => ({ playerId, games, points, jokersUsed })),
     ).toEqual(othersBefore);
   });
+
+  it("excludes a joker-only outsider who is a member of another group", async () => {
+    const year = new Date().getFullYear();
+    const season = await prisma.season.create({
+      data: {
+        groupId: (await createTestGroup()).id,
+        name: `Saison ${year}`,
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    });
+    const [p1, p2, p3, p4] = await Promise.all(
+      [1, 2, 3, 4].map((i) =>
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
+      ),
+    );
+    const otherGroup = await createTestGroup("Andere");
+    const outsider = await createMember(otherGroup.id, { name: "Olaf", email: "olaf@x", passwordHash: "x" });
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4 },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: p1.id,
+        team1PlayerBId: p2.id,
+        team2PlayerAId: p3.id,
+        team2PlayerBId: p4.id,
+        team1Score: 3,
+        team2Score: 1,
+      },
+    });
+    await prisma.jokerUse.create({
+      data: {
+        playerId: outsider.id,
+        seasonId: season.id,
+        gameDayId: day.id,
+        ppgAtUse: "2",
+        gamesCredited: 2,
+        pointsCredited: "4.00",
+      },
+    });
+
+    const ranking = await computeRanking(season.id);
+    expect(ranking.map((r) => r.playerId)).not.toContain(outsider.id);
+    expect(ranking).toHaveLength(4);
+  });
 });

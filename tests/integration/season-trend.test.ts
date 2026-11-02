@@ -233,4 +233,21 @@ describe("buildSeasonTrend", () => {
     expect(trend.players.map((p) => p.name).sort()).toEqual(["Michi", "Patrick", "Thomas"]);
     expect(trend.totalPlayers).toBe(3);
   });
+
+  it("omits a player who is a member only of another group", async () => {
+    const season = await makeSeason();
+    const [paul, patrick, michi] = await Promise.all([
+      makeUser(season, "Paul"),
+      makeUser(season, "Patrick"),
+      makeUser(season, "Michi"),
+    ]);
+    const otherGroup = await createTestGroup("Andere");
+    const outsider = await createMember(otherGroup.id, { name: "Olaf", email: "olaf@x", passwordHash: "x" });
+    const day = await makeFinishedDay(season, new Date("2026-04-01"));
+    await makeMatch(day.id, 1, [paul.id, patrick.id], [michi.id, outsider.id], 3, 1);
+
+    const trend = await buildSeasonTrend(season.id);
+    expect(trend.players.map((p) => p.name).sort()).toEqual(["Michi", "Patrick", "Paul"]);
+    expect(trend.totalPlayers).toBe(3);
+  });
 });
