@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { PATCH, DELETE } from "@/app/api/players/[id]/route";
+import { POST as joinPOST } from "@/app/api/game-days/[id]/join/route";
+import { authorizeCredentials } from "@/lib/auth/authorize";
+import { hashPassword } from "@/lib/auth/hash";
 import { resetDb } from "../helpers/reset-db";
 import {
   createMember,
+  createTestGameDay,
   createTestGroup,
+  createTestSeason,
   sessionFor,
   setupGroupWithAdmin,
 } from "../helpers/group";
@@ -153,8 +158,6 @@ describe("PATCH /api/players/[id]", () => {
     const res = await call(owner.id, { isAdmin: false });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe("owner_protected");
-    const p = await prisma.player.findUniqueOrThrow({ where: { id: owner.id } });
-    expect(p.isAdmin).toBe(true);
     const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
     expect(m.role).toBe("owner");
   });
@@ -216,6 +219,46 @@ describe("DELETE /api/players/[id]", () => {
     expect(res.status).toBe(204);
     const m = await prisma.membership.findFirstOrThrow({ where: { playerId: target.id } });
     expect(m.removedAt).not.toBeNull();
+  });
+
+  it("keeps the account: the removed player can still log in without a group", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, {
+      name: "U1",
+      email: "user1@example.com",
+      passwordHash: await hashPassword("pw12345678"),
+    });
+    authMock.mockResolvedValue(session);
+    expect((await callDelete(target.id)).status).toBe(204);
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(p.deletedAt).toBeNull();
+    const user = await authorizeCredentials({
+      identifier: "user1@example.com",
+      password: "pw12345678",
+    });
+    expect(user?.id).toBe(target.id);
+    expect(user?.groupId).toBeNull();
+    expect(user?.isAdmin).toBe(false);
+  });
+
+  it("locks the removed player out of the group's APIs", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const season = await createTestSeason(group.id);
+    const day = await createTestGameDay(group.id, season.id);
+    const target = await createMember(group.id, { name: "U1", email: "user1@example.com" });
+    authMock.mockResolvedValue(session);
+    expect((await callDelete(target.id)).status).toBe(204);
+
+    authMock.mockResolvedValue(sessionFor(target, null, null));
+    const res = await joinPOST(
+      new Request(`http://localhost/api/game-days/${day.id}/join`, { method: "POST" }),
+      { params: Promise.resolve({ id: day.id }) },
+    );
+    expect(res.status).toBe(403);
+    const joined = await prisma.gameDayParticipant.findUnique({
+      where: { gameDayId_playerId: { gameDayId: day.id, playerId: target.id } },
+    });
+    expect(joined).toBeNull();
   });
 
   it("returns 404 for a player of another group", async () => {

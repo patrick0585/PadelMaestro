@@ -11,7 +11,7 @@ import { createTestGroup } from "../../helpers/group";
 
 async function makeDay(status: "planned" | "in_progress" | "finished") {
   const admin = await prisma.player.create({
-    data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x", isAdmin: true },
+    data: { name: "A", email: `a-${status}@example.com`, passwordHash: "x" },
   });
   const year = new Date().getFullYear();
   const group = await createTestGroup();
@@ -53,7 +53,7 @@ describe("finishGameDay", () => {
 
   it("throws GameDayNotFoundError for unknown id", async () => {
     const admin = await prisma.player.create({
-      data: { name: "A", email: "a@example.com", passwordHash: "x", isAdmin: true },
+      data: { name: "A", email: "a@example.com", passwordHash: "x" },
     });
     await expect(
       finishGameDay("00000000-0000-0000-0000-000000000000", admin.id),

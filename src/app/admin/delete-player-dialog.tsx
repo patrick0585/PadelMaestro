@@ -66,12 +66,13 @@ export function DeletePlayerDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={`Spieler löschen — ${playerName ?? ""}`}>
+    <Dialog open={open} onClose={onClose} title={`Spieler entfernen — ${playerName ?? ""}`}>
       <div className="space-y-3">
         <p className="text-sm text-foreground">
           {playerName}
           {playerEmail && <span className="ml-1 text-muted-foreground">({playerEmail})</span>} wird
-          deaktiviert. Historische Matches und Spieltage bleiben erhalten.
+          aus der Gruppe entfernt. Das Konto bleibt bestehen, historische Matches und Spieltage
+          bleiben erhalten.
         </p>
         {error && (
           <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive" role="alert">
@@ -83,7 +84,7 @@ export function DeletePlayerDialog({
             Abbrechen
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm} loading={loading}>
-            Löschen
+            Entfernen
           </Button>
         </div>
       </div>

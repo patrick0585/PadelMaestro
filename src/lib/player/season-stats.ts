@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getSeasonGroupId } from "@/lib/group/season-group";
 import { activeMemberPlayers, type MemberPlayer } from "@/lib/group/members";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
@@ -217,10 +218,7 @@ export async function computePlayerSeasonStats(
   const partnerIds = [...partnerTotals.keys()];
   let partnerNames: MemberPlayer[] = [];
   if (partnerIds.length > 0) {
-    const { groupId } = await prisma.season.findUniqueOrThrow({
-      where: { id: seasonId },
-      select: { groupId: true },
-    });
+    const groupId = await getSeasonGroupId(seasonId);
     partnerNames = await activeMemberPlayers(groupId, partnerIds);
   }
   const nameById = new Map(partnerNames.map((p) => [p.id, p.name]));

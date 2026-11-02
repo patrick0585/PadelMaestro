@@ -31,7 +31,7 @@ async function main() {
     const player = await prisma.player.upsert({
       where: { email: d.email },
       update: {},
-      create: { name: d.name, email: d.email, passwordHash, isAdmin: false },
+      create: { name: d.name, email: d.email, passwordHash },
     });
     await prisma.membership.upsert({
       where: { groupId_playerId: { groupId: group.id, playerId: player.id } },

@@ -1,23 +1,12 @@
 import { prisma } from "@/lib/db";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
-import { OwnerProtectedError } from "./owner-protected-error";
+import { OwnerProtectedError, PlayerNotFoundError, LastAdminError } from "./errors";
+export { PlayerNotFoundError, LastAdminError } from "./errors";
 
-export class PlayerNotFoundError extends Error {
-  constructor(id: string) {
-    super(`player not found: ${id}`);
-    this.name = "PlayerNotFoundError";
-  }
-}
 export class SelfDeleteError extends Error {
   constructor() {
     super("cannot delete yourself");
     this.name = "SelfDeleteError";
-  }
-}
-export class LastAdminError extends Error {
-  constructor() {
-    super("cannot delete the last remaining admin");
-    this.name = "LastAdminError";
   }
 }
 export class ActiveParticipationError extends Error {
@@ -65,14 +54,9 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
     });
     if (activeParticipation) throw new ActiveParticipationError();
 
-    const now = new Date();
     await tx.membership.update({
       where: { groupId_playerId: { groupId: input.groupId, playerId: target.id } },
-      data: { removedAt: now },
-    });
-    await tx.player.update({
-      where: { id: target.id },
-      data: { deletedAt: now },
+      data: { removedAt: new Date() },
     });
 
     await tx.auditLog.create({

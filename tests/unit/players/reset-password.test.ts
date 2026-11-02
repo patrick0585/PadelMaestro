@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { verifyPassword, hashPassword } from "@/lib/auth/hash";
 import { resetPlayerPassword, PlayerNotFoundError } from "@/lib/players/reset-password";
-import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
+import { OwnerProtectedError } from "@/lib/players/errors";
 import { resetDb } from "../../helpers/reset-db";
 import { createMember, createTestGroup, setupGroupWithAdmin } from "../../helpers/group";
 

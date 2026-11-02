@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guardGroupAdmin } from "@/lib/auth/route-guard";
+import { updatePlayer } from "@/lib/players/update";
+import { deletePlayer, SelfDeleteError, ActiveParticipationError } from "@/lib/players/delete";
 import {
-  updatePlayer,
   PlayerNotFoundError,
   DuplicateEmailError,
   DuplicateUsernameError,
   LastAdminError,
-} from "@/lib/players/update";
-import {
-  deletePlayer,
-  PlayerNotFoundError as DeletePlayerNotFoundError,
-  SelfDeleteError,
-  LastAdminError as DeleteLastAdminError,
-  ActiveParticipationError,
-} from "@/lib/players/delete";
-import { OwnerProtectedError } from "@/lib/players/owner-protected-error";
+  OwnerProtectedError,
+} from "@/lib/players/errors";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
 const PatchSchema = z
@@ -86,7 +80,7 @@ export async function DELETE(
     await deletePlayer({ groupId: g.ctx.groupId, playerId: id, actorId: g.ctx.userId });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
-    if (e instanceof DeletePlayerNotFoundError) {
+    if (e instanceof PlayerNotFoundError) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
     if (e instanceof SelfDeleteError) {
@@ -95,7 +89,7 @@ export async function DELETE(
         { status: 409 },
       );
     }
-    if (e instanceof DeleteLastAdminError) {
+    if (e instanceof LastAdminError) {
       return NextResponse.json(
         { error: "last_admin", message: "Der letzte verbleibende Admin kann nicht gelöscht werden" },
         { status: 409 },

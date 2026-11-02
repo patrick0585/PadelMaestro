@@ -16,7 +16,6 @@ describe("bootstrapAdmin", () => {
     expect(m.role).toBe("owner");
     expect(m.groupId).toBe(res.groupId);
     const p = await prisma.player.findUniqueOrThrow({ where: { id: res.playerId } });
-    expect(p.isAdmin).toBe(true);
     expect(p.passwordHash).toBeTruthy();
   });
 

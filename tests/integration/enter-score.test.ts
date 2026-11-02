@@ -254,7 +254,7 @@ describe("enterScore", () => {
     const onCourtOf = (m: (typeof matches)[number]) =>
       new Set([m.team1PlayerAId, m.team1PlayerBId, m.team2PlayerAId, m.team2PlayerBId]);
     const found = matches
-      .map((m) => ({ m, bench: players.find((p) => !onCourtOf(m).has(p.id) && !p.isAdmin) }))
+      .map((m) => ({ m, bench: players.find((p) => !onCourtOf(m).has(p.id) && p.id !== players[0].id) }))
       .find((x) => x.bench);
     if (!found?.bench) throw new Error("no bench player available");
     const { m: match, bench } = found;
@@ -272,7 +272,7 @@ describe("enterScore", () => {
 
   it("rejects a day participant whose attendance is declined", async () => {
     const { players, day, matches } = await setupFivePlayerGame();
-    const nonAdmin = players.find((p) => !p.isAdmin)!;
+    const nonAdmin = players.find((p) => p.id !== players[0].id)!;
     await prisma.gameDayParticipant.update({
       where: { gameDayId_playerId: { gameDayId: day.id, playerId: nonAdmin.id } },
       data: { attendance: "declined" },
@@ -311,7 +311,7 @@ describe("enterScore", () => {
     const { matches } = await setupFivePlayerGame();
     const match = matches[0];
     const adminOutside = await prisma.player.create({
-      data: { name: "admin2", email: "a2@x", passwordHash: "x", isAdmin: true },
+      data: { name: "admin2", email: "a2@x", passwordHash: "x" },
     });
 
     const updated = await enterScore({

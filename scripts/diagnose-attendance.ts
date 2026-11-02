@@ -16,6 +16,7 @@ async function main() {
         { name: { equals: identifier, mode: "insensitive" } },
       ],
     },
+    include: { memberships: { include: { group: { select: { slug: true } } } } },
   });
 
   if (!player) {
@@ -28,7 +29,9 @@ async function main() {
   console.log(`name:      ${player.name}`);
   console.log(`email:     ${player.email ?? "(none)"}`);
   console.log(`username:  ${player.username ?? "(none)"}`);
-  console.log(`isAdmin:   ${player.isAdmin}`);
+  for (const m of player.memberships) {
+    console.log(`role:      ${m.role} in ${m.group.slug}${m.removedAt ? " (removed)" : ""}`);
+  }
   console.log(`deletedAt: ${player.deletedAt?.toISOString() ?? "(active)"}`);
   console.log(`createdAt: ${player.createdAt.toISOString()}`);
 

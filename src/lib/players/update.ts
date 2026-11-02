@@ -2,33 +2,15 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
-import { roleForAdminFlag } from "@/lib/auth/roles";
-import { OwnerProtectedError } from "./owner-protected-error";
+import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
+import {
+  DuplicateEmailError,
+  DuplicateUsernameError,
+  LastAdminError,
+  OwnerProtectedError,
+  PlayerNotFoundError,
+} from "./errors";
 
-export class PlayerNotFoundError extends Error {
-  constructor(id: string) {
-    super(`player not found: ${id}`);
-    this.name = "PlayerNotFoundError";
-  }
-}
-export class DuplicateEmailError extends Error {
-  constructor(email: string) {
-    super(`duplicate email: ${email}`);
-    this.name = "DuplicateEmailError";
-  }
-}
-export class DuplicateUsernameError extends Error {
-  constructor(username: string) {
-    super(`duplicate username: ${username}`);
-    this.name = "DuplicateUsernameError";
-  }
-}
-export class LastAdminError extends Error {
-  constructor() {
-    super("cannot demote the last remaining admin");
-    this.name = "LastAdminError";
-  }
-}
 export class NoFieldsError extends Error {
   constructor() {
     super("no fields to update");
@@ -79,7 +61,6 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
           id: true,
           email: true,
           name: true,
-          isAdmin: true,
           username: true,
           deletedAt: true,
         },
@@ -109,31 +90,32 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new LastAdminError();
       }
 
-      const updated = await tx.player.update({
-        where: { id: existing.id },
-        data: definedFields,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          isAdmin: true,
-          username: true,
-        },
-      });
+      const { username, name, email } = definedFields;
+      const hasPlayerChanges = username !== undefined || name !== undefined || email !== undefined;
+      const updatedPlayer = hasPlayerChanges
+        ? await tx.player.update({
+            where: { id: existing.id },
+            data: { username, name, email },
+            select: { id: true, email: true, name: true, username: true },
+          })
+        : { id: existing.id, email: existing.email, name: existing.name, username: existing.username };
 
-      if (newIsAdmin !== undefined && membership.role !== "owner") {
+      let role = membership.role;
+      if (newIsAdmin !== undefined && role !== "owner") {
+        role = roleForAdminFlag(newIsAdmin);
         await tx.membership.update({
           where: { groupId_playerId: { groupId: input.groupId, playerId: existing.id } },
-          data: { role: roleForAdminFlag(newIsAdmin) },
+          data: { role },
         });
       }
+      const updated: UpdatedPlayer = { ...updatedPlayer, isAdmin: isAdminRole(role) };
 
       const changedFields: TrackedField[] = [];
       const before: Record<TrackedField, string | boolean | null> = {
         username: existing.username,
         name: existing.name,
         email: existing.email,
-        isAdmin: existing.isAdmin,
+        isAdmin: isAdminRole(membership.role),
       };
       const after: Record<TrackedField, string | boolean | null> = {
         username: updated.username,

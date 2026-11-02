@@ -54,7 +54,6 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
       name: ADMIN_NAME,
       email: ADMIN_EMAIL,
       passwordHash: adminHash,
-      isAdmin: true,
     },
   });
 
@@ -62,7 +61,7 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
 
   for (const p of NON_ADMIN_PLAYERS) {
     const player = await prisma.player.create({
-      data: { name: p.name, email: p.email, passwordHash: null, isAdmin: false },
+      data: { name: p.name, email: p.email, passwordHash: null },
     });
     await prisma.membership.create({ data: { groupId: group.id, playerId: player.id, role: "member" } });
   }

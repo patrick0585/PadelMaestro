@@ -3,20 +3,8 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
 import { roleForAdminFlag } from "@/lib/auth/roles";
-
-export class DuplicateEmailError extends Error {
-  constructor(email: string) {
-    super(`duplicate email: ${email}`);
-    this.name = "DuplicateEmailError";
-  }
-}
-
-export class DuplicateUsernameError extends Error {
-  constructor(username: string) {
-    super(`duplicate username: ${username}`);
-    this.name = "DuplicateUsernameError";
-  }
-}
+import { DuplicateEmailError, DuplicateUsernameError } from "./errors";
+export { DuplicateEmailError, DuplicateUsernameError } from "./errors";
 
 export interface CreatePlayerInput {
   email: string;
@@ -46,11 +34,10 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
         data: {
           email: input.email,
           name: input.name,
-          isAdmin: input.isAdmin,
           passwordHash,
           username,
         },
-        select: { id: true, email: true, name: true, isAdmin: true, username: true },
+        select: { id: true, email: true, name: true, username: true },
       });
       await tx.membership.create({
         data: { groupId: input.groupId, playerId: player.id, role: roleForAdminFlag(input.isAdmin) },
@@ -65,7 +52,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           payload: {
             email: player.email,
             name: player.name,
-            isAdmin: player.isAdmin,
+            isAdmin: input.isAdmin,
             username: player.username,
           },
         },
@@ -80,7 +67,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           skipDuplicates: true,
         });
       }
-      return player;
+      return { ...player, isAdmin: input.isAdmin };
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
