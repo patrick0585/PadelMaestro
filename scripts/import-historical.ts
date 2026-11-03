@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { prisma } from "../src/lib/db";
 import { getOrCreateActiveSeason } from "../src/lib/season";
-import { getSoleGroup } from "../src/lib/group/sole-group";
+import { resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 
 interface HistoricalGameDay {
   date: string;
@@ -21,20 +21,21 @@ interface HistoricalExport {
 }
 
 async function main() {
-  const path = process.argv[2];
+  const argv = process.argv.slice(2);
+  const [path] = splitArgs(argv).positionals;
   if (!path) {
-    console.error("Usage: pnpm import:historical <path-to-export.json>");
+    console.error("Usage: pnpm import:historical <path-to-export.json> [--group <slug>]");
     process.exit(1);
   }
   const data = JSON.parse(readFileSync(path, "utf-8")) as HistoricalExport;
-  const group = await getSoleGroup();
+  const group = await resolveGroup(argv);
   const season = await getOrCreateActiveSeason(group.id);
 
   const playerByName = new Map<string, string>();
   for (const raw of data.players) {
     const p = await prisma.player.upsert({
       where: { email: raw.email },
-      create: { name: raw.name, email: raw.email, passwordHash: null },
+      create: { name: raw.name, email: raw.email, passwordHash: null, emailVerifiedAt: new Date() },
       update: { name: raw.name },
     });
     await prisma.membership.upsert({

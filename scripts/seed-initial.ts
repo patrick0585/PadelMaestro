@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth/hash";
+import { resolveGroup } from "../src/lib/group/resolve-group";
 import { getSoleGroup } from "../src/lib/group/sole-group";
 
 const ADMIN_NAME = "Patrick";
@@ -14,7 +15,7 @@ const NON_ADMIN_PLAYERS: Array<{ name: string; email: string }> = [
   { name: "Rene", email: "rene@padel.local" },
 ];
 
-export async function seedInitial(options: { adminPassword?: string } = {}): Promise<{
+export async function seedInitial(options: { adminPassword?: string; groupId?: string } = {}): Promise<{
   adminPassword: string;
   adminId: string;
   seasonId: string;
@@ -28,7 +29,9 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
     );
   }
 
-  const group = await getSoleGroup();
+  const group = options.groupId
+    ? await prisma.group.findUniqueOrThrow({ where: { id: options.groupId } })
+    : await getSoleGroup();
   const year = new Date().getFullYear();
   const season = await prisma.season.create({
     data: {
@@ -54,6 +57,7 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
       name: ADMIN_NAME,
       email: ADMIN_EMAIL,
       passwordHash: adminHash,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -61,7 +65,7 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
 
   for (const p of NON_ADMIN_PLAYERS) {
     const player = await prisma.player.create({
-      data: { name: p.name, email: p.email, passwordHash: null },
+      data: { name: p.name, email: p.email, passwordHash: null, emailVerifiedAt: new Date() },
     });
     await prisma.membership.create({ data: { groupId: group.id, playerId: player.id, role: "member" } });
   }
@@ -71,7 +75,9 @@ export async function seedInitial(options: { adminPassword?: string } = {}): Pro
 
 async function main() {
   const envPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  const group = await resolveGroup(process.argv.slice(2));
   const { adminPassword, adminId, seasonId } = await seedInitial({
+    groupId: group.id,
     adminPassword: envPassword && envPassword.length > 0 ? envPassword : undefined,
   });
   const wasGenerated = !envPassword || envPassword.length === 0;
