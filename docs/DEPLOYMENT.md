@@ -206,6 +206,14 @@ The script prints a one-time password. **Copy it now** — it is only shown once
 
 The first admin becomes the owner of the group "Padelmaestro"; any admin bootstrapped later is a plain admin. To hand the owner role to someone else, run `pnpm tenancy:set-owner <EMAIL>` the same way (the previous owner becomes admin).
 
+**Founder link for a new group.** Whoever opens a founder link registers and founds their own group. Create one on the VPS:
+
+```bash
+sudo -u padel -H bash -c 'cd /srv/padel/app && set -a && . ./.env && set +a && pnpm invite:founder --note "Gruppe Wien"'
+```
+
+It prints the link (valid for a limited time, single use). `pnpm invite:founder --list` shows open founder links, `pnpm invite:founder --revoke <id>` withdraws one. Member invitation links are created by group admins on `/admin`, section "Einladen".
+
 Every multi-tenancy migration (PR 1, 2, 4 and 6; PR 3 and 5 had no migration) was rehearsed against a production dump; see `docs/superpowers/plans/2026-11-02-tenancy-pr*-rehearsal.md` for the protocols. Migrations that drop columns (PR 6) need the service stopped during the deploy, see the PR 6 rehearsal doc.
 
 ---
@@ -443,6 +451,7 @@ sudo systemctl restart padel   # reconnect the app to the freshly-restarted Post
 | Reload Caddy | `sudo systemctl reload caddy` |
 | Run ad-hoc migration | `sudo -u padel -H bash -c 'cd /srv/padel/app && pnpm prisma migrate deploy'` |
 | Rotate `AUTH_SECRET` | Edit `.env`, `sudo systemctl restart padel`. **Invalidates all sessions.** |
+| Create founder link | `sudo -u padel -H bash -c 'cd /srv/padel/app && set -a && . ./.env && set +a && pnpm invite:founder --note "Gruppe Wien"'` |
 
 ---
 
