@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
+import { normaliseEmail } from "@/lib/auth/email";
 import { roleForAdminFlag } from "@/lib/auth/roles";
 import { DuplicateEmailError, DuplicateUsernameError } from "./errors";
 export { DuplicateEmailError, DuplicateUsernameError } from "./errors";
@@ -26,13 +27,14 @@ export interface CreatedPlayer {
 
 export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPlayer> {
   const passwordHash = await hashPassword(input.password);
+  const email = normaliseEmail(input.email);
   const username = input.username ? normaliseUsername(input.username) : null;
 
   try {
     return await prisma.$transaction(async (tx) => {
       const player = await tx.player.create({
         data: {
-          email: input.email,
+          email,
           name: input.name,
           passwordHash,
           username,
@@ -73,7 +75,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       const target = (e.meta?.target ?? []) as string[];
       if (target.includes("username")) throw new DuplicateUsernameError(username ?? "");
-      if (target.includes("email")) throw new DuplicateEmailError(input.email);
+      if (target.includes("email")) throw new DuplicateEmailError(email);
       throw e;
     }
     throw e;

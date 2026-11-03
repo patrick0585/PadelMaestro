@@ -39,6 +39,7 @@ describe("refreshTokenFromPlayer", () => {
 
   it("invalidates the session when the player has been soft-deleted", async () => {
     const player: PlayerLookup = {
+      email: "alice@x.de",
       username: "alice",
       deletedAt: new Date("2026-04-01T00:00:00Z"),
       membership: { groupId: "g1", role: "owner" },
@@ -49,6 +50,7 @@ describe("refreshTokenFromPlayer", () => {
 
   it("returns a new token object on success and does not mutate the input", async () => {
     const player: PlayerLookup = {
+      email: "alice2@x.de",
       username: "alice2",
       deletedAt: null,
       membership: { groupId: "g1", role: "admin" },
@@ -67,8 +69,25 @@ describe("refreshTokenFromPlayer", () => {
     expect((input as { refreshedAt?: number }).refreshedAt).toBe(1000);
   });
 
+  it("refresh copies email from the lookup into the token", async () => {
+    const player: PlayerLookup = {
+      email: "new@x.de",
+      username: "alice",
+      deletedAt: null,
+      membership: null,
+    };
+    const result = await refreshTokenFromPlayer(
+      token({ email: "old@x.de" }),
+      client(async () => player),
+      5000,
+    );
+    if (result.kind !== "ok") throw new Error("unreachable");
+    expect(result.token.email).toBe("new@x.de");
+  });
+
   it("copies groupId and role and derives isAdmin true for owner", async () => {
     const player: PlayerLookup = {
+      email: "alice@x.de",
       username: "alice",
       deletedAt: null,
       membership: { groupId: "g9", role: "owner" },
@@ -82,6 +101,7 @@ describe("refreshTokenFromPlayer", () => {
 
   it("derives isAdmin false for a plain member", async () => {
     const player: PlayerLookup = {
+      email: "alice@x.de",
       username: "alice",
       deletedAt: null,
       membership: { groupId: "g9", role: "member" },
@@ -93,7 +113,12 @@ describe("refreshTokenFromPlayer", () => {
   });
 
   it("clears groupId, role and isAdmin when the membership is gone but keeps the token", async () => {
-    const player: PlayerLookup = { username: "alice", deletedAt: null, membership: null };
+    const player: PlayerLookup = {
+      email: "alice@x.de",
+      username: "alice",
+      deletedAt: null,
+      membership: null,
+    };
     const input = token({ isAdmin: true, groupId: "g1", role: "admin" });
     const result = await refreshTokenFromPlayer(input, client(async () => player));
     expect(result.kind).toBe("ok");

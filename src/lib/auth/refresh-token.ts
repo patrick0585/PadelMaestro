@@ -2,6 +2,7 @@ import type { JWT } from "next-auth/jwt";
 import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
 export interface PlayerLookup {
+  email: string;
   username: string | null;
   deletedAt: Date | null;
   membership: { groupId: string; role: GroupRole } | null;
@@ -67,6 +68,7 @@ export async function refreshTokenFromPlayer(
     isAdmin: isAdminRole(player.membership?.role),
     groupId: player.membership?.groupId ?? null,
     role: player.membership?.role ?? null,
+    email: player.email,
     username: player.username,
     refreshedAt: now,
   };

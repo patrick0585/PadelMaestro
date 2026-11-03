@@ -37,7 +37,7 @@ describe("members", () => {
     expect(await findGroupMembership(prisma, g2.id, p.id)).toBeNull();
   });
 
-  it("listActiveMembers enthält nur aktive Mitglieder der Gruppe, sortiert nach Name, mit hasPassword und role", async () => {
+  it("listActiveMembers enthält nur aktive Mitglieder der Gruppe, sortiert nach Name, mit hasPassword, emailVerified und role", async () => {
     const g1 = await createTestGroup("Eins");
     const g2 = await createTestGroup("Zwei");
     const zed = await createMember(g1.id, {
@@ -45,6 +45,7 @@ describe("members", () => {
       email: "z@x.de",
       passwordHash: "h",
       username: "zed",
+      emailVerifiedAt: new Date(),
     });
     const amy = await createMember(g1.id, { name: "Amy", email: "amy@x.de", role: "admin" });
     const gone = await createMember(g1.id, { name: "Bob", email: "b@x.de" });
@@ -59,6 +60,7 @@ describe("members", () => {
         username: null,
         role: "admin",
         hasPassword: false,
+        emailVerified: false,
         avatarVersion: amy.avatarVersion,
       },
       {
@@ -68,6 +70,7 @@ describe("members", () => {
         username: "zed",
         role: "member",
         hasPassword: true,
+        emailVerified: true,
         avatarVersion: zed.avatarVersion,
       },
     ]);

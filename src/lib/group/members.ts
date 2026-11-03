@@ -8,6 +8,7 @@ export type MemberRow = {
   username: string | null;
   role: GroupRole;
   hasPassword: boolean;
+  emailVerified: boolean;
   avatarVersion: number;
 };
 
@@ -24,6 +25,7 @@ export async function listActiveMembers(groupId: string): Promise<MemberRow[]> {
           email: true,
           username: true,
           passwordHash: true,
+          emailVerifiedAt: true,
           avatarVersion: true,
         },
       },
@@ -36,6 +38,7 @@ export async function listActiveMembers(groupId: string): Promise<MemberRow[]> {
     username: player.username,
     role,
     hasPassword: player.passwordHash !== null,
+    emailVerified: player.emailVerifiedAt !== null,
     avatarVersion: player.avatarVersion,
   }));
 }

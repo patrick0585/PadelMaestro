@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
+import { normaliseEmail } from "@/lib/auth/email";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
 import {
@@ -53,6 +54,10 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
     definedFields.username = normaliseUsername(definedFields.username);
   }
 
+  if (typeof definedFields.email === "string") {
+    definedFields.email = normaliseEmail(definedFields.email);
+  }
+
   try {
     return await prisma.$transaction(async (tx) => {
       const existing = await tx.player.findUnique({
@@ -70,8 +75,12 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new PlayerNotFoundError(input.playerId);
       }
 
+      const emailChanged =
+        definedFields.email !== undefined && definedFields.email !== existing.email;
+      if (!emailChanged) delete definedFields.email;
+
       if (
-        definedFields.email !== undefined &&
+        emailChanged &&
         membership.role === "owner" &&
         input.actorId !== input.playerId
       ) {
@@ -91,11 +100,16 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       }
 
       const { username, name, email } = definedFields;
-      const hasPlayerChanges = username !== undefined || name !== undefined || email !== undefined;
+      const hasPlayerChanges = username !== undefined || name !== undefined || emailChanged;
       const updatedPlayer = hasPlayerChanges
         ? await tx.player.update({
             where: { id: existing.id },
-            data: { username, name, email },
+            data: {
+              username,
+              name,
+              email,
+              ...(emailChanged ? { emailVerifiedAt: null, pendingEmail: null } : {}),
+            },
             select: { id: true, email: true, name: true, username: true },
           })
         : { id: existing.id, email: existing.email, name: existing.name, username: existing.username };

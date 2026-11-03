@@ -12,6 +12,7 @@ function row(overrides: Partial<PlayerRow> & Pick<PlayerRow, "id" | "name" | "ro
     username: null,
     isAdmin: overrides.role !== "member",
     hasPassword: true,
+    emailVerified: true,
     avatarVersion: 0,
     ...overrides,
   };
@@ -28,6 +29,19 @@ describe("PlayersSection", () => {
     render(<PlayersSection players={players} />);
     expect(screen.getByText("Besitzer")).toBeInTheDocument();
     expect(screen.getAllByText("Admin")).toHaveLength(1);
+  });
+
+  it("zeigt 'Unbestätigt' nur bei Passwort und unbestätigter Adresse", () => {
+    render(
+      <PlayersSection
+        players={[
+          row({ id: "u", name: "Uwe", role: "member", emailVerified: false }),
+          row({ id: "s", name: "Stats", role: "member", emailVerified: false, hasPassword: false }),
+          row({ id: "v", name: "Vera", role: "member" }),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("Unbestätigt")).toHaveLength(1);
   });
 
   it("blendet den Löschen-Button für den Besitzer aus", () => {

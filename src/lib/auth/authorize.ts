@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
+import { normaliseEmail } from "@/lib/auth/email";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import { findActiveMembership } from "@/lib/group/active-membership";
 import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
@@ -40,7 +41,7 @@ export async function authorizeCredentials(
   const normalised = normaliseUsername(identifier);
   const player = await prisma.player.findFirst({
     where: {
-      OR: [{ email: identifier }, { username: normalised }],
+      OR: [{ email: normaliseEmail(identifier) }, { username: normalised }],
       deletedAt: null,
     },
   });

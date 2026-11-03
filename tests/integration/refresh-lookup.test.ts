@@ -38,7 +38,7 @@ describe("findPlayerForRefresh", () => {
       data: { groupId: g.id, playerId: p.id, role: "admin", removedAt: new Date() },
     });
     const res = await findPlayerForRefresh(prisma, p.id);
-    expect(res).toEqual({ username: "pp", deletedAt: null, membership: null });
+    expect(res).toEqual({ email: "p@x", username: "pp", deletedAt: null, membership: null });
   });
 
   it("returns null for an unknown id", async () => {
