@@ -105,11 +105,15 @@ describe("<ParticipantsRoster> hydration", () => {
     container.innerHTML = html;
     document.body.appendChild(container);
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
-    const root = await act(async () => hydrateRoot(container, ui));
-    const messages = errors.mock.calls.map((c) => String(c[0]));
-    errors.mockRestore();
-    act(() => root.unmount());
-    container.remove();
+    let messages: string[];
+    try {
+      const root = await act(async () => hydrateRoot(container, ui));
+      messages = errors.mock.calls.map((c) => String(c[0]));
+      act(() => root.unmount());
+    } finally {
+      errors.mockRestore();
+      container.remove();
+    }
     expect(messages.filter((m) => /hydrat/i.test(m))).toEqual([]);
   });
 });

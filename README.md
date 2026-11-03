@@ -106,7 +106,7 @@ Members join through invitation links created on the admin page (`/admin`, secti
 pnpm test                 # full Vitest suite (unit + integration)
 pnpm test:watch           # watch mode
 pnpm lint                 # next lint
-pnpm e2e                  # multi-user Playwright driver (needs E2E_ADMIN_EMAIL/PASSWORD env)
+pnpm e2e                  # multi-user Playwright driver (needs E2E_ADMIN_EMAIL/PASSWORD env; E2E_BASE_URL overrides http://localhost:3000)
 pnpm e2e:foreign          # stranger founds a group and plays a game day (see below)
 pnpm db:reset             # nuke and reseed the local DB
 pnpm import:historical    # import a years-old XLSX into a clean season (see docs/import-historical.md)
@@ -122,7 +122,7 @@ PORT=3140 AUTH_URL=http://localhost:3140 APP_URL=http://localhost:3140 MAIL_TRAN
 E2E_BASE_URL=http://localhost:3140 pnpm e2e:foreign
 ```
 
-`AUTH_URL` must match the e2e origin (the CSRF check compares `Origin` against it) and `APP_URL` makes the generated links point there. The driver reads `.env` for the database when it creates the founder link. Each run leaves a new group "E2E Runde …" behind, and anna stays a member of it. The DB scripts (`e2e:reset`, `seed:demo`, `bootstrap:admin`) do not load `.env` themselves; export it first with `set -a; . ./.env; set +a` or call them with `node --env-file=.env` / `tsx --env-file=.env`.
+`AUTH_URL` must match the e2e origin (the CSRF check compares `Origin` against it) and `APP_URL` makes the generated links point there. The driver reads `.env` for the database when it creates the founder link. Each run leaves a new group "E2E Runde …" behind, and anna stays a member of it. The driver switches anna back to padelmaestro at the end; if that fails, she stays active in the E2E group — switch back in the group switcher. The DB scripts (`e2e:reset`, `seed:demo`, `bootstrap:admin`) do not load `.env` themselves; export it first with `set -a; . ./.env; set +a` or call them with `node --env-file=.env` / `tsx --env-file=.env`.
 
 ## Project layout
 

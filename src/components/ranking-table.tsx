@@ -25,7 +25,7 @@ export function RankingTable({ ranking }: { ranking: RankingRow[] }) {
         <span className="text-right">Sp</span>
         <span className="text-right">Jkr</span>
       </div>
-      <ul className="divide-y divide-border">
+      <ul aria-label="Rangliste" className="divide-y divide-border">
         {ranking.map((r) => {
           const totalMedals = r.medals.gold + r.medals.silver + r.medals.bronze;
           return (

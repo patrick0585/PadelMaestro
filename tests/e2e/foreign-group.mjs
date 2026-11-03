@@ -29,7 +29,7 @@ import {
 const TS = Date.now().toString(36);
 const GROUP_NAME = `E2E Runde ${TS}`;
 const OLD_GROUP_NAME = "Padelmaestro";
-const PASSWORD = "e2e-pass-1234";
+const PASSWORD = `pw-${TS}`;
 const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 
@@ -42,9 +42,6 @@ const PEOPLE = {
   m2: { key: "m2", name: `Mila ${TS}`, email: `mitglied2-${TS}@e2e.local`, ip: `${NET}.3` },
   anna: { key: "anna", name: "Anna", email: "anna@demo.local", password: "demo12345", ip: `${NET}.4` },
 };
-
-// Known app defects that are reported, not failed on. Remove once fixed.
-const KNOWN_CONSOLE_ERRORS = [];
 
 const timings = [];
 async function step(label, fn) {
@@ -143,7 +140,9 @@ async function switcherState(page) {
 async function rankingNames(page) {
   await page.goto(`${BASE}/ranking`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Rangliste" }).waitFor({ timeout: 10000 });
-  return (await page.locator("ul > li div.truncate").allTextContents()).map((t) => t.trim());
+  const list = page.getByRole("list", { name: "Rangliste" });
+  if ((await list.count()) === 0) return [];
+  return (await list.locator("li div.truncate").allTextContents()).map((t) => t.trim());
 }
 
 function sameSet(a, b) {
@@ -153,6 +152,7 @@ function sameSet(a, b) {
 async function main() {
   const browser = await chromium.launch({ headless: true });
   const pages = {};
+  let annaHomeGroupId = null;
   const started = Date.now();
 
   try {
@@ -226,6 +226,11 @@ async function main() {
       const ctx = await newContext(browser, PEOPLE.anna);
       const page = await login(ctx, PEOPLE.anna);
       pages.anna = page;
+      annaHomeGroupId = await page.evaluate(async () => {
+        const res = await fetch("/api/auth/session");
+        return (await res.json())?.user?.groupId ?? null;
+      });
+      if (!annaHomeGroupId) record("info", "anna-home-group-unknown", { note: "cannot restore her active group" });
       await page.goto(memberLink, { waitUntil: "domcontentloaded" });
       const join = page.getByRole("button", { name: `Gruppe ${GROUP_NAME} beitreten` });
       if ((await join.count()) === 0) await fail(page, "join-button-missing", { url: page.url() });
@@ -350,6 +355,7 @@ async function main() {
       }
 
       const sw = await switcherState(page);
+      if (!sw.trigger) await fail(page, "switcher-missing", { groups: sw.groups });
       await sw.trigger.click();
       const oldItem = page.locator('[role="menu"][aria-label="Gruppen"]:visible [role="menuitemradio"]', { hasText: OLD_GROUP_NAME });
       const [resp] = await Promise.all([
@@ -378,10 +384,24 @@ async function main() {
       for (const [key, page] of Object.entries(pages)) await shot(page, `foreign-crash-${key}`);
     }
   } finally {
+    // Leave anna in padelmaestro even when the run aborted before step g.
+    if (pages.anna && annaHomeGroupId) {
+      try {
+        const status = await pages.anna.evaluate(async (groupId) => {
+          const res = await fetch("/api/profile/active-group", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ groupId }),
+          });
+          return res.status;
+        }, annaHomeGroupId);
+        if (status !== 204) record("info", "anna-restore-failed", { status });
+      } catch (err) {
+        record("info", "anna-restore-failed", { error: err.message });
+      }
+    }
     for (const [k, errs] of consoleErrors.entries()) {
-      const known = errs.filter((e) => KNOWN_CONSOLE_ERRORS.some((re) => re.test(e)));
-      if (known.length > 0) record("important", "known-console-errors", { user: k, count: known.length, sample: known.slice(0, 2).map((e) => e.slice(0, 300)) });
-      const hard = errs.filter((e) => !e.startsWith("[warning]") && !known.includes(e));
+      const hard = errs.filter((e) => !e.startsWith("[warning]"));
       const warnings = errs.filter((e) => e.startsWith("[warning]"));
       if (hard.length > 0) record("critical", "console-errors", { user: k, count: hard.length, sample: hard.slice(0, 5) });
       if (warnings.length > 0) record("nit", "console-warnings", { user: k, count: warnings.length, sample: warnings.slice(0, 5) });
