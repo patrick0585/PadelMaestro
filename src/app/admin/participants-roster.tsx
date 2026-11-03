@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   closestCenter,
@@ -217,6 +217,8 @@ export function ParticipantsRoster({
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     useSensor(KeyboardSensor),
   );
+  // dnd-kit's own id counter differs between server and client render.
+  const dndId = useId();
 
   async function patch(playerId: string, status: ParticipantAttendance) {
     const row = local.find((r) => r.playerId === playerId);
@@ -279,7 +281,7 @@ export function ParticipantsRoster({
 
   return (
     <div className="space-y-3">
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <DropColumn
             zone={POOL}

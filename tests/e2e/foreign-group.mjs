@@ -44,11 +44,7 @@ const PEOPLE = {
 };
 
 // Known app defects that are reported, not failed on. Remove once fixed.
-const KNOWN_CONSOLE_ERRORS = [
-  // /admin participants roster: dnd-kit's DndContext has no stable id, so
-  // aria-describedby="DndDescribedBy-N" differs between server and client.
-  /A tree hydrated but some attributes[\s\S]*DndDescribedBy-/,
-];
+const KNOWN_CONSOLE_ERRORS = [];
 
 const timings = [];
 async function step(label, fn) {
