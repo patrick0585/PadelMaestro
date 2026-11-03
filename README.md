@@ -122,7 +122,7 @@ PORT=3140 AUTH_URL=http://localhost:3140 APP_URL=http://localhost:3140 MAIL_TRAN
 E2E_BASE_URL=http://localhost:3140 pnpm e2e:foreign
 ```
 
-`AUTH_URL` must match the e2e origin (the CSRF check compares `Origin` against it) and `APP_URL` makes the generated links point there. The driver reads `.env` for the database when it creates the founder link. Each run leaves a new group "E2E Runde …" behind, and anna stays a member of it.
+`AUTH_URL` must match the e2e origin (the CSRF check compares `Origin` against it) and `APP_URL` makes the generated links point there. The driver reads `.env` for the database when it creates the founder link. Each run leaves a new group "E2E Runde …" behind, and anna stays a member of it. The DB scripts (`e2e:reset`, `seed:demo`, `bootstrap:admin`) do not load `.env` themselves; export it first with `set -a; . ./.env; set +a` or call them with `node --env-file=.env` / `tsx --env-file=.env`.
 
 ## Project layout
 
