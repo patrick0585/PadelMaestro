@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { listMyGroups } from "@/lib/group/active-group";
 import { TopNav } from "./top-nav";
 import { MobileTopBar } from "./mobile-top-bar";
 import { BottomTabs } from "./bottom-tabs";
@@ -17,6 +18,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     select: { avatarVersion: true },
   });
   const avatarVersion = row?.avatarVersion ?? 0;
+  const groups = (await listMyGroups(session.user.id)).map(({ id, name }) => ({ id, name }));
+  const activeGroupId = session.user.groupId;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -25,11 +28,15 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         name={name}
         playerId={session.user.id}
         avatarVersion={avatarVersion}
+        groups={groups}
+        activeGroupId={activeGroupId}
       />
       <MobileTopBar
         name={name}
         playerId={session.user.id}
         avatarVersion={avatarVersion}
+        groups={groups}
+        activeGroupId={activeGroupId}
       />
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 md:px-6">{children}</main>
       {/* Single sticky stack so banner + tab-bar share one stacking

@@ -2,18 +2,21 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { MobileTopBar } from "@/components/mobile-top-bar";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
 
 describe("<MobileTopBar>", () => {
   it("renders the user menu trigger with the player's initials", () => {
-    render(<MobileTopBar name="Patrick Koch" playerId="player-1" avatarVersion={0} />);
+    render(<MobileTopBar name="Patrick Koch" playerId="player-1" avatarVersion={0} groups={[]} activeGroupId={null} />);
     expect(screen.getByRole("button", { name: /benutzermenü/i })).toHaveTextContent("PK");
   });
 
   it("is hidden on md and up, visible below", () => {
     const { container } = render(
-      <MobileTopBar name="A B" playerId="player-2" avatarVersion={0} />,
+      <MobileTopBar name="A B" playerId="player-2" avatarVersion={0} groups={[]} activeGroupId={null} />,
     );
     const header = container.querySelector("header");
     expect(header).not.toBeNull();
@@ -27,10 +30,27 @@ describe("<MobileTopBar>", () => {
   // and only reachable in landscape (real user complaint, 2026-05-06).
   it("pads its top by env(safe-area-inset-top) so the avatar clears the iOS notch", () => {
     const { container } = render(
-      <MobileTopBar name="A B" playerId="player-3" avatarVersion={0} />,
+      <MobileTopBar name="A B" playerId="player-3" avatarVersion={0} groups={[]} activeGroupId={null} />,
     );
     const header = container.querySelector("header");
     expect(header).not.toBeNull();
     expect(header!.className).toContain("pt-[env(safe-area-inset-top)]");
+  });
+
+  it("renders the group switcher on the left for two groups", () => {
+    render(
+      <MobileTopBar
+        name="A B"
+        playerId="player-4"
+        avatarVersion={0}
+        groups={[
+          { id: "g1", name: "Dienstagsrunde" },
+          { id: "g2", name: "Freitagsrunde" },
+        ]}
+        activeGroupId="g1"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Gruppe wechseln" })).toHaveTextContent("Dienstagsrunde");
+    expect(screen.getByRole("button", { name: /benutzermenü/i })).toBeInTheDocument();
   });
 });
