@@ -107,9 +107,22 @@ pnpm test                 # full Vitest suite (unit + integration)
 pnpm test:watch           # watch mode
 pnpm lint                 # next lint
 pnpm e2e                  # multi-user Playwright driver (needs E2E_ADMIN_EMAIL/PASSWORD env)
+pnpm e2e:foreign          # stranger founds a group and plays a game day (see below)
 pnpm db:reset             # nuke and reseed the local DB
 pnpm import:historical    # import a years-old XLSX into a clean season (see docs/import-historical.md)
 ```
+
+### End-to-end run "fremde Gruppe"
+
+`pnpm e2e:foreign` plays the onboarding of a new group in the browser, one context per person: a founder link from `scripts/invite-founder.ts`, the founder's signup and new group, a member link from `/admin`, two signups through it, `anna@demo.local` joining with her existing account, then a game day from attendance to the finished ranking, and finally checks that both groups stay separate. Any 5xx or console error fails the run (exit code 1); findings go to `tests/e2e/artifacts/foreign-findings.json`, screenshots of failures next to it. Run it before a beta start:
+
+```bash
+pnpm seed:demo --group padelmaestro   # anna@demo.local must be in padelmaestro
+PORT=3140 AUTH_URL=http://localhost:3140 APP_URL=http://localhost:3140 MAIL_TRANSPORT=console pnpm dev
+E2E_BASE_URL=http://localhost:3140 pnpm e2e:foreign
+```
+
+`AUTH_URL` must match the e2e origin (the CSRF check compares `Origin` against it) and `APP_URL` makes the generated links point there. The driver reads `.env` for the database when it creates the founder link. Each run leaves a new group "E2E Runde …" behind, and anna stays a member of it.
 
 ## Project layout
 
