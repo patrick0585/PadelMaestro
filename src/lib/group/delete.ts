@@ -40,6 +40,13 @@ export async function deleteGroup(i: {
   }
 
   await prisma.$transaction(async (tx) => {
+    // Re-checked under the row lock: a concurrent transfer may have made the actor admin.
+    // Same-value write, because Prisma sends no UPDATE at all for `data: {}`.
+    const stillOwner = await tx.membership.updateMany({
+      where: { groupId, playerId: actorId, role: "owner", removedAt: null },
+      data: { role: "owner" },
+    });
+    if (stillOwner.count !== 1) throw new ForbiddenError();
     const [members, gameDays] = await Promise.all([
       tx.membership.count({ where: { groupId, removedAt: null } }),
       tx.gameDay.count({ where: { groupId } }),
