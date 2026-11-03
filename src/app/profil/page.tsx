@@ -22,7 +22,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <EmailNotice playerId={session.user.id} />
+      <EmailNotice playerId={session.user.id} showProfileLink={false} />
 
       <header>
         <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">

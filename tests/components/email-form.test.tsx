@@ -2,6 +2,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { EmailForm } from "@/app/profil/email-form";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 function submit(status: number) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status, json: async () => ({}) }));
   render(<EmailForm email="a@x.de" pendingEmail={null} emailVerified={true} />);
@@ -24,9 +26,14 @@ describe("<EmailForm>", () => {
     );
   });
 
-  it("429 and 400 messages", async () => {
+  it("429 shows rate limit", async () => {
     submit(429);
     expect((await screen.findByRole("alert")).textContent).toBe("Zu viele Versuche, bitte später.");
+  });
+
+  it("400 shows invalid address", async () => {
+    submit(400);
+    expect((await screen.findByRole("alert")).textContent).toBe("Bitte eine gültige E-Mail-Adresse eingeben.");
   });
 
   it("204 shows success with address", async () => {

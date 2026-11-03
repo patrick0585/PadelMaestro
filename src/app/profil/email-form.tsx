@@ -1,7 +1,10 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { InlineMessage } from "@/components/ui/inline-message";
 import { ResendVerificationButton } from "@/components/resend-verification-button";
 
 type Status =
@@ -26,6 +29,7 @@ export function EmailForm({
   pendingEmail: string | null;
   emailVerified: boolean;
 }) {
+  const router = useRouter();
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
@@ -42,6 +46,7 @@ export function EmailForm({
       if (res.status === 204) {
         setStatus({ kind: "success", address });
         setValue("");
+        router.refresh();
         return;
       }
       if (res.status === 401) {
@@ -61,19 +66,15 @@ export function EmailForm({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="break-all font-semibold text-foreground">{email}</span>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            emailVerified ? "bg-success-soft/40 text-success" : "bg-surface-muted text-foreground-muted"
-          }`}
-        >
+        <Badge variant={emailVerified ? "success" : "warning"}>
           {emailVerified ? "Bestätigt" : "Unbestätigt"}
-        </span>
+        </Badge>
       </div>
       {pendingEmail && (
-        <p className="text-sm text-foreground-muted">Bestätigung ausstehend für {pendingEmail}</p>
+        <p className="text-sm break-all text-foreground-muted">Bestätigung ausstehend für {pendingEmail}</p>
       )}
       {!emailVerified && <ResendVerificationButton />}
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form onSubmit={onSubmit} className="space-y-3 border-t border-border pt-3">
         <div>
           <Label htmlFor="new-email">Neue E-Mail-Adresse</Label>
           <Input
@@ -85,15 +86,11 @@ export function EmailForm({
             required
           />
         </div>
-        {status.kind === "error" && (
-          <p role="alert" className="rounded-xl bg-destructive-soft/40 px-3 py-2 text-sm text-destructive">
-            {status.message}
-          </p>
-        )}
+        {status.kind === "error" && <InlineMessage kind="error">{status.message}</InlineMessage>}
         {status.kind === "success" && (
-          <p role="status" className="rounded-xl bg-success-soft/40 px-3 py-2 text-sm text-success">
+          <InlineMessage kind="success">
             Wir haben dir eine Mail an {status.address} geschickt.
-          </p>
+          </InlineMessage>
         )}
         <div className="flex justify-end">
           <Button type="submit" loading={status.kind === "submitting"}>

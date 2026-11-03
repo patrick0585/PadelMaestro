@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { InlineMessage } from "@/components/ui/inline-message";
 
 type Status =
   | { kind: "idle" }
@@ -14,6 +16,7 @@ const ERRORS: Record<number, string> = {
 };
 
 export function ResendVerificationButton() {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   async function onClick() {
@@ -22,6 +25,11 @@ export function ResendVerificationButton() {
       const res = await fetch("/api/profile/email/resend", { method: "POST" });
       if (res.status === 204) {
         setStatus({ kind: "sent" });
+        router.refresh();
+        return;
+      }
+      if (res.status === 401) {
+        window.location.href = "/login";
         return;
       }
       setStatus({
@@ -33,21 +41,17 @@ export function ResendVerificationButton() {
     }
   }
 
+  const sending = status.kind === "sending";
+
   return (
     <div className="space-y-2">
-      <Button type="button" variant="secondary" size="sm" onClick={onClick} loading={status.kind === "sending"}>
+      <Button type="button" variant="secondary" onClick={onClick} loading={sending} aria-busy={sending}>
         Mail erneut senden
       </Button>
-      {status.kind === "error" && (
-        <p role="alert" className="rounded-xl bg-destructive-soft/40 px-3 py-2 text-sm text-destructive">
-          {status.message}
-        </p>
-      )}
-      {status.kind === "sent" && (
-        <p role="status" className="rounded-xl bg-success-soft/40 px-3 py-2 text-sm text-success">
-          Mail gesendet.
-        </p>
-      )}
+      <div aria-live="polite">
+        {status.kind === "error" && <InlineMessage kind="error">{status.message}</InlineMessage>}
+        {status.kind === "sent" && <InlineMessage kind="success">Mail gesendet.</InlineMessage>}
+      </div>
     </div>
   );
 }
