@@ -150,7 +150,8 @@ export async function buildAccountExport(playerId: string): Promise<AccountExpor
       entityType: a.entityType,
       entityId: a.entityId,
       createdAt: a.createdAt.toISOString(),
-      payload: a.payload,
+      // Rows about other people (e.g. admin creating a player) carry their PII.
+      payload: a.entityType === "Player" && a.entityId !== playerId ? null : a.payload,
     })),
     avatar:
       player.avatarData && player.avatarMimeType

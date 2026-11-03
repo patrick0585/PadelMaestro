@@ -9,6 +9,7 @@ import {
 } from "../helpers/group";
 import { buildAccountExport } from "@/lib/account/export";
 import { PlayerNotFoundError } from "@/lib/players/errors";
+import { createPlayer } from "@/lib/players/create";
 
 beforeEach(async () => {
   await resetDb();
@@ -147,6 +148,43 @@ describe("buildAccountExport", () => {
     const json = JSON.stringify(out);
     for (const id of [p2.id, p3.id, p4.id]) expect(json).not.toContain(id);
     expect(out.avatar).toBeNull();
+  });
+
+  it("exports audit rows about other players without payload; own player rows keep it", async () => {
+    const { g1, me } = await setup();
+    await prisma.auditLog.create({
+      data: {
+        actorId: me.id,
+        groupId: g1.id,
+        action: "player.update",
+        entityType: "Player",
+        entityId: me.id,
+        payload: { name: "Me" },
+      },
+    });
+    const created = await createPlayer({
+      email: "neuling@example.com",
+      name: "Neuling Fremd",
+      password: "hunter22extra",
+      isAdmin: false,
+      actorId: me.id,
+      groupId: g1.id,
+    });
+
+    const out = await buildAccountExport(me.id);
+    const foreign = out.auditLogs.find((a) => a.action === "player.create");
+    expect(foreign).toMatchObject({
+      action: "player.create",
+      entityType: "Player",
+      entityId: created.id,
+      payload: null,
+    });
+    expect(foreign?.createdAt).toEqual(expect.any(String));
+    const own = out.auditLogs.find((a) => a.action === "player.update");
+    expect(own?.payload).toEqual({ name: "Me" });
+    const json = JSON.stringify(out);
+    expect(json).not.toContain("neuling@example.com");
+    expect(json).not.toContain("Neuling Fremd");
   });
 
   it("throws PlayerNotFoundError for a deleted account", async () => {
