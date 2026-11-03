@@ -2,12 +2,17 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { contextFromSession } from "@/lib/auth/group-context";
+import { LeaveGroupButton } from "./leave-group-button";
 import { ChangePasswordForm } from "./change-password-form";
 import { AvatarUploader } from "./avatar-uploader";
 import { EmailForm } from "./email-form";
 import { EmailNotice } from "@/components/email-notice";
 
 export const dynamic = "force-dynamic";
+
+const ROLE_LABELS = { owner: "Besitzer", admin: "Admin", member: "Mitglied" } as const;
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -19,6 +24,10 @@ export default async function ProfilePage() {
   });
   const avatarVersion = player?.avatarVersion ?? 0;
   const email = player?.email ?? session.user.email;
+  const ctx = contextFromSession(session);
+  const group = ctx
+    ? await prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } })
+    : null;
 
   return (
     <div className="space-y-4">
@@ -53,6 +62,26 @@ export default async function ProfilePage() {
           />
         </CardBody>
       </Card>
+
+      {ctx && group && (
+        <Card>
+          <CardBody className="space-y-3">
+            <h2 className="text-base font-semibold text-foreground">Gruppe</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-foreground">{group.name}</span>
+              <Badge variant="neutral">{ROLE_LABELS[ctx.role]}</Badge>
+            </div>
+            {ctx.role === "owner" ? (
+              <p className="text-sm text-foreground-muted">
+                Als Besitzer kannst du die Gruppe nicht verlassen. Übertrage den Besitz im
+                Admin-Bereich.
+              </p>
+            ) : (
+              <LeaveGroupButton />
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardBody className="space-y-3">
