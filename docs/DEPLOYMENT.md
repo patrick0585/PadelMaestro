@@ -309,7 +309,7 @@ sudo journalctl -u caddy -n 30 --no-pager
 
 Caddy fetches a Let's Encrypt cert automatically on the first request (~10 seconds). Tail the journal if something looks off.
 
-Invitation URLs carry their token in the path; the access log records request URIs, so keep `/var/log/caddy` root-only (default) or skip `/einladung/*` from logging.
+Invitation URLs carry their token in the path; the access log records request URIs, so keep `/var/log/caddy` not world-readable (default) or skip `/einladung/*` from logging.
 
 ---
 
