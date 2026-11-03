@@ -75,8 +75,9 @@ async function anonymise(playerId: string, now: Date): Promise<void> {
       where: { entityType: "Player", entityId: playerId },
       data: { payload: { anonymised: true } },
     });
-    await tx.player.update({
-      where: { id: playerId },
+    // deletedAt guard: a concurrent second deletion finds nothing and rolls back.
+    const { count } = await tx.player.updateMany({
+      where: { id: playerId, deletedAt: null },
       data: {
         name: "Gelöschter Spieler",
         email: `geloescht-${playerId}@anonym.invalid`,
@@ -93,6 +94,7 @@ async function anonymise(playerId: string, now: Date): Promise<void> {
         sessionVersion: { increment: 1 },
       },
     });
+    if (count !== 1) throw new PlayerNotFoundError(playerId);
     await tx.auditLog.create({
       data: {
         actorId: playerId,

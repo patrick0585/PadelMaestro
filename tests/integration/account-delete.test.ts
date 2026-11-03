@@ -439,4 +439,22 @@ describe("deleteOwnAccount", () => {
     expect(await snapshot()).toEqual(before);
   });
 
+  it("two concurrent deletions: one succeeds, the other fails with PlayerNotFoundError and writes no second audit", async () => {
+    const { group } = await setupGroup();
+    const p = await createMember(group.id, {
+      name: "Paula",
+      email: "paula@example.com",
+      passwordHash: hash,
+    });
+    const results = await Promise.allSettled([
+      deleteOwnAccount({ playerId: p.id, password: PASSWORD, now: NOW }),
+      deleteOwnAccount({ playerId: p.id, password: PASSWORD, now: NOW }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(rejected.reason).toBeInstanceOf(PlayerNotFoundError);
+    expect(await prisma.auditLog.count({ where: { action: "account.delete" } })).toBe(1);
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: p.id } });
+    expect(after.sessionVersion).toBe(p.sessionVersion + 1);
+  });
 });
