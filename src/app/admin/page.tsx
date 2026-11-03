@@ -12,6 +12,8 @@ import { CloseSeasonDialog } from "./close-season-dialog";
 import { StartGameDayButton } from "./start-game-day-button";
 import { DeleteGameDayButton } from "./delete-game-day-button";
 import { PlayersSection } from "./players-section";
+import { InvitationsSection } from "./invitations-section";
+import { listOpenInvitations } from "@/lib/invitations/manage";
 import {
   ParticipantsRoster,
   type ParticipantAttendance,
@@ -90,6 +92,13 @@ export default async function AdminPage({
     where: { seasonId: season.id, status: "finished" },
   });
 
+  const invitations = (await listOpenInvitations(ctx.groupId)).map((i) => ({
+    ...i,
+    expiresAt: i.expiresAt.toISOString(),
+    createdAt: i.createdAt.toISOString(),
+    uses: i.uses.map((u) => ({ ...u, usedAt: u.usedAt.toISOString() })),
+  }));
+
   const playersForUi = players.map((p) => ({
     id: p.id,
     name: p.name,
@@ -116,6 +125,8 @@ export default async function AdminPage({
       )}
 
       <PlayersSection players={playersForUi} />
+
+      <InvitationsSection initial={invitations} />
 
       <Card>
         <CardBody className="space-y-3">
