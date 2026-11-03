@@ -46,6 +46,7 @@ export async function createGroup(i: {
     await tx.membership.create({
       data: { groupId: created.id, playerId: i.founderId, role: "owner", joinedAt: now },
     });
+    await tx.player.update({ where: { id: i.founderId }, data: { activeGroupId: created.id } });
     if (use) {
       const claimed = await tx.invitationUse.updateMany({
         where: { id: use.id, foundedGroupId: null },

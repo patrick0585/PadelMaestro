@@ -10,6 +10,17 @@ export async function findActiveMembership(
   db: Prisma.TransactionClient | PrismaClient,
   playerId: string,
 ): Promise<{ groupId: string; role: GroupRole } | null> {
+  const player = await db.player.findUnique({
+    where: { id: playerId },
+    select: { activeGroupId: true },
+  });
+  if (player?.activeGroupId) {
+    const preferred = await db.membership.findFirst({
+      where: { playerId, groupId: player.activeGroupId, removedAt: null },
+      select: { groupId: true, role: true },
+    });
+    if (preferred) return preferred;
+  }
   return db.membership.findFirst({
     where: { playerId, removedAt: null },
     orderBy: [...ACTIVE_MEMBERSHIP_ORDER],
@@ -41,4 +52,16 @@ export async function findGroupMembership(
     where: { groupId, playerId, removedAt: null },
     select: { role: true },
   });
+}
+
+// True when the account also belongs to another group; its admins there must not lose control of it.
+export async function isSharedAccount(
+  db: Prisma.TransactionClient | PrismaClient,
+  playerId: string,
+  groupId: string,
+): Promise<boolean> {
+  const others = await db.membership.count({
+    where: { playerId, removedAt: null, groupId: { not: groupId } },
+  });
+  return others > 0;
 }

@@ -6,7 +6,7 @@ export const DEFAULT_GROUP_SLUG = "padelmaestro";
 
 export class AmbiguousGroupError extends Error {
   constructor() {
-    super("expected exactly one group, found several");
+    super("Mehrere Gruppen vorhanden, bitte --group <slug> angeben.");
     this.name = "AmbiguousGroupError";
   }
 }

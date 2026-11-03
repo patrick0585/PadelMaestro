@@ -1,14 +1,15 @@
 import { prisma } from "../src/lib/db";
-import { getSoleGroup } from "../src/lib/group/sole-group";
+import { isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 import { setGroupOwner } from "../src/lib/group/set-owner";
 
 async function main() {
-  const email = process.argv[2];
+  const argv = process.argv.slice(2);
+  const [email] = splitArgs(argv).positionals;
   if (!email) {
-    console.error("Usage: pnpm tenancy:set-owner <email>");
+    console.error("Usage: pnpm tenancy:set-owner <email> [--group <slug>]");
     process.exit(1);
   }
-  const group = await getSoleGroup();
+  const group = await resolveGroup(argv);
   const { newOwnerId, previousOwnerId } = await setGroupOwner({
     email,
     groupId: group.id,
@@ -23,7 +24,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(err);
+    console.error(isGroupArgError(err) ? err.message : err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

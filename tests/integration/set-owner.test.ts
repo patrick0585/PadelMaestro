@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { getSoleGroup } from "@/lib/group/sole-group";
 import { DeletedPlayerError, PlayerNotFoundError, setGroupOwner } from "@/lib/group/set-owner";
+import { resolveGroup } from "@/lib/group/resolve-group";
 import { resetDb } from "../helpers/reset-db";
 
 async function mkPlayer(email: string, name: string) {
@@ -111,5 +112,18 @@ describe("setGroupOwner", () => {
       })).role;
     expect(await role(b.id, y.id)).toBe("admin");
     expect(await role(a.id, x.id)).toBe("owner");
+  });
+
+  it("works with the group resolved from --group <slug> next to another group", async () => {
+    await prisma.group.create({ data: { name: "Eins", slug: "eins" } });
+    const target = await prisma.group.create({ data: { name: "Zwei", slug: "zwei" } });
+    const p = await mkPlayer("s@example.com", "S");
+    const group = await resolveGroup(["s@example.com", "--group", "zwei"]);
+    const res = await setGroupOwner({ email: "s@example.com", groupId: group.id });
+    expect(res.newOwnerId).toBe(p.id);
+    const m = await prisma.membership.findUniqueOrThrow({
+      where: { groupId_playerId: { groupId: target.id, playerId: p.id } },
+    });
+    expect(m.role).toBe("owner");
   });
 });

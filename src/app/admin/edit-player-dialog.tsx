@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import type { GroupRole } from "@/lib/auth/roles";
 import { isValidUsername, normaliseUsername } from "@/lib/auth/username";
 
@@ -29,7 +30,7 @@ export function EditPlayerDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<"member" | "admin">("member");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isOwner = player?.role === "owner";
@@ -39,7 +40,7 @@ export function EditPlayerDialog({
       setName(player.name);
       setEmail(player.email);
       setUsername(player.username ?? "");
-      setIsAdmin(player.isAdmin);
+      setRole(player.role === "admin" ? "admin" : "member");
       setError(null);
     }
   }, [open, player]);
@@ -70,7 +71,7 @@ export function EditPlayerDialog({
     if (normalisedUsername && normalisedUsername !== (player.username ?? "")) {
       diff.username = normalisedUsername;
     }
-    if (isAdmin !== player.isAdmin) diff.isAdmin = isAdmin;
+    if (!isOwner && role !== player.role) diff.role = role;
 
     if (Object.keys(diff).length === 0) {
       onClose();
@@ -101,6 +102,8 @@ export function EditPlayerDialog({
       setError(
         "Der Besitzer ist geschützt: Er kann nicht herabgestuft oder entfernt werden, und seine E-Mail kann nur er selbst ändern.",
       );
+    } else if (res.status === 409 && body.error === "account_shared") {
+      setError("Dieses Konto ist auch in anderen Gruppen. Änderungen am Konto macht die Person selbst im Profil.");
     } else if (res.status === 400) {
       setError("Eingabe ungültig");
     } else if (res.status === 404) {
@@ -147,25 +150,22 @@ export function EditPlayerDialog({
             autoComplete="off"
           />
         </div>
-        <div className="space-y-1">
-          <label
-            htmlFor="edit-player-is-admin"
-            className={`flex items-center gap-2 text-sm text-foreground${isOwner ? " cursor-not-allowed opacity-60" : ""}`}
-          >
-            <input
-              id="edit-player-is-admin"
-              type="checkbox"
-              checked={isOwner || isAdmin}
-              disabled={isOwner}
-              aria-describedby={isOwner ? "edit-player-is-admin-hint" : undefined}
-              onChange={(e) => setIsAdmin(e.target.checked)}
-            />
-            Admin-Rechte
-          </label>
-          {isOwner && (
-            <p id="edit-player-is-admin-hint" className="text-xs text-foreground-muted">
-              Der Besitzer behält immer Admin-Rechte.
-            </p>
+        <div>
+          <Label htmlFor="edit-player-role">Rolle</Label>
+          {isOwner ? (
+            <div className="mt-1">
+              <Badge variant="primary">Besitzer</Badge>
+            </div>
+          ) : (
+            <select
+              id="edit-player-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as "member" | "admin")}
+              className="w-full rounded-xl border border-border-strong bg-surface-muted px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+            >
+              <option value="member">Mitglied</option>
+              <option value="admin">Admin</option>
+            </select>
           )}
         </div>
         {error && (

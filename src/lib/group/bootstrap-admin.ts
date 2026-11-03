@@ -14,12 +14,15 @@ export async function bootstrapAdmin(input: {
   email: string;
   name: string;
   password: string;
+  groupId?: string;
 }): Promise<{ playerId: string; groupId: string; role: GroupRole }> {
   const existing = await prisma.player.findUnique({ where: { email: input.email } });
   if (existing) throw new PlayerExistsError(input.email);
   const passwordHash = await hashPassword(input.password);
   return prisma.$transaction(async (tx) => {
-    const group = await getSoleGroup(tx);
+    const group = input.groupId
+      ? await tx.group.findUniqueOrThrow({ where: { id: input.groupId } })
+      : await getSoleGroup(tx);
     const hasOwner = await tx.membership.count({
       where: { groupId: group.id, role: "owner", removedAt: null },
     });

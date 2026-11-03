@@ -52,4 +52,16 @@ describe("bootstrapAdmin", () => {
     expect(oldRow.role).toBe("owner");
     expect(oldRow.removedAt?.getTime()).toBe(removedAt.getTime());
   });
+
+  it("with groupId joins that group (owner if it has none, else admin) and creates no group", async () => {
+    const g1 = await prisma.group.create({ data: { name: "G1", slug: "g1" } });
+    const g2 = await prisma.group.create({ data: { name: "G2", slug: "g2" } });
+    const first = await bootstrapAdmin({ email: "a@x", name: "A", password: "pw-123456", groupId: g2.id });
+    expect(first.groupId).toBe(g2.id);
+    expect(first.role).toBe("owner");
+    const second = await bootstrapAdmin({ email: "b@x", name: "B", password: "pw-123456", groupId: g2.id });
+    expect(second.role).toBe("admin");
+    expect(await prisma.group.count()).toBe(2);
+    expect(await prisma.membership.count({ where: { groupId: g1.id } })).toBe(0);
+  });
 });

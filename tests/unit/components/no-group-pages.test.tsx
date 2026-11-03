@@ -2,8 +2,23 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    player: {
+      findUnique: vi.fn().mockResolvedValue({
+        avatarVersion: 0,
+        email: "p@example.com",
+        emailVerifiedAt: new Date(),
+        pendingEmail: null,
+      }),
+    },
+    group: { findUnique: vi.fn() },
+  },
+}));
+vi.mock("@/components/email-notice", () => ({ EmailNotice: () => null }));
 vi.mock("@/lib/group/create", () => ({ canFoundGroup: vi.fn().mockResolvedValue(false) }));
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
   redirect: (to: string) => {
     throw new Error(`REDIRECT:${to}`);
   },
@@ -18,6 +33,7 @@ import GameDayPage from "@/app/game-day/page";
 import ArchivePage from "@/app/archive/page";
 import DashboardPage from "@/app/page";
 import AdminPage from "@/app/admin/page";
+import ProfilePage from "@/app/profil/page";
 
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
@@ -55,5 +71,15 @@ describe("AdminPage ohne Gruppe", () => {
   it("leitet zur Rangliste", async () => {
     authMock.mockResolvedValue(groupless);
     await expect(AdminPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/ranking");
+  });
+});
+
+describe("ProfilePage ohne Gruppe", () => {
+  it("lässt die Karte Gruppe weg", async () => {
+    authMock.mockResolvedValue(groupless);
+    render(await ProfilePage());
+    expect(screen.getByText("Passwort ändern")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Gruppe" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Gruppe verlassen" })).toBeNull();
   });
 });

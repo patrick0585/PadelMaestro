@@ -37,6 +37,7 @@ export async function joinGroup(
       data: { groupId: i.groupId, playerId: i.playerId, role: "member", joinedAt: now },
     });
   }
+  await tx.player.update({ where: { id: i.playerId }, data: { activeGroupId: i.groupId } });
   await addToPlannedGameDays(tx, i.groupId, i.playerId);
   return { outcome: existing ? "reactivated" : "joined" };
 }

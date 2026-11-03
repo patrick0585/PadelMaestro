@@ -92,7 +92,7 @@ Open <http://localhost:3000> and log in.
 
 ## Groups and roles
 
-An installation can host several groups; every player is a member of at least one group with one of three roles: **owner**, **admin** or **member**. `pnpm bootstrap:admin` creates the group "Padelmaestro" and makes the first admin its owner; further bootstrapped admins become plain admins. Use `pnpm tenancy:set-owner <email>` to move the owner role to another player (the previous owner becomes admin).
+An installation can host several groups; every player is a member of at least one group with one of three roles: **owner**, **admin** or **member**. `pnpm bootstrap:admin` creates the group "Padelmaestro" and makes the first admin its owner; further bootstrapped admins become plain admins. Use `pnpm tenancy:set-owner <email>` to move the owner role to another player (the previous owner becomes admin). With more than one group, the operator and dev scripts (`bootstrap:admin`, `tenancy:set-owner`, `seed:*`, `import:historical`) need `--group <slug>` and abort without it; players created by the seed and import scripts are marked as verified. `import:statistik` deletes all players, seasons, game days, memberships and invitations (groups stay) and refuses to run with more than one group.
 
 Members join through invitation links created on the admin page (`/admin`, section "Einladen"). New groups start from a founder link created with `pnpm invite:founder`. With `PUBLIC_SIGNUP=true`, any logged-in player can found a group without a founder link. The flag is off by default; only the exact value `true` enables it.
 

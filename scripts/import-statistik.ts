@@ -3,7 +3,7 @@ import XLSX from "xlsx";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../src/lib/db";
 import { seedInitial } from "./seed-initial";
-import { getSoleGroup } from "../src/lib/group/sole-group";
+import { assertSingleGroup, isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 import { computeRanking } from "../src/lib/ranking/compute";
 
 // XLSX uses "Michael"; our canonical player name is "Michi".
@@ -198,18 +198,19 @@ async function wipeAll() {
     prisma.gameDayParticipant.deleteMany({}),
     prisma.gameDay.deleteMany({}),
     prisma.season.deleteMany({}),
+    prisma.invitationUse.deleteMany({}),
+    prisma.invitation.deleteMany({}),
     prisma.membership.deleteMany({}),
     prisma.player.deleteMany({}),
   ]);
 }
 
-async function getOrCreateSeasonByYear(year: number, activeYear: number) {
-  const existing = await prisma.season.findFirst({ where: { year }, orderBy: { createdAt: "asc" } });
+async function getOrCreateSeasonByYear(groupId: string, year: number, activeYear: number) {
+  const existing = await prisma.season.findFirst({ where: { groupId, year }, orderBy: { createdAt: "asc" } });
   if (existing) return existing;
-  const group = await getSoleGroup();
   return prisma.season.create({
     data: {
-      groupId: group.id,
+      groupId,
       name: `Saison ${year}`,
       year,
       startDate: new Date(Date.UTC(year, 0, 1)),
@@ -219,8 +220,8 @@ async function getOrCreateSeasonByYear(year: number, activeYear: number) {
   });
 }
 
-async function importDay(day: ParsedGameDay, playerIdByName: Map<string, string>, activeYear: number) {
-  const season = await getOrCreateSeasonByYear(day.date.getUTCFullYear(), activeYear);
+async function importDay(groupId: string, day: ParsedGameDay, playerIdByName: Map<string, string>, activeYear: number) {
+  const season = await getOrCreateSeasonByYear(groupId, day.date.getUTCFullYear(), activeYear);
 
   const gameDay = await prisma.gameDay.create({
     data: {
@@ -280,15 +281,26 @@ async function importDay(day: ParsedGameDay, playerIdByName: Map<string, string>
 }
 
 async function main() {
-  const path = process.argv[2] ?? "statistik.xlsx";
+  const argv = process.argv.slice(2);
+  const path = splitArgs(argv).positionals[0] ?? "statistik.xlsx";
   const confirmed = process.argv.includes("--yes");
+  try {
+    await assertSingleGroup();
+  } catch (err) {
+    if (!isGroupArgError(err)) throw err;
+    console.error(
+      "import:statistik ist nur für Installationen mit genau einer Gruppe gedacht (löscht alle Daten). Abbruch.",
+    );
+    process.exit(1);
+  }
   if (!confirmed) {
-    console.error("This script will DELETE ALL DATA in the database and re-import from XLSX.");
+    console.error("This script will DELETE ALL DATA of ALL groups in the database and re-import from XLSX.");
     console.error("Re-run with --yes to confirm:");
     console.error(`  pnpm import:statistik ${path} --yes`);
     process.exit(1);
   }
 
+  const group = await resolveGroup(argv);
   const absPath = resolve(process.cwd(), path);
   console.log(`Reading ${absPath} ...`);
   const wb = XLSX.readFile(absPath);
@@ -315,6 +327,7 @@ async function main() {
   console.log("Seeding players ...");
   const envPassword = process.env.INITIAL_ADMIN_PASSWORD;
   const { adminPassword } = await seedInitial({
+    groupId: group.id,
     adminPassword: envPassword && envPassword.length > 0 ? envPassword : undefined,
   });
   const players = await prisma.player.findMany({ select: { id: true, name: true } });
@@ -324,7 +337,7 @@ async function main() {
   let totalMatches = 0;
   let totalJokers = 0;
   for (const day of days) {
-    const { matches, jokers } = await importDay(day, playerIdByName, activeYear);
+    const { matches, jokers } = await importDay(group.id, day, playerIdByName, activeYear);
     totalMatches += matches;
     totalJokers += jokers;
     console.log(
@@ -333,7 +346,7 @@ async function main() {
     );
   }
 
-  const seasonActive = await prisma.season.findFirst({ where: { year: activeYear }, orderBy: { createdAt: "asc" } });
+  const seasonActive = await prisma.season.findFirst({ where: { groupId: group.id, year: activeYear }, orderBy: { createdAt: "asc" } });
   if (seasonActive && !seasonActive.isActive) {
     await prisma.season.updateMany({ where: { isActive: true }, data: { isActive: false } });
     await prisma.season.update({ where: { id: seasonActive.id }, data: { isActive: true } });
@@ -366,7 +379,7 @@ async function main() {
 if (require.main === module) {
   main()
     .catch((err) => {
-      console.error(err);
+      console.error(isGroupArgError(err) ? err.message : err);
       process.exit(1);
     })
     .finally(() => prisma.$disconnect());

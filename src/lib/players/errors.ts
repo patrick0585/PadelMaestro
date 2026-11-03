@@ -32,3 +32,10 @@ export class OwnerProtectedError extends Error {
     this.name = "OwnerProtectedError";
   }
 }
+
+export class SharedAccountError extends Error {
+  constructor() {
+    super("account belongs to other groups too");
+    this.name = "SharedAccountError";
+  }
+}

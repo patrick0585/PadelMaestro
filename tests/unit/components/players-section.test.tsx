@@ -26,7 +26,7 @@ const players: PlayerRow[] = [
 
 describe("PlayersSection", () => {
   it("zeigt Badge 'Besitzer' für owner und 'Admin' für admin", () => {
-    render(<PlayersSection players={players} />);
+    render(<PlayersSection players={players} viewerRole="owner" />);
     expect(screen.getByText("Besitzer")).toBeInTheDocument();
     expect(screen.getAllByText("Admin")).toHaveLength(1);
   });
@@ -39,14 +39,40 @@ describe("PlayersSection", () => {
           row({ id: "s", name: "Stats", role: "member", emailVerified: false, hasPassword: false }),
           row({ id: "v", name: "Vera", role: "member" }),
         ]}
+        viewerRole="owner"
       />,
     );
     expect(screen.getAllByText("Unbestätigt")).toHaveLength(1);
   });
 
   it("blendet den Löschen-Button für den Besitzer aus", () => {
-    render(<PlayersSection players={players} />);
+    render(<PlayersSection players={players} viewerRole="owner" />);
     expect(screen.queryByLabelText("Spieler Olga löschen")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Spieler Martin löschen")).toBeInTheDocument();
+  });
+
+  it("zeigt 'Besitz übertragen' nur dem Besitzer und nicht in seiner eigenen Zeile", () => {
+    const { unmount } = render(<PlayersSection players={players} viewerRole="owner" />);
+    expect(screen.getByLabelText("Besitz übertragen an Armin")).toBeInTheDocument();
+    expect(screen.getByLabelText("Besitz übertragen an Martin")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Besitz übertragen an Olga")).not.toBeInTheDocument();
+    unmount();
+
+    render(<PlayersSection players={players} viewerRole="admin" />);
+    expect(screen.queryByText("Besitz übertragen")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Besitz übertragen/)).not.toBeInTheDocument();
+  });
+
+  it("blendet 'Besitz übertragen' für Mitglieder ohne Passwort aus", () => {
+    render(
+      <PlayersSection
+        players={[
+          row({ id: "o", name: "Olga", role: "owner" }),
+          row({ id: "s", name: "Stats", role: "member", hasPassword: false }),
+        ]}
+        viewerRole="owner"
+      />,
+    );
+    expect(screen.queryByLabelText("Besitz übertragen an Stats")).not.toBeInTheDocument();
   });
 });

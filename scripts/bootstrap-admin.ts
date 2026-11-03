@@ -1,19 +1,22 @@
 import { prisma } from "../src/lib/db";
 import { bootstrapAdmin, PlayerExistsError } from "../src/lib/group/bootstrap-admin";
+import { isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 import { randomBytes } from "node:crypto";
 
 async function main() {
-  const email = process.argv[2];
-  const name = process.argv[3];
+  const argv = process.argv.slice(2);
+  const { group: slug, positionals } = splitArgs(argv);
+  const [email, name] = positionals;
   if (!email || !name) {
-    console.error("Usage: pnpm bootstrap:admin <email> <name>");
+    console.error("Usage: pnpm bootstrap:admin <email> <name> [--group <slug>]");
     process.exit(1);
   }
   const password = randomBytes(12).toString("base64url");
   try {
-    await bootstrapAdmin({ email, name, password });
+    const groupId = slug ? (await resolveGroup(argv)).id : undefined;
+    await bootstrapAdmin({ email, name, password, groupId });
   } catch (err) {
-    if (err instanceof PlayerExistsError) {
+    if (err instanceof PlayerExistsError || isGroupArgError(err)) {
       console.error(err.message);
       process.exit(1);
     }
@@ -26,7 +29,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(err);
+    console.error(isGroupArgError(err) ? err.message : err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

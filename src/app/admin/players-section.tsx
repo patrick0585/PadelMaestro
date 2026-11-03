@@ -9,6 +9,7 @@ import { ResetPasswordDialog } from "./reset-password-dialog";
 import { EditPlayerDialog, type EditablePlayer } from "./edit-player-dialog";
 import { DeletePlayerDialog } from "./delete-player-dialog";
 import { AvatarDialog } from "./avatar-dialog";
+import { TransferOwnerDialog } from "./transfer-owner-dialog";
 import type { GroupRole } from "@/lib/auth/roles";
 
 export interface PlayerRow {
@@ -23,12 +24,19 @@ export interface PlayerRow {
   avatarVersion: number;
 }
 
-export function PlayersSection({ players }: { players: PlayerRow[] }) {
+export function PlayersSection({
+  players,
+  viewerRole,
+}: {
+  players: PlayerRow[];
+  viewerRole: GroupRole;
+}) {
   const [createOpen, setCreateOpen] = useState(false);
   const [resetFor, setResetFor] = useState<PlayerRow | null>(null);
   const [editFor, setEditFor] = useState<EditablePlayer | null>(null);
   const [deleteFor, setDeleteFor] = useState<PlayerRow | null>(null);
   const [avatarFor, setAvatarFor] = useState<PlayerRow | null>(null);
+  const [transferFor, setTransferFor] = useState<PlayerRow | null>(null);
 
   return (
     <Card>
@@ -52,7 +60,7 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                   {p.username && <span className="ml-2">· @{p.username}</span>}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {p.role === "owner" ? (
                   <Badge variant="primary">Besitzer</Badge>
                 ) : (
@@ -83,6 +91,16 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                 <Button variant="ghost" size="sm" onClick={() => setAvatarFor(p)}>
                   Avatar
                 </Button>
+                {viewerRole === "owner" && p.role !== "owner" && p.hasPassword && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Besitz übertragen an ${p.name}`}
+                    onClick={() => setTransferFor(p)}
+                  >
+                    Besitz übertragen
+                  </Button>
+                )}
                 {p.role !== "owner" && (
                   <Button
                     variant="ghost"
@@ -124,6 +142,11 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
         playerId={avatarFor?.id ?? null}
         playerName={avatarFor?.name ?? null}
         avatarVersion={avatarFor?.avatarVersion ?? 0}
+      />
+      <TransferOwnerDialog
+        open={transferFor !== null}
+        onClose={() => setTransferFor(null)}
+        player={transferFor}
       />
     </Card>
   );

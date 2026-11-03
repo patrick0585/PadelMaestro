@@ -2,7 +2,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
 import { normaliseEmail } from "@/lib/auth/email";
-import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
+import {
+  countOtherAdmins,
+  findGroupMembership,
+  isSharedAccount,
+} from "@/lib/group/active-membership";
 import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
 import { revokeOpenTokens } from "@/lib/account/tokens";
 import {
@@ -11,6 +15,7 @@ import {
   LastAdminError,
   OwnerProtectedError,
   PlayerNotFoundError,
+  SharedAccountError,
 } from "./errors";
 
 export class NoFieldsError extends Error {
@@ -25,6 +30,7 @@ export interface UpdatablePlayerFields {
   name?: string;
   email?: string;
   isAdmin?: boolean;
+  role?: "member" | "admin";
 }
 
 export interface UpdatePlayerInput {
@@ -88,12 +94,26 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new OwnerProtectedError("only the owner may change the owner's email");
       }
 
-      const newIsAdmin = definedFields.isAdmin;
-      if (newIsAdmin === false && membership.role === "owner") {
+      const accountChanged =
+        emailChanged ||
+        (definedFields.name !== undefined && definedFields.name !== existing.name) ||
+        (definedFields.username !== undefined && definedFields.username !== existing.username);
+      if (
+        accountChanged &&
+        input.actorId !== input.playerId &&
+        (await isSharedAccount(tx, existing.id, input.groupId))
+      ) {
+        throw new SharedAccountError();
+      }
+
+      const targetRole =
+        definedFields.role ??
+        (definedFields.isAdmin === undefined ? undefined : roleForAdminFlag(definedFields.isAdmin));
+      if (targetRole === "member" && membership.role === "owner") {
         throw new OwnerProtectedError();
       }
       if (
-        newIsAdmin === false &&
+        targetRole === "member" &&
         membership.role === "admin" &&
         (await countOtherAdmins(tx, input.groupId, existing.id)) === 0
       ) {
@@ -117,27 +137,40 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       if (emailChanged) await revokeOpenTokens(tx, existing.id);
 
       let role = membership.role;
-      if (newIsAdmin !== undefined && role !== "owner") {
-        role = roleForAdminFlag(newIsAdmin);
-        await tx.membership.update({
-          where: { groupId_playerId: { groupId: input.groupId, playerId: existing.id } },
+      if (targetRole !== undefined && role !== "owner") {
+        role = targetRole;
+        // Re-checked under the row lock: a concurrent ownership transfer may have promoted the target.
+        const changed = await tx.membership.updateMany({
+          where: {
+            groupId: input.groupId,
+            playerId: existing.id,
+            removedAt: null,
+            role: { not: "owner" },
+          },
           data: { role },
         });
+        if (changed.count !== 1) {
+          const current = await findGroupMembership(tx, input.groupId, existing.id);
+          if (current?.role === "owner") throw new OwnerProtectedError();
+          throw new PlayerNotFoundError(input.playerId);
+        }
       }
       const updated: UpdatedPlayer = { ...updatedPlayer, isAdmin: isAdminRole(role) };
 
       const changedFields: TrackedField[] = [];
-      const before: Record<TrackedField, string | boolean | null> = {
+      const before: Record<TrackedField | "role", string | boolean | null> = {
         username: existing.username,
         name: existing.name,
         email: existing.email,
         isAdmin: isAdminRole(membership.role),
+        role: membership.role,
       };
-      const after: Record<TrackedField, string | boolean | null> = {
+      const after: Record<TrackedField | "role", string | boolean | null> = {
         username: updated.username,
         name: updated.name,
         email: updated.email,
         isAdmin: updated.isAdmin,
+        role,
       };
       for (const f of TRACKED_FIELDS) {
         if (before[f] !== after[f]) changedFields.push(f);

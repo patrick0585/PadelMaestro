@@ -8,10 +8,12 @@
 //
 // The 5 confirmed demo players satisfy lockRoster's 4–6 requirement, so
 // you can click "Spieltag starten" in the Admin UI right after.
+// With more than one group, add --group <slug>.
 
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth/hash";
-import { getSoleGroup } from "../src/lib/group/sole-group";
+import { pathToFileURL } from "node:url";
+import { isGroupArgError, resolveGroup } from "../src/lib/group/resolve-group";
 
 const DEMO_PASSWORD = "demo12345";
 const DUMMIES = [
@@ -22,21 +24,20 @@ const DUMMIES = [
   { name: "Eva",    email: "eva@demo.local" },
 ];
 
-async function main() {
-  const confirmAll = process.argv.includes("--confirm-all");
+export async function seedDemo(groupId: string, opts: { confirmAll: boolean }): Promise<void> {
+  const { confirmAll } = opts;
   const passwordHash = await hashPassword(DEMO_PASSWORD);
-  const group = await getSoleGroup();
 
   for (const d of DUMMIES) {
     const player = await prisma.player.upsert({
       where: { email: d.email },
-      update: {},
-      create: { name: d.name, email: d.email, passwordHash },
+      update: { emailVerifiedAt: new Date() },
+      create: { name: d.name, email: d.email, passwordHash, emailVerifiedAt: new Date() },
     });
     await prisma.membership.upsert({
-      where: { groupId_playerId: { groupId: group.id, playerId: player.id } },
+      where: { groupId_playerId: { groupId, playerId: player.id } },
       update: {},
-      create: { groupId: group.id, playerId: player.id, role: "member" },
+      create: { groupId, playerId: player.id, role: "member" },
     });
   }
   console.log(`Ensured ${DUMMIES.length} dummy players (password: ${DEMO_PASSWORD}).`);
@@ -47,7 +48,7 @@ async function main() {
   }
 
   const day = await prisma.gameDay.findFirst({
-    where: { status: "planned" },
+    where: { status: "planned", groupId },
     orderBy: { date: "desc" },
   });
   if (!day) {
@@ -80,9 +81,17 @@ async function main() {
   console.log(`Click "Spieltag starten" in the Admin UI to lock the roster.`);
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+async function main() {
+  const argv = process.argv.slice(2);
+  const group = await resolveGroup(argv);
+  await seedDemo(group.id, { confirmAll: argv.includes("--confirm-all") });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main()
+    .catch((err) => {
+      console.error(isGroupArgError(err) ? err.message : err);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

@@ -72,6 +72,24 @@ describe("joinGroup", () => {
     expect(parts.map((p) => p.gameDayId)).toEqual([planned.id]);
   });
 
+  it("joinGroup sets activeGroupId to the joined group on join and on reactivation", async () => {
+    const { group, player } = await setup();
+    await prisma.$transaction((tx) => joinGroup(tx, { groupId: group.id, playerId: player.id }));
+    expect((await prisma.player.findUnique({ where: { id: player.id } }))?.activeGroupId).toBe(group.id);
+
+    const other = await createTestGroup("Andere");
+    await prisma.membership.updateMany({
+      where: { playerId: player.id },
+      data: { removedAt: new Date() },
+    });
+    await prisma.player.update({ where: { id: player.id }, data: { activeGroupId: other.id } });
+    const res = await prisma.$transaction((tx) =>
+      joinGroup(tx, { groupId: group.id, playerId: player.id }),
+    );
+    expect(res).toEqual({ outcome: "reactivated" });
+    expect((await prisma.player.findUnique({ where: { id: player.id } }))?.activeGroupId).toBe(group.id);
+  });
+
   it("leaves an active membership untouched and returns already_member", async () => {
     const { group, player } = await setup();
     const joinedAt = new Date("2024-01-01");
