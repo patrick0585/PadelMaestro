@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { findPlayerForRefresh } from "@/lib/auth/refresh-lookup";
-import { createTestGroup } from "../helpers/group";
+import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
+import { hashPassword } from "@/lib/auth/hash";
+import { deleteOwnAccount } from "@/lib/account/delete";
+import { createMember, createTestGroup } from "../helpers/group";
 import { resetDb } from "../helpers/reset-db";
 
 async function mkPlayer() {
@@ -65,5 +68,21 @@ describe("findPlayerForRefresh", () => {
     const winner = a.id > b.id ? a : b;
     const res = await findPlayerForRefresh(prisma, p.id);
     expect(res?.membership).toEqual({ groupId: winner.groupId, role: winner.role });
+  });
+
+  it("findPlayerForRefresh + refreshTokenFromPlayer invalidate the deleted account's token", async () => {
+    const g = await createTestGroup();
+    const p = await createMember(g.id, {
+      name: "Paula",
+      email: "paula@example.com",
+      passwordHash: await hashPassword("geheim-genug-123"),
+    });
+    const client = { findUnique: (id: string) => findPlayerForRefresh(prisma, id) };
+    const token = { id: p.id, sessionVersion: p.sessionVersion };
+    expect((await refreshTokenFromPlayer(token, client)).kind).toBe("ok");
+
+    await deleteOwnAccount({ playerId: p.id, password: "geheim-genug-123" });
+
+    expect(await refreshTokenFromPlayer(token, client)).toEqual({ kind: "invalidate" });
   });
 });
