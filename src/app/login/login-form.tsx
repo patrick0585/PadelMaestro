@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,12 @@ export function LoginForm() {
       <Button type="submit" loading={loading} className="w-full">
         Anmelden
       </Button>
+      <Link
+        href="/passwort-vergessen"
+        className="flex min-h-11 items-center justify-center rounded-xl text-sm text-foreground-muted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        Passwort vergessen?
+      </Link>
     </form>
   );
 }
