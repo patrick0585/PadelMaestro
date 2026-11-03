@@ -154,6 +154,10 @@ AUTH_SECRET="<AUTH_SECRET>"
 AUTH_URL="https://<DOMAIN>"
 AUTH_TRUST_HOST="true"
 NODE_ENV="production"
+MAIL_TRANSPORT="console"
+MAIL_FROM="Padelmaestro <noreply@padelmaestro.de>"
+RESEND_API_KEY=""
+APP_URL="https://<DOMAIN>"
 ENV
 sudo chown padel:padel /srv/padel/app/.env
 sudo chmod 600 /srv/padel/app/.env
@@ -163,6 +167,8 @@ sudo grep -E '<[A-Z_]+>' /srv/padel/app/.env && echo "❌ placeholders still pre
 ```
 
 `AUTH_TRUST_HOST=true` is required because next-auth sits behind Caddy.
+
+Mail variables: `MAIL_TRANSPORT` is mandatory in production (`resend` or `console`; `memory` is rejected). With `console`, mails are only written to the journal as `[mail]` lines, so nothing is delivered. Complete section 11, then switch to `resend`. `APP_URL` is the base for links in mails and falls back to `AUTH_URL`.
 
 ### 4.4 Install, migrate, build
 
@@ -303,7 +309,7 @@ Open `https://<DOMAIN>/login` in a browser. Expect:
 - Admin tab (⚙️) visible in the bottom-nav
 - Spieler → "Spieler hinzufügen" works, new player appears in the list
 
-If any step fails: `sudo journalctl -u padel -n 100 --no-pager`.
+If any step fails: `sudo tail -n 100 /srv/padel/logs/app.err.log` (app output goes to `/srv/padel/logs/app.log` / `app.err.log`; `journalctl -u padel` only shows systemd state lines).
 
 ---
 
@@ -326,6 +332,8 @@ The script (`scripts/deploy.sh` in the repo) does exactly this:
 7. Curl `/login` as a smoke check
 
 If any step fails the script exits non-zero and the service stays on the previous build (no broken restart).
+
+**Env changes.** `deploy.sh` does not touch `.env`. If a release needs new variables, edit `/srv/padel/app/.env` *before* running it. The mail release (migration only adds columns/tables, no downtime needed) requires `MAIL_TRANSPORT=console` (or `resend`) in `.env` first: without it the process exits right after start with `[startup] MAIL_TRANSPORT must be …` in `/srv/padel/logs/app.err.log` (check in `src/instrumentation.ts`), and systemd keeps restarting it. Use `console` only until section 11 is done.
 
 ---
 
@@ -427,7 +435,7 @@ sudo systemctl restart padel   # reconnect the app to the freshly-restarted Post
 
 | Task | Command |
 |---|---|
-| Service logs | `sudo journalctl -u padel -f` |
+| Service logs | `sudo tail -f /srv/padel/logs/app.log /srv/padel/logs/app.err.log` |
 | App file logs | `sudo tail -f /srv/padel/logs/app.log` |
 | Caddy logs | `sudo journalctl -u caddy -f` |
 | DB console | `sudo -u padel psql $DATABASE_URL` |
@@ -435,6 +443,26 @@ sudo systemctl restart padel   # reconnect the app to the freshly-restarted Post
 | Reload Caddy | `sudo systemctl reload caddy` |
 | Run ad-hoc migration | `sudo -u padel -H bash -c 'cd /srv/padel/app && pnpm prisma migrate deploy'` |
 | Rotate `AUTH_SECRET` | Edit `.env`, `sudo systemctl restart padel`. **Invalidates all sessions.** |
+
+---
+
+## 11. Mail (Resend)
+
+Transactional mails (address confirmation, password reset, change notice) go out through Resend. The production domain is `padelmaestro.de`, DNS at IONOS. The existing IONOS mailbox (as of 2026-11: MX `mx00.ionos.de` / `mx01.ionos.de`, SPF `v=spf1 include:_spf-eu.ionos.com ~all`) must stay untouched.
+
+1. In the Resend dashboard, add the domain `padelmaestro.de`. Choose the EU region if offered.
+2. Resend shows the DNS records to create. Typically these are on a subdomain chosen by Resend (e.g. `send.…`: one MX and one SPF TXT) plus a DKIM TXT at `resend._domainkey.padelmaestro.de`. Use the exact values from the dashboard.
+3. In IONOS DNS, add only those records. Do not edit or replace the existing root MX or root SPF records.
+4. Click "Verify" in Resend and wait until the domain shows as verified (DNS propagation can take a while).
+5. Create an API key in Resend and set in `/srv/padel/app/.env`:
+   ```
+   MAIL_TRANSPORT="resend"
+   RESEND_API_KEY="<key from Resend>"
+   ```
+   `MAIL_FROM` defaults to `Padelmaestro <noreply@padelmaestro.de>` and must use the verified domain.
+6. `sudo systemctl restart padel`
+7. Test: on the profile page enter a real address under „Neue E-Mail-Adresse", then confirm via the link in the received mail.
+8. On problems: `sudo grep '\[mail\]' /srv/padel/logs/app.log /srv/padel/logs/app.err.log | tail -n 50`.
 
 ---
 

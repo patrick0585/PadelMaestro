@@ -36,6 +36,12 @@ describe("authorize (identifier-based)", () => {
     expect(user?.id).toBe(p.id);
   });
 
+  it("login with 'Patrick@Example.com ' finds the account stored lowercase", async () => {
+    const p = await seedPlayer({ email: "patrick@example.com", password: "pw12345678" });
+    const user = await authorizeForTests({ identifier: "Patrick@Example.com ", password: "pw12345678" });
+    expect(user?.id).toBe(p.id);
+  });
+
   it("logs in by exact-case username", async () => {
     const p = await seedPlayer({ email: "b@example.com", username: "alice", password: "pw12345678" });
     const user = await authorizeForTests({ identifier: "alice", password: "pw12345678" });
@@ -119,5 +125,12 @@ describe("authorize (group and role)", () => {
     expect(user?.groupId).toBeNull();
     expect(user?.role).toBeNull();
     expect(user?.isAdmin).toBe(false);
+  });
+
+  it("returns the player's current sessionVersion", async () => {
+    const p = await seedPlayer({ email: "sv@example.com", password: "pw12345678" });
+    await prisma.player.update({ where: { id: p.id }, data: { sessionVersion: 3 } });
+    const user = await authorizeForTests({ identifier: "sv@example.com", password: "pw12345678" });
+    expect(user?.sessionVersion).toBe(3);
   });
 });

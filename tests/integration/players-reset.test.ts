@@ -37,6 +37,7 @@ describe("PATCH /api/players/[id]/password", () => {
     expect(res.status).toBe(204);
     const updated = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
     expect(await verifyPassword("newpass12", updated.passwordHash!)).toBe(true);
+    expect(updated.sessionVersion).toBe(target.sessionVersion + 1);
   });
 
   it("returns 404 for unknown id", async () => {

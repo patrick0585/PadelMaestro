@@ -19,6 +19,7 @@ export interface PlayerRow {
   isAdmin: boolean;
   role: GroupRole;
   hasPassword: boolean;
+  emailVerified: boolean;
   avatarVersion: number;
 }
 
@@ -58,6 +59,7 @@ export function PlayersSection({ players }: { players: PlayerRow[] }) {
                   p.isAdmin && <Badge variant="primary">Admin</Badge>
                 )}
                 {!p.hasPassword && <Badge variant="neutral">Nur Stats</Badge>}
+                {p.hasPassword && !p.emailVerified && <Badge variant="neutral">Unbestätigt</Badge>}
                 <Button
                   variant="ghost"
                   size="sm"

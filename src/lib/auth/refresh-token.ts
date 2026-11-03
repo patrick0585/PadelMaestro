@@ -2,8 +2,10 @@ import type { JWT } from "next-auth/jwt";
 import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
 export interface PlayerLookup {
+  email: string;
   username: string | null;
   deletedAt: Date | null;
+  sessionVersion: number;
   membership: { groupId: string; role: GroupRole } | null;
 }
 
@@ -61,12 +63,17 @@ export async function refreshTokenFromPlayer(
   if (!player || player.deletedAt) {
     return { kind: "invalidate" };
   }
+  // Tokens issued before sessionVersion existed count as version 0.
+  if (player.sessionVersion !== (token.sessionVersion ?? 0)) {
+    return { kind: "invalidate" };
+  }
 
   const refreshed: JWT = {
     ...token,
     isAdmin: isAdminRole(player.membership?.role),
     groupId: player.membership?.groupId ?? null,
     role: player.membership?.role ?? null,
+    email: player.email,
     username: player.username,
     refreshedAt: now,
   };

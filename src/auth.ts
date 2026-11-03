@@ -50,6 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.username = user.username ?? null;
         token.groupId = user.groupId ?? null;
         token.role = user.role ?? null;
+        token.sessionVersion = user.sessionVersion ?? 0;
         token.refreshedAt = Date.now();
         return token;
       }
@@ -68,6 +69,7 @@ declare module "next-auth" {
     username?: string | null;
     groupId?: string | null;
     role?: GroupRole | null;
+    sessionVersion?: number;
   }
   interface Session {
     user: {
@@ -90,5 +92,6 @@ declare module "next-auth/jwt" {
     groupId?: string | null;
     role?: GroupRole | null;
     refreshedAt?: number;
+    sessionVersion?: number;
   }
 }

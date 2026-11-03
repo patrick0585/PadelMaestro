@@ -71,6 +71,8 @@ pnpm install
 
 # 2. Local env (copy and fill in AUTH_SECRET via `openssl rand -base64 32`)
 cp .env.example .env
+#    Mail needs MAIL_TRANSPORT (already "console" in .env.example): mails are
+#    not sent, they are printed with their link to the dev server log.
 
 # 3. Postgres
 docker compose -f docker-compose.dev.yml up -d

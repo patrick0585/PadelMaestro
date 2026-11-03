@@ -25,6 +25,7 @@ export async function createMember(
     role?: GroupRole;
     passwordHash?: string | null;
     username?: string | null;
+    emailVerifiedAt?: Date | null;
   },
 ): Promise<Player> {
   const role = opts.role ?? "member";
@@ -34,6 +35,7 @@ export async function createMember(
       email: opts.email,
       passwordHash: opts.passwordHash ?? null,
       username: opts.username ?? null,
+      emailVerifiedAt: opts.emailVerifiedAt ?? null,
     },
   });
   await prisma.membership.create({ data: { groupId, playerId: player.id, role } });

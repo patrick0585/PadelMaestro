@@ -26,7 +26,7 @@ async function main() {
   const hash = await hashPassword(password);
   await prisma.player.update({
     where: { id: player.id },
-    data: { passwordHash: hash },
+    data: { passwordHash: hash, sessionVersion: { increment: 1 } },
   });
 
   console.log(`Password reset for ${player.name} (${player.email}).`);

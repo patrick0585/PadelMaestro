@@ -129,6 +129,43 @@ describe("PATCH /api/players/[id]", () => {
     expect(body.error).toBe("username_taken");
   });
 
+  it("admin email change resets emailVerifiedAt and pendingEmail and stores lowercase", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, {
+      name: "U1",
+      email: "user1@example.com",
+      emailVerifiedAt: new Date(),
+    });
+    await prisma.player.update({ where: { id: target.id }, data: { pendingEmail: "pending@example.com" } });
+    authMock.mockResolvedValue(session);
+    const res = await call(target.id, { email: "New.Mail@Example.com" });
+    expect(res.status).toBe(200);
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(p.email).toBe("new.mail@example.com");
+    expect(p.emailVerifiedAt).toBeNull();
+    expect(p.pendingEmail).toBeNull();
+  });
+
+  it("admin email change with only different casing is a no-op (no audit row)", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const verifiedAt = new Date();
+    const target = await createMember(group.id, {
+      name: "U1",
+      email: "user1@example.com",
+      emailVerifiedAt: verifiedAt,
+    });
+    authMock.mockResolvedValue(session);
+    const res = await call(target.id, { email: "User1@Example.com" });
+    expect(res.status).toBe(200);
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(p.email).toBe("user1@example.com");
+    expect(p.emailVerifiedAt?.getTime()).toBe(verifiedAt.getTime());
+    const entries = await prisma.auditLog.findMany({
+      where: { entityId: target.id, action: "player.update" },
+    });
+    expect(entries).toHaveLength(0);
+  });
+
   it("returns 409 email_taken on collision", async () => {
     const { group, session } = await setupGroupWithAdmin();
     await prisma.player.create({

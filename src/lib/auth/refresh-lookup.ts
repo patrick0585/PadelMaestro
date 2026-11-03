@@ -8,12 +8,14 @@ export async function findPlayerForRefresh(
 ): Promise<PlayerLookup | null> {
   const player = await db.player.findUnique({
     where: { id },
-    select: { username: true, deletedAt: true },
+    select: { email: true, username: true, deletedAt: true, sessionVersion: true },
   });
   if (!player) return null;
   return {
+    email: player.email,
     username: player.username,
     deletedAt: player.deletedAt,
+    sessionVersion: player.sessionVersion,
     membership: await findActiveMembership(db, id),
   };
 }

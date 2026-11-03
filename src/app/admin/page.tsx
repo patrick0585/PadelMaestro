@@ -92,6 +92,7 @@ export default async function AdminPage() {
     isAdmin: isAdminRole(p.role),
     role: p.role,
     hasPassword: p.hasPassword,
+    emailVerified: p.emailVerified,
     avatarVersion: p.avatarVersion,
   }));
 

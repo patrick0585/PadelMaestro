@@ -8,25 +8,30 @@ datasource db {
 }
 
 model Player {
-  id             String    @id @default(uuid())
-  name           String
-  email          String    @unique
-  username       String?   @unique
-  passwordHash   String?
-  avatarData     Bytes?
-  avatarMimeType String?
-  avatarVersion  Int       @default(0)
-  telegramId     BigInt?   @unique
-  invitedAt      DateTime  @default(now())
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  username        String?   @unique
+  passwordHash    String?
+  avatarData      Bytes?
+  avatarMimeType  String?
+  avatarVersion   Int       @default(0)
+  telegramId      BigInt?   @unique
+  invitedAt       DateTime  @default(now())
+  deletedAt       DateTime?
+  emailVerifiedAt DateTime?
+  pendingEmail    String?
+  termsAcceptedAt DateTime?
+  sessionVersion  Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  participations  GameDayParticipant[]
-  matchesScored   Match[]      @relation("ScoredBy")
-  jokersUsed      JokerUse[]
-  auditLogs       AuditLog[]
-  memberships     Membership[]
+  emailTokens    EmailToken[]
+  participations GameDayParticipant[]
+  matchesScored  Match[]              @relation("ScoredBy")
+  jokersUsed     JokerUse[]
+  auditLogs      AuditLog[]
+  memberships    Membership[]
 
   // All four player slots of a Match can reference a Player
   matchT1A Match[] @relation("MatchT1A")
@@ -36,6 +41,25 @@ model Player {
 
   @@index([email])
   @@index([deletedAt])
+}
+
+enum EmailTokenPurpose {
+  verify_email
+  password_reset
+}
+
+model EmailToken {
+  id        String            @id @default(uuid())
+  playerId  String
+  purpose   EmailTokenPurpose
+  tokenHash String            @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+  player    Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, purpose])
 }
 
 model Season {
@@ -49,9 +73,9 @@ model Season {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  group      Group      @relation(fields: [groupId], references: [id])
-  gameDays   GameDay[]
-  jokerUses  JokerUse[]
+  group     Group      @relation(fields: [groupId], references: [id])
+  gameDays  GameDay[]
+  jokerUses JokerUse[]
 
   @@unique([groupId, name])
   @@index([groupId, isActive])
@@ -64,18 +88,18 @@ enum GameDayStatus {
 }
 
 model GameDay {
-  id           String        @id @default(uuid())
-  groupId      String
-  seasonId     String
-  date         DateTime      @db.Date
-  playerCount  Int?
-  status       GameDayStatus @default(planned)
-  seed         String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id          String        @id @default(uuid())
+  groupId     String
+  seasonId    String
+  date        DateTime      @db.Date
+  playerCount Int?
+  status      GameDayStatus @default(planned)
+  seed        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  group        Group         @relation(fields: [groupId], references: [id])
-  season       Season        @relation(fields: [seasonId], references: [id])
+  group        Group                @relation(fields: [groupId], references: [id])
+  season       Season               @relation(fields: [seasonId], references: [id])
   participants GameDayParticipant[]
   matches      Match[]
   jokers       JokerUse[]
@@ -92,12 +116,12 @@ enum AttendanceStatus {
 }
 
 model GameDayParticipant {
-  id          String            @id @default(uuid())
+  id          String           @id @default(uuid())
   gameDayId   String
   playerId    String
-  attendance  AttendanceStatus  @default(pending)
+  attendance  AttendanceStatus @default(pending)
   respondedAt DateTime?
-  createdAt   DateTime          @default(now())
+  createdAt   DateTime         @default(now())
 
   gameDay GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
   player  Player  @relation(fields: [playerId], references: [id])
@@ -107,20 +131,20 @@ model GameDayParticipant {
 }
 
 model Match {
-  id            String    @id @default(uuid())
-  gameDayId     String
-  matchNumber   Int
+  id             String    @id @default(uuid())
+  gameDayId      String
+  matchNumber    Int
   team1PlayerAId String
   team1PlayerBId String
   team2PlayerAId String
   team2PlayerBId String
-  team1Score    Int?
-  team2Score    Int?
-  scoredById    String?
-  scoredAt      DateTime?
-  version       Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  team1Score     Int?
+  team2Score     Int?
+  scoredById     String?
+  scoredAt       DateTime?
+  version        Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   gameDay      GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
   team1PlayerA Player  @relation("MatchT1A", fields: [team1PlayerAId], references: [id])
