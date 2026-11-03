@@ -106,8 +106,8 @@ export default function Content() {
 
       <h2>7. Empfänger</h2>
       <p>
-        Außerhalb deiner Gruppen (siehe Abschnitt 4) werden Daten nur an die genannten Dienstleister IONOS und Resend
-        weitergegeben. Ein Verkauf findet nicht statt. Automatisierte Entscheidungen im Einzelfall finden nicht statt.
+        Außerhalb der eigenen Gruppen (siehe Abschnitt 4) werden Daten nur an die genannten Dienstleister IONOS und
+        Resend weitergegeben. Ein Verkauf findet nicht statt. Automatisierte Entscheidungen im Einzelfall finden nicht statt.
       </p>
 
       <h2>8. Speicherdauer</h2>
@@ -135,8 +135,8 @@ export default function Content() {
           Profil ändern.
         </li>
         <li>
-          <strong>Löschung</strong> (Art. 17 DSGVO): über „Konto löschen“ im Profil. Dein Name und deine Kontodaten
-          werden gelöscht; Spielergebnisse bleiben ohne Personenbezug erhalten. Solange jemand Besitzer einer Gruppe ist, ist das Löschen gesperrt; vorher muss
+          <strong>Löschung</strong> (Art. 17 DSGVO): über „Konto löschen“ im Profil. Name und Kontodaten werden
+          gelöscht; Spielergebnisse bleiben ohne Personenbezug erhalten. Solange jemand Besitzer einer Gruppe ist, ist das Löschen gesperrt; vorher muss
           der Besitz übertragen oder die Gruppe gelöscht werden.
         </li>
         <li>
