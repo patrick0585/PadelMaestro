@@ -311,6 +311,8 @@ sudo systemctl reload caddy
 sudo journalctl -u caddy -n 30 --no-pager
 ```
 
+The security headers (HSTS, `X-Content-Type-Options`, `Referrer-Policy: same-origin`, `X-Frame-Options`, `Permissions-Policy`) are set by the app itself in `next.config.ts`, so they ship with every deploy; the `header` block in Caddy is optional and only duplicates them. Check with `curl -sI https://<DOMAIN>/login`.
+
 Caddy fetches a Let's Encrypt cert automatically on the first request (~10 seconds). Tail the journal if something looks off.
 
 Invitation URLs carry their token in the path; the access log records request URIs, so keep `/var/log/caddy` not world-readable (default) or skip `/einladung/*` from logging.
