@@ -29,8 +29,14 @@ Rohmaterial für die Datenschutzerklärung, keine Datenschutzerklärung. Nicht j
 
 ## Löschung und Export
 
-- Account-Löschung und Datenexport folgen in einem späteren PR
-- Geplant: Self-Service im Profil
+- Export (Profil, `GET /api/profile/export`): JSON mit Konto, Mitgliedschaften, Teilnahmen, Matches mit Mitspieler-Namen, Joker, eigenen Audit-Einträgen inkl. Payload und Avatar
+- Der Export kann IDs anderer Konten aus eigenen Aktionen enthalten
+- Löschung (Profil, Passwort erforderlich): Anonymisierung statt Löschung der Spielergebnisse
+- Name wird „Gelöschter Spieler", E-Mail `geloescht-<id>@anonym.invalid`; Passwort, Avatar und Benutzername werden entfernt
+- Mitgliedschaften werden beendet, Teilnahmen an geplanten Spieltagen entfernt; abgeschlossene Ergebnisse bleiben anonym erhalten
+- Eigene Audit-Einträge als Actor bleiben mit ID erhalten; Einträge über die Person werden anonymisiert
+- Gesperrt, solange die Person Besitzer einer Gruppe ist
+- Konten ohne Passwort entfernt ein Admin aus der Gruppe
 
 ## Offene Punkte
 
