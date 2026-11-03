@@ -126,4 +126,11 @@ describe("authorize (group and role)", () => {
     expect(user?.role).toBeNull();
     expect(user?.isAdmin).toBe(false);
   });
+
+  it("returns the player's current sessionVersion", async () => {
+    const p = await seedPlayer({ email: "sv@example.com", password: "pw12345678" });
+    await prisma.player.update({ where: { id: p.id }, data: { sessionVersion: 3 } });
+    const user = await authorizeForTests({ identifier: "sv@example.com", password: "pw12345678" });
+    expect(user?.sessionVersion).toBe(3);
+  });
 });

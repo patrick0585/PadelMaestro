@@ -6,6 +6,8 @@ import { clearMemoryOutbox, memoryOutbox } from "@/lib/mail/transport";
 import { confirmPasswordReset, requestPasswordReset } from "@/lib/account/password-reset";
 import { InvalidTokenError } from "@/lib/account/errors";
 import { hashPassword, verifyPassword } from "@/lib/auth/hash";
+import { findPlayerForRefresh } from "@/lib/auth/refresh-lookup";
+import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 
 const LINK = /\/passwort-zuruecksetzen\/([A-Za-z0-9_-]{43})/;
 
@@ -92,6 +94,20 @@ describe("password reset", () => {
     expect(audit[0].entityType).toBe("Player");
     expect(audit[0].entityId).toBe(me.id);
     expect(audit[0].payload).toEqual({ playerId: me.id, via: "email" });
+  });
+
+  it("confirmPasswordReset ends sessions that carry the old version", async () => {
+    const me = await member("maxi@example.com");
+    const oldToken = { id: me.id, sessionVersion: me.sessionVersion };
+    await requestPasswordReset("maxi@example.com");
+    await confirmPasswordReset({ token: lastToken(), newPassword: "neues-passwort-1" });
+
+    const stored = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
+    expect(stored.sessionVersion).toBe(me.sessionVersion + 1);
+    const lookup = { findUnique: (id: string) => findPlayerForRefresh(prisma, id) };
+    expect(await refreshTokenFromPlayer(oldToken, lookup)).toEqual({ kind: "invalidate" });
+    const fresh = await refreshTokenFromPlayer({ ...oldToken, sessionVersion: stored.sessionVersion }, lookup);
+    expect(fresh.kind).toBe("ok");
   });
 
   it("confirmPasswordReset rejects expired, used and unknown tokens", async () => {

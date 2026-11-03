@@ -64,7 +64,7 @@ export async function confirmPasswordReset(i: {
     });
     if (claimed.count !== 1) throw new InvalidTokenError();
 
-    await tx.player.update({ where: { id: row.playerId }, data: { passwordHash } });
+    await tx.player.update({ where: { id: row.playerId }, data: { passwordHash, sessionVersion: { increment: 1 } } });
     await tx.emailToken.updateMany({
       where: { playerId: row.playerId, purpose: "password_reset", usedAt: null },
       data: { usedAt: now },

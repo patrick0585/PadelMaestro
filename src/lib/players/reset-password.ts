@@ -23,7 +23,7 @@ export async function resetPlayerPassword(input: ResetPlayerPasswordInput): Prom
   await prisma.$transaction(async (tx) => {
     await tx.player.update({
       where: { id: input.playerId },
-      data: { passwordHash },
+      data: { passwordHash, sessionVersion: { increment: 1 } },
     });
     await tx.auditLog.create({
       data: {

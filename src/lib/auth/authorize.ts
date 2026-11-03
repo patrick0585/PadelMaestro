@@ -25,6 +25,7 @@ export type AuthorizedUser = {
   isAdmin: boolean;
   groupId: string | null;
   role: GroupRole | null;
+  sessionVersion: number;
 };
 
 export async function authorizeCredentials(
@@ -57,5 +58,6 @@ export async function authorizeCredentials(
     isAdmin: isAdminRole(membership?.role),
     groupId: membership?.groupId ?? null,
     role: membership?.role ?? null,
+    sessionVersion: player.sessionVersion,
   };
 }
