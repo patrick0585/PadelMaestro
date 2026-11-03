@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GroupSwitcher } from "@/components/group-switcher";
@@ -205,5 +205,27 @@ describe("<GroupSwitcher>", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveFocus();
+  });
+
+  // Safari and Firefox on macOS do not focus a button on mousedown: the
+  // focused item blurs with relatedTarget null before the click lands.
+  it("keeps the menu open for a click on an item when mousedown blurs without a target", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
+    const [first, second] = screen.getAllByRole("menuitemradio");
+    expect(first).toHaveFocus();
+
+    fireEvent.mouseDown(second);
+    fireEvent.blur(first, { relatedTarget: null });
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    fireEvent.mouseUp(second);
+    fireEvent.click(second);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/profile/active-group",
+      expect.objectContaining({ body: JSON.stringify({ groupId: "g2" }) }),
+    );
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 });

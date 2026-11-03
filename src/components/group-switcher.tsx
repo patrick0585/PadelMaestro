@@ -25,6 +25,7 @@ export function GroupSwitcher({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const returnFocus = useRef(false);
+  const pointerInside = useRef(false);
 
   const active = groups.find((g) => g.id === activeGroupId) ?? groups[0];
 
@@ -110,7 +111,14 @@ export function GroupSwitcher({
       onKeyDown={(e) => {
         if (open && e.key === "Escape") closeMenu(true);
       }}
+      // Safari and Firefox on macOS don't focus buttons on mousedown, so a press
+      // inside blurs with relatedTarget null; ignore that blur until mouseup.
+      onMouseDown={() => {
+        pointerInside.current = true;
+        window.addEventListener("mouseup", () => (pointerInside.current = false), { once: true });
+      }}
       onBlur={(e) => {
+        if (pointerInside.current) return;
         const next = e.relatedTarget as Node | null;
         // Focus to nowhere means a click on inert content: hand it back to the trigger.
         if (open && !rootRef.current?.contains(next)) closeMenu(next === null);
@@ -123,8 +131,6 @@ export function GroupSwitcher({
         aria-expanded={open}
         aria-busy={pending}
         disabled={pending}
-        // Keep focus in the menu while open so the blur handler does not close and reopen it.
-        onMouseDown={(e) => open && e.preventDefault()}
         onClick={() => (open ? closeMenu(true) : openMenu())}
         className="-ml-2 flex min-h-11 max-w-full items-center gap-1 rounded-xl px-2 text-sm font-semibold text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
       >
