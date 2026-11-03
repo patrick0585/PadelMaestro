@@ -13,7 +13,7 @@
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth/hash";
 import { pathToFileURL } from "node:url";
-import { resolveGroup } from "../src/lib/group/resolve-group";
+import { isGroupArgError, resolveGroup } from "../src/lib/group/resolve-group";
 
 const DEMO_PASSWORD = "demo12345";
 const DUMMIES = [
@@ -90,7 +90,7 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main()
     .catch((err) => {
-      console.error(err instanceof Error ? err.message : err);
+      console.error(isGroupArgError(err) ? err.message : err);
       process.exit(1);
     })
     .finally(() => prisma.$disconnect());

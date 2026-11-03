@@ -1,13 +1,32 @@
 import { parseArgs } from "node:util";
 import type { Group } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getSoleGroup } from "./sole-group";
+import { AmbiguousGroupError, getSoleGroup } from "./sole-group";
 
 export class GroupNotFoundError extends Error {
   constructor(slug: string) {
     super(`Gruppe "${slug}" nicht gefunden.`);
     this.name = "GroupNotFoundError";
   }
+}
+
+export class GroupUsageError extends Error {
+  constructor() {
+    super("--group braucht einen Slug");
+    this.name = "GroupUsageError";
+  }
+}
+
+export function isGroupArgError(err: unknown): err is Error {
+  return (
+    err instanceof GroupNotFoundError ||
+    err instanceof AmbiguousGroupError ||
+    err instanceof GroupUsageError
+  );
+}
+
+export async function assertSingleGroup(): Promise<void> {
+  if ((await prisma.group.count()) > 1) throw new AmbiguousGroupError();
 }
 
 export function splitArgs(argv: string[]): { group: string | undefined; positionals: string[] } {
@@ -17,6 +36,7 @@ export function splitArgs(argv: string[]): { group: string | undefined; position
     allowPositionals: true,
     strict: false,
   });
+  if (values.group === true || values.group === "") throw new GroupUsageError();
   const group = typeof values.group === "string" ? values.group : undefined;
   return { group, positionals };
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { prisma } from "../src/lib/db";
 import { getOrCreateActiveSeason } from "../src/lib/season";
-import { resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
+import { isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 
 interface HistoricalGameDay {
   date: string;
@@ -81,7 +81,7 @@ function must(value: string | undefined, name: string): string {
 
 main()
   .catch((err) => {
-    console.error(err);
+    console.error(isGroupArgError(err) ? err.message : err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

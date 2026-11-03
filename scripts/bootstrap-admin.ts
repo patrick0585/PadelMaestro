@@ -1,7 +1,6 @@
 import { prisma } from "../src/lib/db";
 import { bootstrapAdmin, PlayerExistsError } from "../src/lib/group/bootstrap-admin";
-import { resolveGroup, splitArgs, GroupNotFoundError } from "../src/lib/group/resolve-group";
-import { AmbiguousGroupError } from "../src/lib/group/sole-group";
+import { isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 import { randomBytes } from "node:crypto";
 
 async function main() {
@@ -17,11 +16,7 @@ async function main() {
     const groupId = slug ? (await resolveGroup(argv)).id : undefined;
     await bootstrapAdmin({ email, name, password, groupId });
   } catch (err) {
-    if (
-      err instanceof PlayerExistsError ||
-      err instanceof GroupNotFoundError ||
-      err instanceof AmbiguousGroupError
-    ) {
+    if (err instanceof PlayerExistsError || isGroupArgError(err)) {
       console.error(err.message);
       process.exit(1);
     }
@@ -34,7 +29,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(err);
+    console.error(isGroupArgError(err) ? err.message : err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

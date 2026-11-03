@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/db";
-import { resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
+import { isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 import { setGroupOwner } from "../src/lib/group/set-owner";
 
 async function main() {
@@ -24,7 +24,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(err);
+    console.error(isGroupArgError(err) ? err.message : err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

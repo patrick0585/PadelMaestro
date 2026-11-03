@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth/hash";
-import { resolveGroup } from "../src/lib/group/resolve-group";
+import { isGroupArgError, resolveGroup } from "../src/lib/group/resolve-group";
 import { getSoleGroup } from "../src/lib/group/sole-group";
 
 const ADMIN_NAME = "Patrick";
@@ -95,7 +95,7 @@ async function main() {
 if (require.main === module) {
   main()
     .catch((err) => {
-      console.error(err);
+      console.error(isGroupArgError(err) ? err.message : err);
       process.exit(1);
     })
     .finally(() => prisma.$disconnect());

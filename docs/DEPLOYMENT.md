@@ -208,7 +208,7 @@ The script prints a one-time password. **Copy it now** — it is only shown once
 
 The first admin becomes the owner of the group "Padelmaestro"; any admin bootstrapped later is a plain admin. To hand the owner role to someone else, run `pnpm tenancy:set-owner <EMAIL>` the same way (the previous owner becomes admin).
 
-With more than one group, pass `--group <slug>` to `bootstrap:admin`, `tenancy:set-owner`, `seed:*` and `import:*` (the slug is shown on `/admin`; `pnpm invite:founder --list` shows founder links only). Without the flag the scripts abort once a second group exists.
+With more than one group, pass `--group <slug>` to `bootstrap:admin`, `tenancy:set-owner`, `seed:*` and `import:historical` (the slug is shown on `/admin`; `pnpm invite:founder --list` shows founder links only). Without the flag the scripts abort once a second group exists. `import:statistik` wipes the whole database and refuses to run with more than one group.
 
 Every multi-tenancy migration (PR 1, 2, 4 and 6; PR 3 and 5 had no migration) was rehearsed against a production dump; see `docs/superpowers/plans/2026-11-02-tenancy-pr*-rehearsal.md` for the protocols. Migrations that drop columns (PR 6) need the service stopped during the deploy, see the PR 6 rehearsal doc.
 

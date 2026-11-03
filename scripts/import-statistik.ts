@@ -3,7 +3,7 @@ import XLSX from "xlsx";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../src/lib/db";
 import { seedInitial } from "./seed-initial";
-import { resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
+import { assertSingleGroup, isGroupArgError, resolveGroup, splitArgs } from "../src/lib/group/resolve-group";
 import { computeRanking } from "../src/lib/ranking/compute";
 
 // XLSX uses "Michael"; our canonical player name is "Michi".
@@ -282,8 +282,17 @@ async function main() {
   const argv = process.argv.slice(2);
   const path = splitArgs(argv).positionals[0] ?? "statistik.xlsx";
   const confirmed = process.argv.includes("--yes");
+  try {
+    await assertSingleGroup();
+  } catch (err) {
+    if (!isGroupArgError(err)) throw err;
+    console.error(
+      "import:statistik ist nur für Installationen mit genau einer Gruppe gedacht (löscht alle Daten). Abbruch.",
+    );
+    process.exit(1);
+  }
   if (!confirmed) {
-    console.error("This script will DELETE ALL DATA in the database and re-import from XLSX.");
+    console.error("This script will DELETE ALL DATA of ALL groups in the database and re-import from XLSX.");
     console.error("Re-run with --yes to confirm:");
     console.error(`  pnpm import:statistik ${path} --yes`);
     process.exit(1);
@@ -368,7 +377,7 @@ async function main() {
 if (require.main === module) {
   main()
     .catch((err) => {
-      console.error(err);
+      console.error(isGroupArgError(err) ? err.message : err);
       process.exit(1);
     })
     .finally(() => prisma.$disconnect());
