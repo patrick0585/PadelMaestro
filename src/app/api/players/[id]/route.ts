@@ -22,6 +22,7 @@ const PatchSchema = z
     name: z.string().min(1).max(64).optional(),
     email: z.string().email().optional(),
     isAdmin: z.boolean().optional(),
+    role: z.enum(["member", "admin"]).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "no_fields" });
 

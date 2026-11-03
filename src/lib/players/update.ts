@@ -25,6 +25,7 @@ export interface UpdatablePlayerFields {
   name?: string;
   email?: string;
   isAdmin?: boolean;
+  role?: "member" | "admin";
 }
 
 export interface UpdatePlayerInput {
@@ -88,12 +89,14 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         throw new OwnerProtectedError("only the owner may change the owner's email");
       }
 
-      const newIsAdmin = definedFields.isAdmin;
-      if (newIsAdmin === false && membership.role === "owner") {
+      const targetRole =
+        definedFields.role ??
+        (definedFields.isAdmin === undefined ? undefined : roleForAdminFlag(definedFields.isAdmin));
+      if (targetRole === "member" && membership.role === "owner") {
         throw new OwnerProtectedError();
       }
       if (
-        newIsAdmin === false &&
+        targetRole === "member" &&
         membership.role === "admin" &&
         (await countOtherAdmins(tx, input.groupId, existing.id)) === 0
       ) {
@@ -117,8 +120,8 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       if (emailChanged) await revokeOpenTokens(tx, existing.id);
 
       let role = membership.role;
-      if (newIsAdmin !== undefined && role !== "owner") {
-        role = roleForAdminFlag(newIsAdmin);
+      if (targetRole !== undefined && role !== "owner") {
+        role = targetRole;
         await tx.membership.update({
           where: { groupId_playerId: { groupId: input.groupId, playerId: existing.id } },
           data: { role },
@@ -127,17 +130,19 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       const updated: UpdatedPlayer = { ...updatedPlayer, isAdmin: isAdminRole(role) };
 
       const changedFields: TrackedField[] = [];
-      const before: Record<TrackedField, string | boolean | null> = {
+      const before: Record<TrackedField | "role", string | boolean | null> = {
         username: existing.username,
         name: existing.name,
         email: existing.email,
         isAdmin: isAdminRole(membership.role),
+        role: membership.role,
       };
-      const after: Record<TrackedField, string | boolean | null> = {
+      const after: Record<TrackedField | "role", string | boolean | null> = {
         username: updated.username,
         name: updated.name,
         email: updated.email,
         isAdmin: updated.isAdmin,
+        role,
       };
       for (const f of TRACKED_FIELDS) {
         if (before[f] !== after[f]) changedFields.push(f);

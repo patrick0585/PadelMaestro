@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { PATCH, DELETE } from "@/app/api/players/[id]/route";
 import { POST as joinPOST } from "@/app/api/game-days/[id]/join/route";
+import { updatePlayer } from "@/lib/players/update";
 import { authorizeCredentials } from "@/lib/auth/authorize";
 import { hashPassword } from "@/lib/auth/hash";
 import { resetDb } from "../helpers/reset-db";
@@ -229,10 +230,68 @@ describe("PATCH /api/players/[id]", () => {
     expect(m.role).toBe("member");
   });
 
+  it("PATCH role member on the owner → 409 owner_protected; on the last admin → 409 last_admin", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const owner = await createMember(group.id, { name: "O", email: "owner@example.com", role: "owner" });
+    authMock.mockResolvedValue(session);
+    const ownerRes = await call(owner.id, { role: "member" });
+    expect(ownerRes.status).toBe(409);
+    expect(((await ownerRes.json()) as { error: string }).error).toBe("owner_protected");
+    const m = await prisma.membership.findFirstOrThrow({ where: { playerId: owner.id } });
+    expect(m.role).toBe("owner");
+
+    await prisma.membership.delete({ where: { id: m.id } });
+    const adminId = session.user.id;
+    const adminRes = await call(adminId, { role: "member" });
+    expect(adminRes.status).toBe(409);
+    expect(((await adminRes.json()) as { error: string }).error).toBe("last_admin");
+    const am = await prisma.membership.findFirstOrThrow({ where: { playerId: adminId } });
+    expect(am.role).toBe("admin");
+  });
+
   it("returns 401 without a session", async () => {
     authMock.mockResolvedValue(null);
     const res = await call("00000000-0000-0000-0000-000000000000", { name: "X" });
     expect(res.status).toBe(401);
+  });
+});
+
+describe("updatePlayer role", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it("updatePlayer with role admin promotes, with role member demotes, and role wins over isAdmin", async () => {
+    const { group, admin } = await setupGroupWithAdmin("owner");
+    const target = await createMember(group.id, { name: "T", email: "t@example.com" });
+    const roleOf = async () =>
+      (await prisma.membership.findFirstOrThrow({ where: { playerId: target.id } })).role;
+    const run = (fields: Parameters<typeof updatePlayer>[0]["fields"]) =>
+      updatePlayer({ groupId: group.id, playerId: target.id, actorId: admin.id, fields });
+
+    expect((await run({ role: "admin" })).isAdmin).toBe(true);
+    expect(await roleOf()).toBe("admin");
+
+    expect((await run({ role: "member" })).isAdmin).toBe(false);
+    expect(await roleOf()).toBe("member");
+
+    await run({ role: "admin", isAdmin: false });
+    expect(await roleOf()).toBe("admin");
+    await run({ role: "member", isAdmin: true });
+    expect(await roleOf()).toBe("member");
+
+    const entry = await prisma.auditLog.findFirstOrThrow({
+      where: { entityId: target.id, action: "player.update" },
+      orderBy: { createdAt: "asc" },
+    });
+    const payload = entry.payload as {
+      before: { role: string };
+      after: { role: string };
+      changedFields: string[];
+    };
+    expect(payload.before.role).toBe("member");
+    expect(payload.after.role).toBe("admin");
+    expect(payload.changedFields).toEqual(["isAdmin"]);
   });
 });
 
