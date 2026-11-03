@@ -4,8 +4,9 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { safeNextPath } from "@/lib/auth/next-path";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,7 @@ export function LoginForm() {
     } catch {
       // storage blocked: the notice just stays dismissed
     }
-    window.location.assign("/");
+    window.location.assign(safeNextPath(next));
   }
 
   return (
