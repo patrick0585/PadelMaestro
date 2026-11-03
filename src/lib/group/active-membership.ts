@@ -53,3 +53,15 @@ export async function findGroupMembership(
     select: { role: true },
   });
 }
+
+// True when the account also belongs to another group; its admins there must not lose control of it.
+export async function isSharedAccount(
+  db: Prisma.TransactionClient | PrismaClient,
+  playerId: string,
+  groupId: string,
+): Promise<boolean> {
+  const others = await db.membership.count({
+    where: { playerId, removedAt: null, groupId: { not: groupId } },
+  });
+  return others > 0;
+}

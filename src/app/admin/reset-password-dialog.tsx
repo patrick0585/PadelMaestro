@@ -46,7 +46,9 @@ export function ResetPasswordDialog({
       setError(
         res.status === 409 && body.error === "owner_protected"
           ? "Das Passwort des Besitzers kann nur der Besitzer selbst ändern"
-          : "Zurücksetzen fehlgeschlagen",
+          : res.status === 409 && body.error === "account_shared"
+            ? "Dieses Konto ist auch in anderen Gruppen. Änderungen am Konto macht die Person selbst im Profil."
+            : "Zurücksetzen fehlgeschlagen",
       );
       return;
     }

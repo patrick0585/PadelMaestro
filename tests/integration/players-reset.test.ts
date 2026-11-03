@@ -135,3 +135,50 @@ describe("PATCH /api/players/[id]/password", () => {
     expect(after.passwordHash).toBe("legacy");
   });
 });
+
+describe("PATCH /api/players/[id]/password on a shared account", () => {
+  beforeEach(async () => {
+    authMock.mockReset();
+    await resetDb();
+  });
+
+  async function ownerOfBInA(groupAId: string) {
+    const groupB = await createTestGroup("Gruppe B");
+    const ownerB = await createMember(groupB.id, {
+      name: "Bea",
+      email: "bea@example.com",
+      role: "owner",
+      passwordHash: "legacy",
+    });
+    await prisma.membership.create({ data: { groupId: groupAId, playerId: ownerB.id } });
+    return { groupB, ownerB };
+  }
+
+  it("returns 409 account_shared when the admin of A resets the password of B's owner", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const { ownerB } = await ownerOfBInA(group.id);
+    authMock.mockResolvedValue(session);
+    const res = await PATCH(patchReq(ownerB.id, "newpass12"), {
+      params: Promise.resolve({ id: ownerB.id }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "account_shared" });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: ownerB.id } });
+    expect(after.passwordHash).toBe("legacy");
+    expect(after.sessionVersion).toBe(ownerB.sessionVersion);
+  });
+
+  it("allows the reset once the other membership has ended", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const { groupB, ownerB } = await ownerOfBInA(group.id);
+    await prisma.membership.updateMany({
+      where: { groupId: groupB.id, playerId: ownerB.id },
+      data: { removedAt: new Date() },
+    });
+    authMock.mockResolvedValue(session);
+    const res = await PATCH(patchReq(ownerB.id, "newpass12"), {
+      params: Promise.resolve({ id: ownerB.id }),
+    });
+    expect(res.status).toBe(204);
+  });
+});

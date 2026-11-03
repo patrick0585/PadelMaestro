@@ -2,7 +2,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normaliseUsername } from "@/lib/auth/username";
 import { normaliseEmail } from "@/lib/auth/email";
-import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
+import {
+  countOtherAdmins,
+  findGroupMembership,
+  isSharedAccount,
+} from "@/lib/group/active-membership";
 import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
 import { revokeOpenTokens } from "@/lib/account/tokens";
 import {
@@ -11,6 +15,7 @@ import {
   LastAdminError,
   OwnerProtectedError,
   PlayerNotFoundError,
+  SharedAccountError,
 } from "./errors";
 
 export class NoFieldsError extends Error {
@@ -87,6 +92,18 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
         input.actorId !== input.playerId
       ) {
         throw new OwnerProtectedError("only the owner may change the owner's email");
+      }
+
+      const accountChanged =
+        emailChanged ||
+        (definedFields.name !== undefined && definedFields.name !== existing.name) ||
+        (definedFields.username !== undefined && definedFields.username !== existing.username);
+      if (
+        accountChanged &&
+        input.actorId !== input.playerId &&
+        (await isSharedAccount(tx, existing.id, input.groupId))
+      ) {
+        throw new SharedAccountError();
       }
 
       const targetRole =

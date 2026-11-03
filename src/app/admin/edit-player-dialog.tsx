@@ -102,6 +102,8 @@ export function EditPlayerDialog({
       setError(
         "Der Besitzer ist geschützt: Er kann nicht herabgestuft oder entfernt werden, und seine E-Mail kann nur er selbst ändern.",
       );
+    } else if (res.status === 409 && body.error === "account_shared") {
+      setError("Dieses Konto ist auch in anderen Gruppen. Änderungen am Konto macht die Person selbst im Profil.");
     } else if (res.status === 400) {
       setError("Eingabe ungültig");
     } else if (res.status === 404) {

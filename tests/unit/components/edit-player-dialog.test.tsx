@@ -50,4 +50,23 @@ describe("EditPlayerDialog Rolle", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ name: "Olga B" });
   });
+
+  it("shows the shared-account text on 409 account_shared", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: "account_shared" }),
+      }),
+    );
+    render(<EditPlayerDialog open onClose={() => {}} player={player("member")} />);
+    fireEvent.change(screen.getByLabelText("E-Mail"), { target: { value: "neu@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(
+        "Dieses Konto ist auch in anderen Gruppen. Änderungen am Konto macht die Person selbst im Profil.",
+      ),
+    ).toBeInTheDocument();
+  });
 });

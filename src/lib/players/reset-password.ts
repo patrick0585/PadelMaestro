@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/hash";
-import { findGroupMembership } from "@/lib/group/active-membership";
-import { OwnerProtectedError, PlayerNotFoundError } from "./errors";
+import { findGroupMembership, isSharedAccount } from "@/lib/group/active-membership";
+import { OwnerProtectedError, PlayerNotFoundError, SharedAccountError } from "./errors";
 export { PlayerNotFoundError } from "./errors";
 
 export interface ResetPlayerPasswordInput {
@@ -16,6 +16,12 @@ export async function resetPlayerPassword(input: ResetPlayerPasswordInput): Prom
   if (!membership) throw new PlayerNotFoundError(input.playerId);
   if (membership.role === "owner" && input.actorId !== input.playerId) {
     throw new OwnerProtectedError("only the owner may change the owner's password");
+  }
+  if (
+    input.actorId !== input.playerId &&
+    (await isSharedAccount(prisma, input.playerId, input.groupId))
+  ) {
+    throw new SharedAccountError();
   }
 
   const passwordHash = await hashPassword(input.password);

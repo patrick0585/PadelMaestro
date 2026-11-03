@@ -9,6 +9,7 @@ import {
   DuplicateUsernameError,
   LastAdminError,
   OwnerProtectedError,
+  SharedAccountError,
 } from "@/lib/players/errors";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
 
@@ -62,6 +63,9 @@ export async function PATCH(
     }
     if (e instanceof LastAdminError) {
       return NextResponse.json({ error: "last_admin" }, { status: 409 });
+    }
+    if (e instanceof SharedAccountError) {
+      return NextResponse.json({ error: "account_shared" }, { status: 409 });
     }
     if (e instanceof OwnerProtectedError) {
       return NextResponse.json({ error: "owner_protected" }, { status: 409 });

@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { guardGroupAdmin } from "@/lib/auth/route-guard";
 import { contextFromSession } from "@/lib/auth/group-context";
-import { findGroupMembership } from "@/lib/group/active-membership";
+import { findGroupMembership, isSharedAccount } from "@/lib/group/active-membership";
 import {
   setPlayerAvatar,
   deletePlayerAvatar,
@@ -23,9 +23,18 @@ function tooLargeByContentLength(req: Request): boolean {
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
-async function targetNotFound(groupId: string, id: string): Promise<NextResponse | null> {
-  if (await findGroupMembership(prisma, groupId, id)) return null;
-  return NextResponse.json({ error: "not_found" }, { status: 404 });
+async function targetBlocked(
+  groupId: string,
+  actorId: string,
+  id: string,
+): Promise<NextResponse | null> {
+  if (!(await findGroupMembership(prisma, groupId, id))) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (id !== actorId && (await isSharedAccount(prisma, id, groupId))) {
+    return NextResponse.json({ error: "account_shared" }, { status: 409 });
+  }
+  return null;
 }
 
 export async function PUT(req: Request, ctx: RouteCtx) {
@@ -36,8 +45,8 @@ export async function PUT(req: Request, ctx: RouteCtx) {
   }
 
   const { id } = await ctx.params;
-  const notFound = await targetNotFound(g.ctx.groupId, id);
-  if (notFound) return notFound;
+  const blocked = await targetBlocked(g.ctx.groupId, g.ctx.userId, id);
+  if (blocked) return blocked;
 
   let form: FormData;
   try {
@@ -77,8 +86,8 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
   const g = await guardGroupAdmin();
   if (g.response) return g.response;
   const { id } = await ctx.params;
-  const notFound = await targetNotFound(g.ctx.groupId, id);
-  if (notFound) return notFound;
+  const blocked = await targetBlocked(g.ctx.groupId, g.ctx.userId, id);
+  if (blocked) return blocked;
   try {
     await deletePlayerAvatar({ playerId: id, actorId: g.ctx.userId });
   } catch (e) {

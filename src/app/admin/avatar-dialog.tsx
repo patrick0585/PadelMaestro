@@ -6,6 +6,14 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 
+async function failureText(res: Response, fallback: string): Promise<string> {
+  if (res.status !== 409) return fallback;
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  return body?.error === "account_shared"
+    ? "Dieses Konto ist auch in anderen Gruppen. Änderungen am Konto macht die Person selbst im Profil."
+    : fallback;
+}
+
 export function AvatarDialog({
   open,
   onClose,
@@ -66,7 +74,7 @@ export function AvatarDialog({
     const res = await fetch(`/api/players/${playerId}/avatar`, { method: "PUT", body });
     setLoading(false);
     if (!res.ok) {
-      setError("Hochladen fehlgeschlagen.");
+      setError(await failureText(res, "Hochladen fehlgeschlagen."));
       return;
     }
     onClose();
@@ -80,7 +88,7 @@ export function AvatarDialog({
     const res = await fetch(`/api/players/${playerId}/avatar`, { method: "DELETE" });
     setLoading(false);
     if (!res.ok) {
-      setError("Entfernen fehlgeschlagen.");
+      setError(await failureText(res, "Entfernen fehlgeschlagen."));
       return;
     }
     onClose();

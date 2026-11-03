@@ -466,6 +466,31 @@ describe("DELETE /api/players/[id]/avatar (admin)", () => {
   });
 });
 
+describe("/api/players/[id]/avatar (admin) on a shared account", () => {
+  beforeEach(resetDb);
+
+  it("PUT and DELETE return 409 account_shared for the owner of another group", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const groupB = await createTestGroup("Gruppe B");
+    const ownerB = await createMember(groupB.id, { name: "Bea", email: "bea@example.com", role: "owner" });
+    await prisma.membership.create({ data: { groupId: group.id, playerId: ownerB.id } });
+    await setPlayerAvatar({ playerId: ownerB.id, actorId: ownerB.id, file: FIXTURE });
+
+    authMock.mockResolvedValueOnce(session);
+    const put = await putAvatar(ownerB.id);
+    expect(put.status).toBe(409);
+    expect(await put.json()).toEqual({ error: "account_shared" });
+
+    authMock.mockResolvedValueOnce(session);
+    const del = await deleteAvatar(ownerB.id);
+    expect(del.status).toBe(409);
+    expect(await del.json()).toEqual({ error: "account_shared" });
+
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: ownerB.id } });
+    expect(after.avatarVersion).toBe(1);
+  });
+});
+
 describe("GET /api/players/[id]/avatar", () => {
   beforeEach(resetDb);
 

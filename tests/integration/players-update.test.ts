@@ -394,3 +394,47 @@ describe("DELETE /api/players/[id]", () => {
     expect(m.removedAt).toBeNull();
   });
 });
+
+describe("PATCH /api/players/[id] on a shared account", () => {
+  beforeEach(async () => {
+    authMock.mockReset();
+    await resetDb();
+  });
+
+  async function ownerOfBInA(groupAId: string) {
+    const groupB = await createTestGroup("Gruppe B");
+    const ownerB = await createMember(groupB.id, {
+      name: "Bea",
+      email: "bea@example.com",
+      role: "owner",
+      passwordHash: "x",
+    });
+    await prisma.membership.create({ data: { groupId: groupAId, playerId: ownerB.id } });
+    return ownerB;
+  }
+
+  it("returns 409 account_shared for email, name or username changes", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const ownerB = await ownerOfBInA(group.id);
+    authMock.mockResolvedValue(session);
+    for (const body of [{ email: "hijack@example.com" }, { name: "Gekapert" }, { username: "gekapert" }]) {
+      const res = await call(ownerB.id, body);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: "account_shared" });
+    }
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: ownerB.id } });
+    expect(p).toMatchObject({ email: "bea@example.com", name: "Bea", username: null });
+  });
+
+  it("still allows a role change", async () => {
+    const { group, session } = await setupGroupWithAdmin("admin");
+    const ownerB = await ownerOfBInA(group.id);
+    authMock.mockResolvedValue(session);
+    const res = await call(ownerB.id, { role: "admin" });
+    expect(res.status).toBe(200);
+    const m = await prisma.membership.findFirstOrThrow({
+      where: { groupId: group.id, playerId: ownerB.id },
+    });
+    expect(m.role).toBe("admin");
+  });
+});
