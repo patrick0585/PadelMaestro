@@ -64,12 +64,20 @@ describe("<SignupForm>", () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/gruppe/neu"));
   });
 
-  it("falls back to the login page when signIn fails after signup", async () => {
+  it("falls back to the login page with the invitation as next when signIn fails on a member link", async () => {
     stubFetch(201, { playerId: "p1", kind: "member", groupId: "g1" });
     signIn.mockResolvedValue({ ok: false });
     render(<SignupForm token="tok1" kind="member" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith(LOGIN_HREF));
+  });
+
+  it("falls back to the login page with /gruppe/neu as next when signIn fails on a founder link", async () => {
+    stubFetch(201, { playerId: "p1", kind: "founder", groupId: null });
+    signIn.mockResolvedValue({ ok: false });
+    render(<SignupForm token="tok1" kind="founder" />);
+    fill();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/login?next=/gruppe/neu"));
   });
 
   it("shows the login hint with next link on 409", async () => {

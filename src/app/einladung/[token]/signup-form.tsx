@@ -41,7 +41,7 @@ export function SignupForm({ token, kind }: { token: string; kind: "founder" | "
       });
       if (res.status === 201) {
         const login = await signIn("credentials", { identifier: email.trim(), password, redirect: false });
-        if (!login?.ok) window.location.assign(loginHref);
+        if (!login?.ok) window.location.assign(kind === "founder" ? "/login?next=/gruppe/neu" : loginHref);
         else window.location.assign(kind === "founder" ? "/gruppe/neu" : "/");
         return;
       }
