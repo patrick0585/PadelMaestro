@@ -5,6 +5,7 @@ import { contextFromSession } from "@/lib/auth/group-context";
 import { isAdminRole } from "@/lib/auth/roles";
 import { listActiveMembers } from "@/lib/group/members";
 import { Card, CardBody } from "@/components/ui/card";
+import { InlineMessage } from "@/components/ui/inline-message";
 import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { CloseSeasonDialog } from "./close-season-dialog";
@@ -52,7 +53,12 @@ function buildRosterRows(
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ willkommen?: string }>;
+}) {
+  const { willkommen } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login");
   const ctx = contextFromSession(session);
@@ -102,6 +108,12 @@ export default async function AdminPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Admin</p>
         <h1 className="text-2xl font-bold text-foreground">Verwaltung</h1>
       </header>
+
+      {willkommen === "1" && (
+        <InlineMessage kind="success">
+          Deine Gruppe steht. Lade jetzt deine Mitspieler ein.
+        </InlineMessage>
+      )}
 
       <PlayersSection players={playersForUi} />
 

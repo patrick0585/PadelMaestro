@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/group/create", () => ({ canFoundGroup: vi.fn().mockResolvedValue(false) }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     throw new Error(`REDIRECT:${to}`);
@@ -53,6 +54,6 @@ describe.each([
 describe("AdminPage ohne Gruppe", () => {
   it("leitet zur Rangliste", async () => {
     authMock.mockResolvedValue(groupless);
-    await expect(AdminPage()).rejects.toThrow("REDIRECT:/ranking");
+    await expect(AdminPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/ranking");
   });
 });

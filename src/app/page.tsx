@@ -12,6 +12,7 @@ import { DashboardHero, type HeroState } from "./dashboard-hero";
 import { DayPpgStrip } from "@/components/day-ppg-strip";
 import { EmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
+import { canFoundGroup } from "@/lib/group/create";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,10 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const ctx = contextFromSession(session);
-  if (!ctx) return <NoGroupNotice />;
+  if (!ctx) {
+    const canFound = await canFoundGroup(session.user.id);
+    return <NoGroupNotice canFound={canFound} />;
+  }
 
   const me = await prisma.player.findUnique({
     where: { id: session.user.id },
