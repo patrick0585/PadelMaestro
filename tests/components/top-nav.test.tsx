@@ -42,7 +42,7 @@ describe("<TopNav>", () => {
         activeGroupId="g2"
       />,
     );
-    expect(screen.getByRole("button", { name: "Gruppe wechseln" })).toHaveTextContent("Freitagsrunde");
+    expect(screen.getByRole("button", { name: /Gruppe wechseln/ })).toHaveTextContent("Freitagsrunde");
     expect(screen.getByRole("link", { name: /padelmaestro/i })).toHaveAttribute("href", "/");
   });
 });

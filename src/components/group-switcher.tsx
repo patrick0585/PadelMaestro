@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown } from "lucide-react";
 import { InlineMessage } from "@/components/ui/inline-message";
 
 type Group = { id: string; name: string };
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+const NAME_WIDTH = "max-w-[10rem] truncate lg:max-w-[12rem]";
 
 export function GroupSwitcher({
   groups,
@@ -18,47 +18,57 @@ export function GroupSwitcher({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [focusIndex, setFocusIndex] = useState(0);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const returnFocus = useRef(false);
+
+  const active = groups.find((g) => g.id === activeGroupId) ?? groups[0];
+
+  function openMenu() {
+    setFailed(false);
+    const checkedIndex = groups.findIndex((g) => g.id === active?.id);
+    setFocusIndex(Math.max(checkedIndex, 0));
+    setOpen(true);
+  }
+
+  function closeMenu(focusTrigger: boolean) {
+    setFailed(false);
+    setOpen(false);
+    returnFocus.current = focusTrigger;
+  }
 
   useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    if (open) itemRefs.current[focusIndex]?.focus();
+  }, [open, focusIndex]);
+
+  useEffect(() => {
+    if (!open && !pending && returnFocus.current) {
+      returnFocus.current = false;
+      triggerRef.current?.focus();
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  }, [open, pending]);
 
   if (groups.length === 0) return null;
 
   if (groups.length === 1) {
     const { name } = groups[0];
     return (
-      <span
-        className="max-w-[12rem] truncate text-sm font-semibold text-foreground-muted"
-        title={name}
-      >
+      <span className={`${NAME_WIDTH} text-sm font-medium text-foreground`} title={name}>
         {name}
       </span>
     );
   }
 
-  const active = groups.find((g) => g.id === activeGroupId) ?? groups[0];
-
   async function select(groupId: string) {
+    if (pending) return;
+    if (groupId === activeGroupId) {
+      closeMenu(true);
+      return;
+    }
     setFailed(false);
     setPending(true);
     try {
@@ -68,7 +78,7 @@ export function GroupSwitcher({
         body: JSON.stringify({ groupId }),
       });
       if (res.status !== 204) throw new Error(`status ${res.status}`);
-      setOpen(false);
+      closeMenu(true);
       router.refresh();
     } catch {
       setFailed(true);
@@ -77,54 +87,90 @@ export function GroupSwitcher({
     }
   }
 
+  function onMenuKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const last = groups.length - 1;
+    const moves: Record<string, number> = {
+      ArrowDown: focusIndex === last ? 0 : focusIndex + 1,
+      ArrowUp: focusIndex === 0 ? last : focusIndex - 1,
+      Home: 0,
+      End: last,
+    };
+    if (e.key in moves) {
+      e.preventDefault();
+      setFocusIndex(moves[e.key]);
+    } else if (e.key === "Tab") {
+      closeMenu(false);
+    }
+  }
+
   return (
-    <div ref={rootRef} className="relative min-w-0">
+    <div
+      ref={rootRef}
+      className="relative min-w-0"
+      onKeyDown={(e) => {
+        if (open && e.key === "Escape") closeMenu(true);
+      }}
+      onBlur={(e) => {
+        const next = e.relatedTarget as Node | null;
+        // Focus to nowhere means a click on inert content: hand it back to the trigger.
+        if (open && !rootRef.current?.contains(next)) closeMenu(next === null);
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
-        aria-label="Gruppe wechseln"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-busy={pending}
         disabled={pending}
-        onClick={() => setOpen((v) => !v)}
-        className={`flex min-h-11 max-w-full items-center gap-1 rounded-xl px-2 text-sm font-semibold text-foreground-muted transition-colors hover:text-foreground disabled:cursor-wait disabled:opacity-60 ${FOCUS_RING}`}
+        // Keep focus in the menu while open so the blur handler does not close and reopen it.
+        onMouseDown={(e) => open && e.preventDefault()}
+        onClick={() => (open ? closeMenu(true) : openMenu())}
+        className="-ml-2 flex min-h-11 max-w-full items-center gap-1 rounded-xl px-2 text-sm font-semibold text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
       >
-        <span className="max-w-[12rem] truncate" title={active.name}>
+        <span className="sr-only">Gruppe wechseln:</span>{" "}
+        <span className={NAME_WIDTH} title={active.name}>
           {active.name}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
       </button>
-      {(open || failed) && (
+      {open && (
         <div className="absolute left-0 top-full z-50 mt-2 flex w-64 max-w-[calc(100vw-2rem)] flex-col gap-2">
-          {open && (
-            <div
-              role="menu"
-              aria-label="Gruppen"
-              className="rounded-xl border border-border-strong bg-surface-elevated py-1 text-foreground"
-            >
-              {groups.map((g) => {
-                const checked = g.id === active.id;
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={checked}
-                    disabled={pending}
-                    onClick={() => (checked ? setOpen(false) : select(g.id))}
-                    className={`flex min-h-11 w-full items-center justify-between gap-2 px-4 text-left text-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
-                      checked ? "font-semibold text-primary" : "text-foreground"
-                    }`}
-                  >
-                    <span className="truncate">{g.name}</span>
-                    {checked && <Check className="h-4 w-4 shrink-0" aria-hidden />}
-                  </button>
-                );
-              })}
-            </div>
+          <div
+            role="menu"
+            aria-label="Gruppen"
+            onKeyDown={onMenuKeyDown}
+            className="rounded-xl border border-border-strong bg-surface-elevated py-1 text-foreground"
+          >
+            {groups.map((g, i) => {
+              const checked = g.id === active.id;
+              return (
+                <button
+                  key={g.id}
+                  ref={(el) => {
+                    itemRefs.current[i] = el;
+                  }}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={checked}
+                  tabIndex={i === focusIndex ? 0 : -1}
+                  title={g.name}
+                  onClick={() => select(g.id)}
+                  className={`flex min-h-11 w-full items-center justify-between gap-2 px-4 text-left text-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                    checked ? "font-semibold text-primary" : "text-foreground"
+                  }`}
+                >
+                  <span className="truncate">{g.name}</span>
+                  {checked && <Check className="h-4 w-4 shrink-0" aria-hidden />}
+                </button>
+              );
+            })}
+          </div>
+          {failed && (
+            <InlineMessage kind="error">
+              Gruppenwechsel fehlgeschlagen. Bitte erneut versuchen.
+            </InlineMessage>
           )}
-          {failed && <InlineMessage kind="error">Wechsel fehlgeschlagen.</InlineMessage>}
         </div>
       )}
     </div>

@@ -18,7 +18,10 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     select: { avatarVersion: true },
   });
   const avatarVersion = row?.avatarVersion ?? 0;
-  const groups = (await listMyGroups(session.user.id)).map(({ id, name }) => ({ id, name }));
+  const groups = (await listMyGroups(session.user.id)).map(({ id, name: groupName }) => ({
+    id,
+    name: groupName,
+  }));
   const activeGroupId = session.user.groupId;
 
   return (

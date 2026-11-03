@@ -34,7 +34,7 @@ describe("<GroupSwitcher>", () => {
   it("renders a menu for two groups, marks the active one, and patches then refreshes on select", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
     render(<GroupSwitcher groups={groups} activeGroupId="g2" />);
-    const trigger = screen.getByRole("button", { name: "Gruppe wechseln" });
+    const trigger = screen.getByRole("button", { name: /Gruppe wechseln/ });
     expect(trigger).toHaveTextContent("Freitagsrunde");
     expect(trigger).toHaveAttribute("aria-haspopup", "menu");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -44,8 +44,14 @@ describe("<GroupSwitcher>", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
     const items = screen.getAllByRole("menuitemradio");
     expect(items).toHaveLength(2);
-    expect(screen.getByRole("menuitemradio", { name: /Freitagsrunde/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("menuitemradio", { name: /Dienstagsrunde/ })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("menuitemradio", { name: /Freitagsrunde/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("menuitemradio", { name: /Dienstagsrunde/ })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
 
     await userEvent.click(screen.getByRole("menuitemradio", { name: /Dienstagsrunde/ }));
     expect(fetchMock).toHaveBeenCalledWith(
@@ -58,12 +64,14 @@ describe("<GroupSwitcher>", () => {
 
   it("falls back to the first group's name when the active id is unknown", () => {
     render(<GroupSwitcher groups={groups} activeGroupId={null} />);
-    expect(screen.getByRole("button", { name: "Gruppe wechseln" })).toHaveTextContent("Dienstagsrunde");
+    expect(screen.getByRole("button", { name: /Gruppe wechseln/ })).toHaveTextContent(
+      "Dienstagsrunde",
+    );
   });
 
   it("closes the menu on Escape", async () => {
     render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Gruppe wechseln" }));
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -72,18 +80,130 @@ describe("<GroupSwitcher>", () => {
   it("shows an error when the patch fails", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
     render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Gruppe wechseln" }));
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
     await userEvent.click(screen.getByRole("menuitemradio", { name: /Freitagsrunde/ }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Wechsel fehlgeschlagen.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Gruppenwechsel fehlgeschlagen. Bitte erneut versuchen.",
+    );
     expect(refresh).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Gruppe wechseln" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Gruppe wechseln/ })).not.toBeDisabled();
   });
 
   it("shows an error on a network failure", async () => {
     fetchMock.mockRejectedValue(new TypeError("offline"));
     render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Gruppe wechseln" }));
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
     await userEvent.click(screen.getByRole("menuitemradio", { name: /Freitagsrunde/ }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Wechsel fehlgeschlagen.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Gruppenwechsel fehlgeschlagen. Bitte erneut versuchen.",
+    );
+  });
+
+  it("labels the trigger with the action and the visible group name", () => {
+    render(<GroupSwitcher groups={groups} activeGroupId="g2" />);
+    expect(
+      screen.getByRole("button", { name: "Gruppe wechseln: Freitagsrunde" }),
+    ).toBeInTheDocument();
+  });
+
+  it("focuses the checked item on open and selects via ArrowDown and Enter", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    const trigger = screen.getByRole("button", { name: /Gruppe wechseln/ });
+    await userEvent.click(trigger);
+    const [first, second] = screen.getAllByRole("menuitemradio");
+    expect(first).toHaveFocus();
+    expect(first).toHaveAttribute("tabindex", "0");
+    expect(second).toHaveAttribute("tabindex", "-1");
+
+    await userEvent.keyboard("{ArrowDown}");
+    expect(second).toHaveFocus();
+    expect(second).toHaveAttribute("tabindex", "0");
+    await userEvent.keyboard("{Enter}");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/profile/active-group",
+      expect.objectContaining({ body: JSON.stringify({ groupId: "g2" }) }),
+    );
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("wraps with the arrow keys and jumps with Home and End", async () => {
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
+    const [first, second] = screen.getAllByRole("menuitemradio");
+    await userEvent.keyboard("{ArrowUp}");
+    expect(second).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(first).toHaveFocus();
+    await userEvent.keyboard("{End}");
+    expect(second).toHaveFocus();
+    await userEvent.keyboard("{Home}");
+    expect(first).toHaveFocus();
+  });
+
+  it("closes on Tab and returns focus to the trigger on Escape and outside click", async () => {
+    render(
+      <>
+        <GroupSwitcher groups={groups} activeGroupId="g1" />
+        <p>draußen</p>
+      </>,
+    );
+    const trigger = screen.getByRole("button", { name: /Gruppe wechseln/ });
+    await userEvent.click(trigger);
+    await userEvent.tab();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    await userEvent.click(trigger);
+    await userEvent.keyboard("{Escape}");
+    expect(trigger).toHaveFocus();
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByText("draußen"));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("does not patch when the active group is selected again", async () => {
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
+    await userEvent.click(screen.getByRole("menuitemradio", { name: /Dienstagsrunde/ }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("patches the fallback group when no active id matches", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    render(<GroupSwitcher groups={groups} activeGroupId={null} />);
+    await userEvent.click(screen.getByRole("button", { name: /Gruppe wechseln/ }));
+    await userEvent.click(screen.getByRole("menuitemradio", { name: /Dienstagsrunde/ }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/profile/active-group",
+      expect.objectContaining({ body: JSON.stringify({ groupId: "g1" }) }),
+    );
+  });
+
+  it("clears the error when the menu closes and reopens", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 500 }));
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    const trigger = screen.getByRole("button", { name: /Gruppe wechseln/ });
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitemradio", { name: /Freitagsrunde/ }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await userEvent.click(trigger);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("closes when the trigger is clicked again and keeps focus on it", async () => {
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    const trigger = screen.getByRole("button", { name: /Gruppe wechseln/ });
+    await userEvent.click(trigger);
+    await userEvent.click(trigger);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
   });
 });

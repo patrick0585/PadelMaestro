@@ -50,7 +50,7 @@ describe("<MobileTopBar>", () => {
         activeGroupId="g1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Gruppe wechseln" })).toHaveTextContent("Dienstagsrunde");
+    expect(screen.getByRole("button", { name: /Gruppe wechseln/ })).toHaveTextContent("Dienstagsrunde");
     expect(screen.getByRole("button", { name: /benutzermenü/i })).toBeInTheDocument();
   });
 });
