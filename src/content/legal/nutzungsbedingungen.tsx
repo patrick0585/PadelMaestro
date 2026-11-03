@@ -14,7 +14,7 @@ export default function Content() {
       <p>
         Padelmaestro (<a href="https://padelmaestro.de">padelmaestro.de</a>) hilft privaten Padel-Spielgruppen, Spieltage
         zu organisieren, Ergebnisse zu erfassen und Ranglisten zu sehen. Betrieben wird die App von der im{" "}
-        <a href="/impressum">Impressum</a> genannten Privatperson. Diese Bedingungen gelten für die gesamte Nutzung der
+        <a href="/impressum">Impressum</a> genannten Privatperson (im Folgenden: der Betreiber). Diese Bedingungen gelten für die gesamte Nutzung der
         App. Mit der Registrierung stimmst du ihnen zu.
       </p>
 
@@ -31,14 +31,13 @@ export default function Content() {
 
       <h2>3. Gruppen und Rollen</h2>
       <p>
-        Ein Konto entsteht über den Einladungslink einer Gruppe. Jede Gruppe hat einen Besitzer; Besitzer und Admins
-        verwalten die Mitglieder, Spieltage und Einladungen ihrer Gruppe.
+        Ein Konto entsteht über den Einladungslink einer Gruppe. Jede Gruppe hat einen Besitzer. Besitzer und Admins (vom
+        Besitzer ernannte Mitglieder) verwalten die Mitglieder, Spieltage und Einladungen ihrer Gruppe.
       </p>
       <ul>
         <li>Teile Einladungslinks nur mit Personen, die du in der Gruppe haben willst, und nicht öffentlich.</li>
         <li>
-          Der Besitzer einer Gruppe trägt die Verantwortung für seine Gruppe und das, was dort
-          eingetragen wird.
+          Der Besitzer ist für die Verwaltung seiner Gruppe verantwortlich, jedes Mitglied für die eigenen Einträge.
         </li>
       </ul>
 
@@ -56,8 +55,8 @@ export default function Content() {
       <h2>5. Inhalte</h2>
       <p>
         Ergebnisse, Namen und Profilbilder, die du einträgst oder hochlädst, sind für die Mitglieder deiner Gruppe
-        sichtbar. Du bist für deine Einträge verantwortlich und lädst nur Bilder hoch, an denen du die nötigen Rechte
-        hast. Der Betreiber nutzt deine Inhalte nur, um die App bereitzustellen, und für nichts anderes. Details stehen
+        sichtbar. Lade nur Bilder hoch, an denen du die nötigen Rechte hast. Der Betreiber nutzt deine Inhalte nur, um
+        die App bereitzustellen. Details stehen
         in der <a href="/datenschutz">Datenschutzerklärung</a>.
       </p>
 
@@ -65,7 +64,7 @@ export default function Content() {
       <p>
         Padelmaestro ist kostenlos und befindet sich im Beta-Betrieb. Es gibt keine Garantie, dass die App jederzeit
         erreichbar ist oder fehlerfrei funktioniert. Funktionen können sich ändern. Der Betreiber kann den Dienst auch
-        ganz einstellen; das wird mit angemessenem Vorlauf angekündigt. Du kannst deine Daten jederzeit im Profil über
+        ganz einstellen; das wird mit [vier Wochen] Vorlauf angekündigt. Du kannst deine Daten jederzeit im Profil über
         „Daten exportieren“ herunterladen.
       </p>
 
@@ -73,9 +72,10 @@ export default function Content() {
       <p>
         Der Betreiber haftet unbeschränkt für Vorsatz und grobe Fahrlässigkeit. Bei leichter Fahrlässigkeit haftet er
         nur, wenn eine wesentliche Vertragspflicht verletzt wird, und dann begrenzt auf den vorhersehbaren, typischen
-        Schaden. Wesentlich sind Pflichten, deren Erfüllung die Nutzung der App überhaupt erst ermöglicht und auf die du
-        vertrauen darfst. Die gesetzliche Haftung für Schäden an Leben, Körper und Gesundheit bleibt unberührt.
+        Schaden. Wesentlich sind Pflichten, ohne die du die App nicht sinnvoll nutzen kannst. Die gesetzliche Haftung für
+        Schäden an Leben, Körper und Gesundheit bleibt unberührt.
       </p>
+      <p>[Haftungsklausel rechtlich prüfen]</p>
 
       <h2>8. Beendigung</h2>
       <p>
@@ -89,8 +89,8 @@ export default function Content() {
 
       <h2>9. Änderungen der Bedingungen</h2>
       <p>
-        Wenn sich diese Bedingungen ändern, wirst du in der App oder per E-Mail darauf hingewiesen. Nutzt du die App
-        danach weiter, gilt das als Zustimmung zu den geänderten Bedingungen. Bist du nicht einverstanden, kannst du
+        Wenn sich diese Bedingungen ändern, wirst du in der App oder per E-Mail darauf hingewiesen. Wenn du die App
+        nach der Ankündigung weiter nutzt, gelten die neuen Bedingungen für dich. [Wirksamkeit rechtlich prüfen] Bist du nicht einverstanden, kannst du
         dein Konto löschen.
       </p>
 

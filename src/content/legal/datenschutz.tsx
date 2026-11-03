@@ -18,13 +18,13 @@ export default function Content() {
 
       <h2>1. Verantwortlicher</h2>
       <p>
-        Verantwortlich im Sinne der Datenschutz-Grundverordnung (DSGVO) ist die im <a href="/impressum">Impressum</a>{" "}
-        genannte Privatperson: [VORNAME NACHNAME], [STRASSE HAUSNUMMER], [PLZ ORT], E-Mail: [E-MAIL-ADRESSE].
+        Verantwortlich ist die im <a href="/impressum">Impressum</a> genannte Person.
       </p>
 
       <h2>2. Hosting und Zugriffsprotokoll</h2>
       <p>
-        Die App läuft auf einem virtuellen Server der IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, Deutschland. Das
+        Die App läuft auf einem virtuellen Server der IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, Deutschland
+        [Anschrift des Hosters prüfen]. Das
         Rechenzentrum befindet sich in Deutschland. IONOS verarbeitet die Daten als Auftragsverarbeiter.
       </p>
       <p>Bei jedem Aufruf speichert der Webserver ein Zugriffsprotokoll mit folgenden Angaben:</p>
@@ -35,10 +35,11 @@ export default function Content() {
         <li>Statuscode der Antwort</li>
         <li>Browser-Kennung (User-Agent)</li>
       </ul>
+      <p>[Felder mit der Server-Konfiguration abgleichen]</p>
       <p>
-        Zweck ist die Betriebssicherheit, etwa die Abwehr von Angriffen, sowie die Fehlersuche. Rechtsgrundlage ist das
-        berechtigte Interesse an einem sicheren und funktionierenden Dienst (Art. 6 Abs. 1 lit. f DSGVO). Die Protokolle
-        werden durch automatische Rotation nach spätestens 14 Tagen gelöscht [Frist prüfen].
+        Zweck sind die Betriebssicherheit und die Fehlersuche. Rechtsgrundlage ist das berechtigte Interesse an einem
+        sicheren und funktionierenden Dienst (Art. 6 Abs. 1 lit. f DSGVO). Die Protokolle werden durch automatische
+        Rotation nach spätestens 14 Tagen gelöscht [Frist prüfen].
       </p>
 
       <h2>3. Konto und Nutzung der App</h2>
@@ -57,13 +58,18 @@ export default function Content() {
       </ul>
       <p>
         Diese Daten sind nötig, um das Konto, die Gruppen und die Ergebnisse bereitzustellen. Rechtsgrundlage ist die
-        Erfüllung des Nutzungsverhältnisses (Art. 6 Abs. 1 lit. b DSGVO).
+        Erfüllung des Nutzungsverhältnisses (Art. 6 Abs. 1 lit. b DSGVO) [Rechtsgrundlage prüfen].
       </p>
       <h3>Audit-Protokoll</h3>
       <p>
         Die App protokolliert, welche Aktion wer wann ausgelöst hat, zum Beispiel das Eintragen oder Ändern eines
         Ergebnisses. Das dient der Nachvollziehbarkeit innerhalb der Gruppen und der Sicherheit. Rechtsgrundlage ist das
         berechtigte Interesse (Art. 6 Abs. 1 lit. f DSGVO).
+      </p>
+      <p>
+        Wird ein Konto gelöscht, werden Einträge über diese Person anonymisiert. Bei Einträgen zu Aktionen, die die
+        Person selbst ausgelöst hat, bleibt nur die Konto-ID erhalten. Die Einträge werden aufbewahrt, solange das
+        Konto oder die Gruppe besteht [Aufbewahrung prüfen].
       </p>
 
       <h2>4. Sichtbarkeit innerhalb der Gruppe</h2>
@@ -83,7 +89,8 @@ export default function Content() {
         Für den Versand wird Resend genutzt (Resend Inc., 2261 Market Street #5039, San Francisco, CA 94114, USA).
         Übermittelt werden Empfängeradresse, Name und Inhalt der Mail. Als Verarbeitungsregion ist die EU (Irland)
         gewählt. Mit Resend besteht ein Auftragsverarbeitungsvertrag; für einen möglichen Zugriff aus den USA gelten die
-        EU-Standardvertragsklauseln. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+        EU-Standardvertragsklauseln [Anschrift, Auftragsverarbeitungsvertrag und Standardvertragsklauseln prüfen].
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
       </p>
 
       <h2>6. Cookies</h2>
@@ -99,8 +106,8 @@ export default function Content() {
 
       <h2>7. Empfänger</h2>
       <p>
-        Daten werden nur an die oben genannten Auftragsverarbeiter (IONOS, Resend) weitergegeben. Ein Verkauf oder eine
-        sonstige Weitergabe an Dritte findet nicht statt. Automatisierte Entscheidungen im Einzelfall finden nicht statt.
+        Außerhalb deiner Gruppen (siehe Abschnitt 4) werden Daten nur an die genannten Dienstleister IONOS und Resend
+        weitergegeben. Ein Verkauf findet nicht statt. Automatisierte Entscheidungen im Einzelfall finden nicht statt.
       </p>
 
       <h2>8. Speicherdauer</h2>
@@ -110,7 +117,7 @@ export default function Content() {
           Nach dem Löschen eines Kontos bleiben Spielergebnisse anonymisiert erhalten, damit Ranglisten und Spieltage der
           anderen Mitglieder stimmen. Statt des Namens erscheint dann „Gelöschter Spieler“.
         </li>
-        <li>Zugriffsprotokolle werden kurzfristig gelöscht (siehe Abschnitt 2).</li>
+        <li>Zugriffsprotokolle werden nach spätestens 14 Tagen gelöscht [Frist prüfen] (siehe Abschnitt 2).</li>
         <li>
           Links zur Bestätigung der E-Mail-Adresse gelten 24 Stunden, Links zum Zurücksetzen des Passworts 1 Stunde.
         </li>
@@ -128,12 +135,12 @@ export default function Content() {
           Profil ändern.
         </li>
         <li>
-          <strong>Löschung</strong> (Art. 17 DSGVO): über „Konto löschen“ im Profil. Spielergebnisse werden dabei
-          anonymisiert statt gelöscht. Solange jemand Besitzer einer Gruppe ist, ist das Löschen gesperrt; vorher muss
+          <strong>Löschung</strong> (Art. 17 DSGVO): über „Konto löschen“ im Profil. Dein Name und deine Kontodaten
+          werden gelöscht; Spielergebnisse bleiben ohne Personenbezug erhalten. Solange jemand Besitzer einer Gruppe ist, ist das Löschen gesperrt; vorher muss
           der Besitz übertragen oder die Gruppe gelöscht werden.
         </li>
         <li>
-          <strong>Einschränkung der Verarbeitung</strong> (Art. 18 DSGVO).
+          <strong>Einschränkung der Verarbeitung</strong> (Art. 18 DSGVO): auf Anfrage per E-Mail.
         </li>
         <li>
           <strong>Widerspruch</strong> (Art. 21 DSGVO) gegen Verarbeitungen, die auf berechtigtem Interesse beruhen.

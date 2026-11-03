@@ -18,10 +18,11 @@ export default function Content() {
       </p>
       <h2>Verantwortlich für den Inhalt</h2>
       <p>[VORNAME NACHNAME], Anschrift wie oben.</p>
+      <p>[Abschnitt „Verantwortlich für den Inhalt“ nur bei journalistisch-redaktionellen Inhalten nötig – prüfen]</p>
       <h2>Hinweis</h2>
       <p>
-        Diese App ist ein privates, nicht-kommerzielles Projekt. Padelmaestro unter{" "}
-        <a href="https://padelmaestro.de">padelmaestro.de</a> hilft privaten Padel-Spielgruppen, Spieltage zu
+        Diese App ist ein privates, nicht-kommerzielles Projekt. Padelmaestro (
+        <a href="https://padelmaestro.de">padelmaestro.de</a>) hilft privaten Padel-Spielgruppen, Spieltage zu
         organisieren und Ergebnisse festzuhalten.
       </p>
       <h2>Haftung für Links</h2>
@@ -30,6 +31,7 @@ export default function Content() {
         Verlinkung waren keine Rechtsverstöße erkennbar. Werden solche bekannt, wird der betreffende Link umgehend
         entfernt.
       </p>
+      <p>[Haftung für Links: entfernen, wenn keine externen Links]</p>
     </>
   );
 }
