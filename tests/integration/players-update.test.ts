@@ -86,6 +86,16 @@ describe("PATCH /api/players/[id]", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for a placeholder address", async () => {
+    const { group, session } = await setupGroupWithAdmin();
+    const target = await createMember(group.id, { name: "U1", email: "user1@example.com" });
+    authMock.mockResolvedValue(session);
+    const res = await call(target.id, { email: "x@anonym.invalid" });
+    expect(res.status).toBe(400);
+    const row = await prisma.player.findUniqueOrThrow({ where: { id: target.id } });
+    expect(row.email).toBe("user1@example.com");
+  });
+
   it("returns 403 for non-admin", async () => {
     const { group } = await setupGroupWithAdmin();
     const u = await createMember(group.id, { name: "U1", email: "user1@example.com" });
