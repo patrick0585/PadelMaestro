@@ -122,10 +122,21 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
       let role = membership.role;
       if (targetRole !== undefined && role !== "owner") {
         role = targetRole;
-        await tx.membership.update({
-          where: { groupId_playerId: { groupId: input.groupId, playerId: existing.id } },
+        // Re-checked under the row lock: a concurrent ownership transfer may have promoted the target.
+        const changed = await tx.membership.updateMany({
+          where: {
+            groupId: input.groupId,
+            playerId: existing.id,
+            removedAt: null,
+            role: { not: "owner" },
+          },
           data: { role },
         });
+        if (changed.count !== 1) {
+          const current = await findGroupMembership(tx, input.groupId, existing.id);
+          if (current?.role === "owner") throw new OwnerProtectedError();
+          throw new PlayerNotFoundError(input.playerId);
+        }
       }
       const updated: UpdatedPlayer = { ...updatedPlayer, isAdmin: isAdminRole(role) };
 

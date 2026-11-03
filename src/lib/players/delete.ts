@@ -64,7 +64,11 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
       },
       data: { removedAt: new Date() },
     });
-    if (removed.count !== 1) throw new OwnerProtectedError();
+    if (removed.count !== 1) {
+      const current = await findGroupMembership(tx, input.groupId, target.id);
+      if (current?.role === "owner") throw new OwnerProtectedError();
+      throw new PlayerNotFoundError(input.playerId);
+    }
 
     await tx.auditLog.create({
       data: {

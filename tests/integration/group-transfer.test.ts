@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
 import { createTestGroup, createMember } from "../helpers/group";
 import { transferOwnership, SelfTransferError } from "@/lib/group/transfer";
 import { ForbiddenError } from "@/lib/auth/group-context";
-import { PlayerNotFoundError } from "@/lib/players/errors";
+import { OwnerProtectedError, PlayerNotFoundError } from "@/lib/players/errors";
+import { updatePlayer } from "@/lib/players/update";
 import { deletePlayer } from "@/lib/players/delete";
 
 async function setup() {
@@ -99,36 +101,91 @@ describe("transferOwnership", () => {
 
   it("removal blocked behind an uncommitted promotion does not remove the new owner", async () => {
     const { group, owner, target } = await setup();
-    let release!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
-    let locked!: () => void;
-    const lockHeld = new Promise<void>((r) => (locked = r));
 
-    // Same writes as transferOwnership, held open until deletePlayer has read the old role.
-    const promotion = prisma.$transaction(
-      async (tx) => {
-        await tx.membership.updateMany({
-          where: { groupId: group.id, playerId: target.id, removedAt: null },
-          data: { role: "owner" },
-        });
-        await tx.membership.updateMany({
-          where: { groupId: group.id, playerId: owner.id, role: "owner" },
-          data: { role: "admin" },
-        });
-        locked();
-        await gate;
-      },
-      { timeout: 10_000 },
+    const [p, r] = await whileLocked(promoteInTx(group.id, owner.id, target.id), () =>
+      deletePlayer({ groupId: group.id, playerId: target.id, actorId: owner.id }),
     );
-    await lockHeld;
-    const removal = deletePlayer({ groupId: group.id, playerId: target.id, actorId: owner.id });
-    await new Promise((r) => setTimeout(r, 300));
-    release();
-    const [p, r] = await Promise.allSettled([promotion, removal]);
 
     expect(p.status).toBe("fulfilled");
     expect(r.status).toBe("rejected");
+    expect((r as PromiseRejectedResult).reason).toBeInstanceOf(OwnerProtectedError);
+    expect(await activeOwners(group.id)).toBe(1);
+    expect(await roleOf(group.id, target.id)).toBe("owner");
+  });
+
+  it("removal blocked behind an uncommitted removal reports not found", async () => {
+    const { group, owner, target } = await setup();
+
+    const [p, r] = await whileLocked(
+      (tx) =>
+        tx.membership.updateMany({
+          where: { groupId: group.id, playerId: target.id },
+          data: { removedAt: new Date() },
+        }),
+      () => deletePlayer({ groupId: group.id, playerId: target.id, actorId: owner.id }),
+    );
+
+    expect(p.status).toBe("fulfilled");
+    expect(r.status).toBe("rejected");
+    expect((r as PromiseRejectedResult).reason).toBeInstanceOf(PlayerNotFoundError);
+  });
+
+  it("role change blocked behind an uncommitted promotion does not demote the new owner", async () => {
+    const { group, owner, target } = await setup();
+    const admin = await createMember(group.id, { name: "Armin", email: "a@example.com", role: "admin" });
+
+    const [p, r] = await whileLocked(promoteInTx(group.id, owner.id, target.id), () =>
+      updatePlayer({
+        groupId: group.id,
+        playerId: target.id,
+        actorId: admin.id,
+        fields: { role: "admin" },
+      }),
+    );
+
+    expect(p.status).toBe("fulfilled");
+    expect(r.status).toBe("rejected");
+    expect((r as PromiseRejectedResult).reason).toBeInstanceOf(OwnerProtectedError);
     expect(await activeOwners(group.id)).toBe(1);
     expect(await roleOf(group.id, target.id)).toBe("owner");
   });
 });
+
+// Same writes as transferOwnership.
+function promoteInTx(groupId: string, ownerId: string, targetId: string) {
+  return async (tx: Prisma.TransactionClient) => {
+    await tx.membership.updateMany({
+      where: { groupId, playerId: targetId, removedAt: null },
+      data: { role: "owner" },
+    });
+    await tx.membership.updateMany({
+      where: { groupId, playerId: ownerId, role: "owner" },
+      data: { role: "admin" },
+    });
+  };
+}
+
+// Runs `writes` in a transaction that stays open until `contender` has read the old state
+// and is blocked on the row lock, then commits.
+async function whileLocked(
+  writes: (tx: Prisma.TransactionClient) => Promise<unknown>,
+  contender: () => Promise<unknown>,
+) {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let locked!: () => void;
+  const lockHeld = new Promise<void>((r) => (locked = r));
+  const holder = prisma.$transaction(
+    async (tx) => {
+      await writes(tx);
+      locked();
+      await gate;
+    },
+    { timeout: 10_000 },
+  );
+  await lockHeld;
+  const contended = contender();
+  await new Promise((r) => setTimeout(r, 300));
+  release();
+  return Promise.allSettled([holder, contended]);
+}
