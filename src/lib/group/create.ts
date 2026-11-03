@@ -47,10 +47,11 @@ export async function createGroup(i: {
       data: { groupId: created.id, playerId: i.founderId, role: "owner", joinedAt: now },
     });
     if (use) {
-      await tx.invitationUse.update({
-        where: { id: use.id },
+      const claimed = await tx.invitationUse.updateMany({
+        where: { id: use.id, foundedGroupId: null },
         data: { foundedGroupId: created.id },
       });
+      if (claimed.count !== 1) throw new NotFounderError();
     }
     await tx.auditLog.create({
       data: {

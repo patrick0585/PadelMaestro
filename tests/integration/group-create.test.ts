@@ -69,6 +69,23 @@ describe("createGroup", () => {
     expect(await prisma.group.count()).toBe(1);
   });
 
+  it("concurrent calls spend one founder use only once", async () => {
+    const p = await founder();
+    const results = await Promise.allSettled([
+      createGroup({ name: "Alpha", founderId: p.id }),
+      createGroup({ name: "Beta", founderId: p.id }),
+    ]);
+    const ok = results.filter((r) => r.status === "fulfilled");
+    const bad = results.filter((r) => r.status === "rejected");
+    expect(ok).toHaveLength(1);
+    expect(bad).toHaveLength(1);
+    expect((bad[0] as PromiseRejectedResult).reason).toBeInstanceOf(NotFounderError);
+    const groups = await prisma.group.findMany();
+    expect(groups).toHaveLength(1);
+    const use = await prisma.invitationUse.findFirst({ where: { playerId: p.id } });
+    expect(use?.foundedGroupId).toBe(groups[0].id);
+  });
+
   it("keeps a recorded use valid after the invitation was revoked", async () => {
     const p = await founder();
     await prisma.invitation.updateMany({ data: { revokedAt: new Date() } });
