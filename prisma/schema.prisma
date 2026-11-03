@@ -23,6 +23,7 @@ model Player {
   pendingEmail    String?
   termsAcceptedAt DateTime?
   sessionVersion  Int       @default(0)
+  activeGroupId   String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -34,6 +35,7 @@ model Player {
   memberships        Membership[]
   invitationsCreated Invitation[]
   invitationUses     InvitationUse[]
+  activeGroup        Group?               @relation("ActiveGroup", fields: [activeGroupId], references: [id], onDelete: SetNull)
 
   // All four player slots of a Match can reference a Player
   matchT1A Match[] @relation("MatchT1A")
@@ -43,6 +45,7 @@ model Player {
 
   @@index([email])
   @@index([deletedAt])
+  @@index([activeGroupId])
 }
 
 enum EmailTokenPurpose {
@@ -207,6 +210,7 @@ model Group {
   auditLogs   AuditLog[]
   invitations Invitation[]
   foundedBy   InvitationUse[] @relation("FoundedGroup")
+  activeFor   Player[]        @relation("ActiveGroup")
 }
 
 enum MembershipRole {

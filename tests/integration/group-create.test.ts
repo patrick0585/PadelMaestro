@@ -44,6 +44,12 @@ describe("createGroup", () => {
     });
   });
 
+  it("createGroup sets the founder's activeGroupId to the new group", async () => {
+    const p = await founder();
+    const g = await createGroup({ name: "Padel Wien", founderId: p.id });
+    expect((await prisma.player.findUnique({ where: { id: p.id } }))?.activeGroupId).toBe(g.id);
+  });
+
   it("without founder use throws NotFounderError when PUBLIC_SIGNUP is off and succeeds when on", async () => {
     const p = await plain();
     await expect(createGroup({ name: "Wien", founderId: p.id })).rejects.toBeInstanceOf(NotFounderError);
