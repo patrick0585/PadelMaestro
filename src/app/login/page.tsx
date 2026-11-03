@@ -1,7 +1,12 @@
 import { LoginForm } from "./login-form";
 import { PadelLogo } from "@/components/padel-logo";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const { next } = await searchParams;
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
@@ -10,7 +15,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-extrabold text-foreground">Willkommen zurück</h1>
           <p className="mt-1 text-sm text-foreground-muted">Bitte melde dich an.</p>
         </div>
-        <LoginForm />
+        <LoginForm next={typeof next === "string" ? next : undefined} />
       </div>
     </div>
   );

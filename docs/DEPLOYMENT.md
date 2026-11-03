@@ -170,6 +170,8 @@ sudo grep -E '<[A-Z_]+>' /srv/padel/app/.env && echo "❌ placeholders still pre
 
 Mail variables: `MAIL_TRANSPORT` is mandatory in production (`resend` or `console`; `memory` is rejected). With `console`, mails are only written to the journal as `[mail]` lines, so nothing is delivered. Complete section 11, then switch to `resend`. `APP_URL` is the base for links in mails and falls back to `AUTH_URL`.
 
+`PUBLIC_SIGNUP` (optional, default off): `true` lets any logged-in player found a group without a founder link. Leave it unset in production.
+
 ### 4.4 Install, migrate, build
 
 ```bash
@@ -207,6 +209,16 @@ The script prints a one-time password. **Copy it now** — it is only shown once
 The first admin becomes the owner of the group "Padelmaestro"; any admin bootstrapped later is a plain admin. To hand the owner role to someone else, run `pnpm tenancy:set-owner <EMAIL>` the same way (the previous owner becomes admin).
 
 Every multi-tenancy migration (PR 1, 2, 4 and 6; PR 3 and 5 had no migration) was rehearsed against a production dump; see `docs/superpowers/plans/2026-11-02-tenancy-pr*-rehearsal.md` for the protocols. Migrations that drop columns (PR 6) need the service stopped during the deploy, see the PR 6 rehearsal doc.
+
+### 4.7 Create founder links
+
+Whoever opens a founder link registers and founds their own group. Create one on the VPS:
+
+```bash
+sudo -u padel -H bash -c 'cd /srv/padel/app && set -a && . ./.env && set +a && pnpm invite:founder --note "Gruppe Wien"'
+```
+
+It prints the link (valid for 30 days, single use), built from `APP_URL`, so `APP_URL` must be set in `.env`. `--note` is optional and only labels the link. `pnpm invite:founder --list` shows open founder links (id, note, expiry, uses); `pnpm invite:founder --revoke <id>` withdraws one (use the same `cd … && set -a && . ./.env && set +a` prefix). Revoking does not undo a redemption that already happened: an account that redeemed the link keeps its right to found one group. Member invitation links (valid 14 days, up to 25 joins) are created by group admins on `/admin`, section "Einladen".
 
 ---
 
@@ -296,6 +308,8 @@ sudo journalctl -u caddy -n 30 --no-pager
 ```
 
 Caddy fetches a Let's Encrypt cert automatically on the first request (~10 seconds). Tail the journal if something looks off.
+
+Invitation URLs carry their token in the path; the access log records request URIs, so keep `/var/log/caddy` not world-readable (default) or skip `/einladung/*` from logging.
 
 ---
 
@@ -443,6 +457,7 @@ sudo systemctl restart padel   # reconnect the app to the freshly-restarted Post
 | Reload Caddy | `sudo systemctl reload caddy` |
 | Run ad-hoc migration | `sudo -u padel -H bash -c 'cd /srv/padel/app && pnpm prisma migrate deploy'` |
 | Rotate `AUTH_SECRET` | Edit `.env`, `sudo systemctl restart padel`. **Invalidates all sessions.** |
+| Create / list founder links (`--list`, `--revoke <id>`) | `sudo -u padel -H bash -c 'cd /srv/padel/app && set -a && . ./.env && set +a && pnpm invite:founder --note "Gruppe Wien"'` |
 
 ---
 

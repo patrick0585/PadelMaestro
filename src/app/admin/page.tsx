@@ -5,12 +5,15 @@ import { contextFromSession } from "@/lib/auth/group-context";
 import { isAdminRole } from "@/lib/auth/roles";
 import { listActiveMembers } from "@/lib/group/members";
 import { Card, CardBody } from "@/components/ui/card";
+import { InlineMessage } from "@/components/ui/inline-message";
 import { Badge } from "@/components/ui/badge";
 import { CreateGameDayForm } from "./create-game-day-form";
 import { CloseSeasonDialog } from "./close-season-dialog";
 import { StartGameDayButton } from "./start-game-day-button";
 import { DeleteGameDayButton } from "./delete-game-day-button";
 import { PlayersSection } from "./players-section";
+import { InvitationsSection } from "./invitations-section";
+import { listOpenInvitations } from "@/lib/invitations/manage";
 import {
   ParticipantsRoster,
   type ParticipantAttendance,
@@ -52,7 +55,12 @@ function buildRosterRows(
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ willkommen?: string }>;
+}) {
+  const { willkommen } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login");
   const ctx = contextFromSession(session);
@@ -84,6 +92,13 @@ export default async function AdminPage() {
     where: { seasonId: season.id, status: "finished" },
   });
 
+  const invitations = (await listOpenInvitations(ctx.groupId)).map((i) => ({
+    ...i,
+    expiresAt: i.expiresAt.toISOString(),
+    createdAt: i.createdAt.toISOString(),
+    uses: i.uses.map((u) => ({ ...u, usedAt: u.usedAt.toISOString() })),
+  }));
+
   const playersForUi = players.map((p) => ({
     id: p.id,
     name: p.name,
@@ -103,7 +118,15 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-bold text-foreground">Verwaltung</h1>
       </header>
 
+      {willkommen === "1" && (
+        <InlineMessage kind="success">
+          Deine Gruppe steht. Lade jetzt deine Mitspieler ein.
+        </InlineMessage>
+      )}
+
       <PlayersSection players={playersForUi} />
+
+      <InvitationsSection initial={invitations} />
 
       <Card>
         <CardBody className="space-y-3">

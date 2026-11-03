@@ -92,7 +92,11 @@ Open <http://localhost:3000> and log in.
 
 ## Groups and roles
 
-Phase 1 runs a single group per installation. Every player is a member of that group with one of three roles: **owner**, **admin** or **member**. `pnpm bootstrap:admin` creates the group "Padelmaestro" and makes the first admin its owner; further bootstrapped admins become plain admins. Use `pnpm tenancy:set-owner <email>` to move the owner role to another player (the previous owner becomes admin). "Remove player" ends the membership; match history, rankings and jokers stay intact. `session.user.isAdmin` is derived from the role (owner or admin), not stored on the player.
+An installation can host several groups; every player is a member of at least one group with one of three roles: **owner**, **admin** or **member**. `pnpm bootstrap:admin` creates the group "Padelmaestro" and makes the first admin its owner; further bootstrapped admins become plain admins. Use `pnpm tenancy:set-owner <email>` to move the owner role to another player (the previous owner becomes admin).
+
+Members join through invitation links created on the admin page (`/admin`, section "Einladen"). New groups start from a founder link created with `pnpm invite:founder`. With `PUBLIC_SIGNUP=true`, any logged-in player can found a group without a founder link. The flag is off by default; only the exact value `true` enables it.
+
+"Remove player" ends the membership; match history, rankings and jokers stay intact. `session.user.isAdmin` is derived from the role (owner or admin), not stored on the player.
 
 ## Common tasks
 

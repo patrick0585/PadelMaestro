@@ -7,11 +7,12 @@ import { LoginForm } from "@/app/login/login-form";
 
 const assign = vi.fn();
 
-function login() {
-  render(<LoginForm />);
+function login(next?: string) {
+  const view = render(<LoginForm next={next} />);
   fireEvent.change(screen.getByLabelText("E-Mail oder Benutzername"), { target: { value: "maxi" } });
   fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "geheim123" } });
   fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+  return view;
 }
 
 describe("<LoginForm>", () => {
@@ -39,5 +40,16 @@ describe("<LoginForm>", () => {
     expect(await screen.findByText("Falsche Anmeldedaten")).toBeTruthy();
     expect(window.sessionStorage.getItem("email-notice-dismissed")).toBe("1");
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("navigates to next after login when next is a safe path, otherwise to /", async () => {
+    signIn.mockResolvedValue({ error: undefined });
+    const first = login("/einladung/abc");
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/einladung/abc"));
+    first.unmount();
+
+    assign.mockReset();
+    login("//evil.example");
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
   });
 });

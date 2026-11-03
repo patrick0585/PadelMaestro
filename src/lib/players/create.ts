@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth/hash";
 import { normaliseUsername } from "@/lib/auth/username";
 import { normaliseEmail } from "@/lib/auth/email";
 import { roleForAdminFlag } from "@/lib/auth/roles";
+import { addToPlannedGameDays } from "@/lib/group/join";
 import { DuplicateEmailError, DuplicateUsernameError } from "./errors";
 export { DuplicateEmailError, DuplicateUsernameError } from "./errors";
 
@@ -59,16 +60,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<CreatedPla
           },
         },
       });
-      const plannedDays = await tx.gameDay.findMany({
-        where: { status: "planned", groupId: input.groupId },
-        select: { id: true },
-      });
-      if (plannedDays.length > 0) {
-        await tx.gameDayParticipant.createMany({
-          data: plannedDays.map((d) => ({ gameDayId: d.id, playerId: player.id })),
-          skipDuplicates: true,
-        });
-      }
+      await addToPlannedGameDays(tx, input.groupId, player.id);
       return { ...player, isAdmin: input.isAdmin };
     });
   } catch (e) {

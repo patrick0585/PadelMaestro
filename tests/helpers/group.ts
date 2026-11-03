@@ -1,16 +1,8 @@
 import { randomBytes } from "node:crypto";
 import type { GameDay, Group, Player, Prisma, Season } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { slugify } from "@/lib/group/slug";
 import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export async function createTestGroup(name = "Testgruppe"): Promise<Group> {
   const suffix = randomBytes(3).toString("hex");
