@@ -6,13 +6,30 @@ export const PLACEHOLDER: boolean = true;
 export default function Content() {
   return (
     <>
-      <p className="text-destructive font-semibold">PLATZHALTER – Text folgt vor dem Beta-Start.</p>
-      <h2>Anbieter</h2>
-      <p className="text-foreground-muted">Name und Anschrift des Betreibers.</p>
+      <p className="text-destructive font-semibold">
+        ENTWURF – noch nicht freigegeben. Vor dem Beta-Start prüfen und PLACEHOLDER auf false setzen.
+      </p>
+      <h2>Angaben gemäß § 5 DDG</h2>
+      <p>[VORNAME NACHNAME]</p>
+      <p>[STRASSE HAUSNUMMER], [PLZ ORT]</p>
       <h2>Kontakt</h2>
-      <p className="text-foreground-muted">E-Mail-Adresse für Anfragen.</p>
-      <h2>Verantwortlich</h2>
-      <p className="text-foreground-muted">Verantwortliche Person für den Inhalt.</p>
+      <p>
+        E-Mail: <a href="mailto:[E-MAIL-ADRESSE]">[E-MAIL-ADRESSE]</a>
+      </p>
+      <h2>Verantwortlich für den Inhalt</h2>
+      <p>[VORNAME NACHNAME], Anschrift wie oben.</p>
+      <h2>Hinweis</h2>
+      <p>
+        Diese App ist ein privates, nicht-kommerzielles Projekt. Padelmaestro unter{" "}
+        <a href="https://padelmaestro.de">padelmaestro.de</a> hilft privaten Padel-Spielgruppen, Spieltage zu
+        organisieren und Ergebnisse festzuhalten.
+      </p>
+      <h2>Haftung für Links</h2>
+      <p>
+        Für die Inhalte verlinkter externer Seiten sind ausschließlich deren Betreiber verantwortlich. Zum Zeitpunkt der
+        Verlinkung waren keine Rechtsverstöße erkennbar. Werden solche bekannt, wird der betreffende Link umgehend
+        entfernt.
+      </p>
     </>
   );
 }
