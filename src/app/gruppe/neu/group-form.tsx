@@ -48,8 +48,11 @@ export function GroupForm() {
           required
           minLength={2}
           maxLength={40}
+          aria-describedby="group-name-hint"
         />
-        <p className="mt-1 text-xs text-foreground-muted">2 bis 40 Zeichen</p>
+        <p id="group-name-hint" className="mt-1 text-xs text-foreground-muted">
+          2 bis 40 Zeichen
+        </p>
       </div>
       {status.kind === "error" && <InlineMessage kind="error">{status.message}</InlineMessage>}
       <Button type="submit" loading={status.kind === "submitting"} className="w-full">

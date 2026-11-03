@@ -41,4 +41,9 @@ describe("<GroupForm>", () => {
     );
     expect(assign).not.toHaveBeenCalled();
   });
+
+  it("group form links the length hint to the name input", () => {
+    render(<GroupForm />);
+    expect(screen.getByLabelText("Gruppenname")).toHaveAccessibleDescription("2 bis 40 Zeichen");
+  });
 });

@@ -8,7 +8,7 @@ export function NoGroupNotice({ canFound = false }: { canFound?: boolean }) {
       <h1 className="text-lg font-semibold text-foreground">Du bist in keiner Gruppe</h1>
       <p className="text-sm text-foreground-muted">
         {canFound
-          ? "Du hast einen Gründer-Link eingelöst."
+          ? "Du kannst jetzt deine eigene Gruppe gründen."
           : "Bitte einen Admin um Aufnahme in eine Gruppe."}
       </p>
       <Link
