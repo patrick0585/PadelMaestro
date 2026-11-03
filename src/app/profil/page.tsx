@@ -10,6 +10,7 @@ import { ChangePasswordForm } from "./change-password-form";
 import { AvatarUploader } from "./avatar-uploader";
 import { EmailForm } from "./email-form";
 import { EmailNotice } from "@/components/email-notice";
+import { AccountSection } from "./account-section";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,13 @@ export default async function ProfilePage() {
 
   const player = await prisma.player.findUnique({
     where: { id: session.user.id },
-    select: { avatarVersion: true, email: true, emailVerifiedAt: true, pendingEmail: true },
+    select: {
+      avatarVersion: true,
+      email: true,
+      emailVerifiedAt: true,
+      pendingEmail: true,
+      passwordHash: true,
+    },
   });
   const avatarVersion = player?.avatarVersion ?? 0;
   const email = player?.email ?? session.user.email;
@@ -96,6 +103,8 @@ export default async function ProfilePage() {
           <ChangePasswordForm />
         </CardBody>
       </Card>
+
+      <AccountSection hasPassword={player?.passwordHash != null} />
     </div>
   );
 }
