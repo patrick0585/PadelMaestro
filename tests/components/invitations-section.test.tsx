@@ -30,7 +30,10 @@ const invitation: SerializedOpenInvitation = {
 };
 
 describe("<InvitationsSection>", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (navigator as { clipboard?: unknown }).clipboard;
+  });
 
   it("renders the empty state and creates a link, then shows the url with a copy button", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -42,7 +45,9 @@ describe("<InvitationsSection>", () => {
     );
 
     render(<InvitationsSection initial={[]} />);
-    expect(screen.getByText("Noch keine offenen Links.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Noch keine offenen Links. Erstelle oben einen und teile ihn."),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Notiz (optional)"), {
       target: { value: "Dienstagsrunde" },
@@ -51,7 +56,10 @@ describe("<InvitationsSection>", () => {
 
     const linkInput = await screen.findByLabelText("Einladungslink");
     expect(linkInput).toHaveValue(url);
-    expect(screen.getByText("Der Link ist nur jetzt kopierbar.")).toBeInTheDocument();
+    expect(screen.getByText("Dein Link ist fertig")).toBeInTheDocument();
+    expect(
+      screen.getByText("Kopiere den Link jetzt, später wird er nicht mehr angezeigt."),
+    ).toBeInTheDocument();
     const [postUrl, init] = fn.mock.calls[0];
     expect(postUrl).toBe("/api/invitations");
     expect(init.method).toBe("POST");
@@ -60,11 +68,12 @@ describe("<InvitationsSection>", () => {
     await waitFor(() => expect(fn).toHaveBeenCalledTimes(2));
     expect(fn.mock.calls[1][0]).toBe("/api/invitations");
     expect(await screen.findByText("Dienstagsrunde")).toBeInTheDocument();
-    expect(screen.queryByText("Noch keine offenen Links.")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Noch keine offenen Links/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Kopieren" }));
     expect(writeText).toHaveBeenCalledWith(url);
     expect(await screen.findByRole("button", { name: "Kopiert" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Link kopiert");
   });
 
   it("revoke removes the row after a 204", async () => {
@@ -73,13 +82,36 @@ describe("<InvitationsSection>", () => {
     expect(screen.getByText("Dienstagsrunde")).toBeInTheDocument();
     expect(screen.getByText(/2 von 25 verwendet/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Widerrufen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Link Dienstagsrunde widerrufen" }));
+    expect(screen.getByText("Wirklich widerrufen?")).toBeInTheDocument();
+    expect(fn).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Ja, widerrufen" }));
 
-    expect(await screen.findByText("Noch keine offenen Links.")).toBeInTheDocument();
+    expect(await screen.findByText(/Noch keine offenen Links/)).toBeInTheDocument();
     expect(screen.queryByText("Dienstagsrunde")).not.toBeInTheDocument();
     expect(fn.mock.calls[0][0]).toBe("/api/invitations/inv1");
     expect(fn.mock.calls[0][1].method).toBe("DELETE");
     await waitFor(() => expect(fn).toHaveBeenCalledTimes(2));
+  });
+
+  it("cancel keeps the row without calling fetch", () => {
+    const fn = stubFetchSequence();
+    render(<InvitationsSection initial={[invitation]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Link Dienstagsrunde widerrufen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(screen.getByRole("button", { name: "Link Dienstagsrunde widerrufen" })).toBeInTheDocument();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("shows the select hint instead of the copy button without clipboard api", async () => {
+    stubFetchSequence(
+      { status: 201, body: { id: "inv1", url: "https://x/einladung/t", expiresAt: invitation.expiresAt } },
+      { status: 200, body: [] },
+    );
+    render(<InvitationsSection initial={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Einladungslink erstellen" }));
+    expect(await screen.findByText("Tippe auf den Link, um ihn zu markieren.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Kopieren" })).not.toBeInTheDocument();
   });
 
   it("expands the joined names of a link", () => {
