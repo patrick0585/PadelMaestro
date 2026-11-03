@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { rateLimitRequest } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
 import { rateLimitedResponse } from "@/lib/rate-limit-response";
 import { requestEmailChange } from "@/lib/account/email-verification";
 import { EmailTakenError, PlayerNotFoundError } from "@/lib/account/errors";
@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const rl = rateLimitRequest(req, `profile-email:${session.user.id}`, {
+  // Keyed by account only, so switching IPs does not reset the budget.
+  const rl = rateLimit(`profile-email:${session.user.id}`, {
     windowMs: 3_600_000,
     max: 5,
   });

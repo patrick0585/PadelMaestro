@@ -13,10 +13,10 @@ import { POST as resend } from "@/app/api/profile/email/resend/route";
 import { POST as confirm } from "@/app/api/email-verification/confirm/route";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
-function req(url: string, body?: unknown): Request {
+function req(url: string, body?: unknown, ip?: string): Request {
   return new Request(`http://test${url}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(ip && { "x-forwarded-for": ip }) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
@@ -111,6 +111,14 @@ describe("POST /api/profile/email", () => {
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(3500);
   });
+
+  it("limit holds per account across different client IPs", async () => {
+    const me = await member("alt@example.com");
+    loginAs(me.id);
+    const from = (ip: string) => changeEmail(req("/api/profile/email", { email: "alt@example.com" }, ip));
+    for (let i = 0; i < 5; i++) expect((await from(i % 2 ? "10.0.0.1" : "10.0.0.2")).status).toBe(204);
+    expect((await from("10.0.0.3")).status).toBe(429);
+  });
 });
 
 describe("POST /api/profile/email/resend", () => {
@@ -151,6 +159,14 @@ describe("POST /api/profile/email/resend", () => {
     const res = await call();
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).not.toBeNull();
+  });
+
+  it("limit holds per account across different client IPs", async () => {
+    const me = await member("alt@example.com");
+    loginAs(me.id);
+    const from = (ip: string) => resend(req("/api/profile/email/resend", undefined, ip));
+    for (let i = 0; i < 3; i++) expect((await from(i % 2 ? "10.0.0.1" : "10.0.0.2")).status).toBe(204);
+    expect((await from("10.0.0.3")).status).toBe(429);
   });
 });
 

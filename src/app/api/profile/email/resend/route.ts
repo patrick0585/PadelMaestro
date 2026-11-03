@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { rateLimitRequest } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
 import { rateLimitedResponse } from "@/lib/rate-limit-response";
 import { sendVerification } from "@/lib/account/email-verification";
 import { PlayerNotFoundError } from "@/lib/account/errors";
 import { MailSendError } from "@/lib/mail/send";
 
-export async function POST(req: Request) {
+export async function POST(_req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const rl = rateLimitRequest(req, `profile-email-resend:${session.user.id}`, {
+  // Keyed by account only, so switching IPs does not reset the budget.
+  const rl = rateLimit(`profile-email-resend:${session.user.id}`, {
     windowMs: 3_600_000,
     max: 3,
   });

@@ -14,12 +14,17 @@ describe("sendMail", () => {
     expect(send).toHaveBeenCalledWith(msg);
   });
 
-  it("wraps transport failures in MailSendError with cause", async () => {
+  it("wraps transport failures in MailSendError with cause, logging without the recipient", async () => {
     const boom = new Error("boom");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     setTransportForTests({ send: vi.fn().mockRejectedValue(boom) });
     const err = await sendMail(msg).catch((e) => e);
     expect(err).toBeInstanceOf(MailSendError);
     expect(err.cause).toBe(boom);
+    expect(err.message).not.toContain(msg.to);
+    expect(error).toHaveBeenCalledWith("[mail] send failed", { subject: "S" }, boom);
+    expect(JSON.stringify(error.mock.calls)).not.toContain(msg.to);
+    error.mockRestore();
   });
 });
 
@@ -32,20 +37,18 @@ describe("sendMail transport creation", () => {
     vi.doUnmock("@/lib/mail/resend-transport");
   });
 
-  it("warns once in production with console transport", async () => {
+  it("does not warn per send in production with console transport", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("MAIL_TRANSPORT", "console");
     vi.spyOn(console, "log").mockImplementation(() => {});
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await sendMail(msg);
     await sendMail(msg);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      "[mail] MAIL_TRANSPORT=console: mails are only logged",
-    );
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("wraps config errors in MailSendError and does not cache them", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("MAIL_TRANSPORT", "resend");
     vi.stubEnv("RESEND_API_KEY", "");
     const err = await sendMail(msg).catch((e) => e);
@@ -56,6 +59,7 @@ describe("sendMail transport creation", () => {
   });
 
   it("wraps an unknown MAIL_TRANSPORT", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("MAIL_TRANSPORT", "smtp");
     await expect(sendMail(msg)).rejects.toBeInstanceOf(MailSendError);
   });
