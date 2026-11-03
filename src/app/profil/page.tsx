@@ -68,7 +68,7 @@ export default async function ProfilePage() {
           <CardBody className="space-y-3">
             <h2 className="text-base font-semibold text-foreground">Gruppe</h2>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-foreground">{group.name}</span>
+              <span className="min-w-0 break-words font-medium text-foreground">{group.name}</span>
               <Badge variant="neutral">{ROLE_LABELS[ctx.role]}</Badge>
             </div>
             {ctx.role === "owner" ? (
@@ -77,7 +77,7 @@ export default async function ProfilePage() {
                 Admin-Bereich.
               </p>
             ) : (
-              <LeaveGroupButton />
+              <LeaveGroupButton groupName={group.name} />
             )}
           </CardBody>
         </Card>

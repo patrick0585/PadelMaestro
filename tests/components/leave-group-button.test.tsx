@@ -19,11 +19,15 @@ describe("<LeaveGroupButton>", () => {
 
   it("button confirms, posts, navigates to / on 204, and shows the three 409 texts", async () => {
     const fn = stubFetch(204);
-    render(<LeaveGroupButton />);
+    render(<LeaveGroupButton groupName="Die Smasher" />);
     fireEvent.click(screen.getByRole("button", { name: "Gruppe verlassen" }));
-    expect(screen.getByText("Wirklich verlassen?")).toBeTruthy();
+    const prompt = "Gruppe „Die Smasher“ wirklich verlassen? Du kommst nur mit neuer Einladung zurück.";
+    expect(screen.getByText(prompt)).toBeTruthy();
+    expect(screen.getByRole("group", { name: prompt })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Abbrechen" }));
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
-    expect(screen.queryByText("Wirklich verlassen?")).toBeNull();
+    expect(screen.queryByText(prompt)).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Gruppe verlassen" }));
     expect(fn).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Gruppe verlassen" }));
@@ -39,10 +43,27 @@ describe("<LeaveGroupButton>", () => {
     ["active_participation", "Du bist für einen Spieltag eingeplant. Sag erst ab."],
   ])("shows the %s text on 409", async (code, text) => {
     stubFetch(409, { error: code });
-    render(<LeaveGroupButton />);
+    render(<LeaveGroupButton groupName="Die Smasher" />);
     fireEvent.click(screen.getByRole("button", { name: "Gruppe verlassen" }));
     fireEvent.click(screen.getByRole("button", { name: "Ja, verlassen" }));
     expect((await screen.findByRole("alert")).textContent).toBe(text);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("shows the generic failure text on 500 and on a fetch error, and returns focus to the trigger", async () => {
+    stubFetch(500);
+    const { unmount } = render(<LeaveGroupButton groupName="Die Smasher" />);
+    fireEvent.click(screen.getByRole("button", { name: "Gruppe verlassen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, verlassen" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Verlassen fehlgeschlagen.");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Gruppe verlassen" }));
+    unmount();
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    render(<LeaveGroupButton groupName="Die Smasher" />);
+    fireEvent.click(screen.getByRole("button", { name: "Gruppe verlassen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, verlassen" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Verlassen fehlgeschlagen.");
     expect(assign).not.toHaveBeenCalled();
   });
 });
