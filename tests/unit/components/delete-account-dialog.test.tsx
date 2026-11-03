@@ -114,7 +114,9 @@ describe("DeleteAccountDialog", () => {
     const assign = vi.fn();
     const orig = window.location;
     Object.defineProperty(window, "location", { configurable: true, value: { assign } });
-    onTestFinished(() => Object.defineProperty(window, "location", { configurable: true, value: orig }));
+    onTestFinished(() => {
+      Object.defineProperty(window, "location", { configurable: true, value: orig });
+    });
     render(<DeleteAccountDialog open onClose={vi.fn()} />);
     submit();
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/login"));
