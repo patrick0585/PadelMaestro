@@ -93,3 +93,27 @@ describe("<ParticipantsRoster> admin joker actions", () => {
     );
   });
 });
+
+describe("<ParticipantsRoster> hydration", () => {
+  it("hydrates server HTML without attribute mismatches", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const { hydrateRoot } = await import("react-dom/client");
+    const { act } = await import("react");
+    const ui = <ParticipantsRoster gameDayId="gd-1" participants={[row()]} />;
+    const html = renderToString(ui);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    let messages: string[];
+    try {
+      const root = await act(async () => hydrateRoot(container, ui));
+      messages = errors.mock.calls.map((c) => String(c[0]));
+      act(() => root.unmount());
+    } finally {
+      errors.mockRestore();
+      container.remove();
+    }
+    expect(messages.filter((m) => /hydrat/i.test(m))).toEqual([]);
+  });
+});
