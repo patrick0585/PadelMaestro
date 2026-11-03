@@ -28,8 +28,8 @@ export function GroupSection({ name }: { name: string }) {
     }).catch(() => null);
     setLoading(false);
     if (res?.status === 200) {
-      const body = (await res.json()) as { name: string };
-      setValue(body.name);
+      const body = (await res.json().catch(() => null)) as { name: string } | null;
+      if (body) setValue(body.name);
       setMessage({ kind: "success", text: "Gespeichert." });
       router.refresh();
       return;
@@ -46,11 +46,15 @@ export function GroupSection({ name }: { name: string }) {
         <h2 className="text-base font-semibold text-foreground">Gruppe</h2>
         <form onSubmit={onRename} className="space-y-2">
           <Label htmlFor={inputId}>Gruppenname</Label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               id={inputId}
+              className="min-w-0 flex-1"
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setMessage(null);
+              }}
               minLength={2}
               maxLength={40}
               required
@@ -61,8 +65,16 @@ export function GroupSection({ name }: { name: string }) {
           </div>
           {message && <InlineMessage kind={message.kind}>{message.text}</InlineMessage>}
         </form>
-        <div className="border-t border-border pt-4">
-          <Button type="button" variant="destructive" onClick={() => setDeleteOpen(true)}>
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <p className="text-sm text-foreground-muted">
+            Löscht die Gruppe mit allen Spieltagen, Ergebnissen und Einladungen.
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full sm:w-auto sm:self-end"
+            onClick={() => setDeleteOpen(true)}
+          >
             Gruppe löschen
           </Button>
         </div>

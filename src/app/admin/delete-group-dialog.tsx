@@ -26,10 +26,12 @@ export function DeleteGroupDialog({
 }) {
   const nameId = useId();
   const passwordId = useId();
+  const hintId = useId();
   const [typedName, setTypedName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordInvalid, setPasswordInvalid] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export function DeleteGroupDialog({
       setTypedName("");
       setPassword("");
       setError(null);
+      setPasswordInvalid(false);
       abortRef.current?.abort();
       abortRef.current = null;
       setLoading(false);
@@ -44,6 +47,7 @@ export function DeleteGroupDialog({
   }, [open]);
 
   const canConfirm = typedName === name && password.length > 0;
+  const nameWrong = typedName !== "" && typedName !== name;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,14 +78,18 @@ export function DeleteGroupDialog({
     setLoading(false);
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     setError(errorText(res.status, body.error));
+    setPasswordInvalid(res.status === 403 && body.error === "wrong_password");
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="Gruppe löschen">
+    <Dialog open={open} onClose={loading ? () => {} : onClose} title="Gruppe löschen">
       <form onSubmit={onSubmit} className="space-y-3">
+        <p className="text-sm font-semibold text-foreground">
+          Das kann nicht rückgängig gemacht werden.
+        </p>
         <p className="text-sm text-foreground">
           Das löscht alle Spieltage, Ergebnisse und Einladungen von <strong>{name}</strong>. Die
-          Konten der Mitglieder bleiben.
+          Mitglieder verlieren den Zugriff auf diese Daten, ihre Konten bleiben.
         </p>
         <div className="space-y-1">
           <Label htmlFor={nameId}>Gruppenname zur Bestätigung</Label>
@@ -90,7 +98,17 @@ export function DeleteGroupDialog({
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
             autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-describedby={hintId}
           />
+          <p
+            id={hintId}
+            className={`text-xs ${nameWrong ? "text-destructive" : "text-foreground-muted"}`}
+          >
+            {nameWrong ? "Der Name stimmt noch nicht." : `Gib den Namen genau so ein: ${name}`}
+          </p>
         </div>
         <div className="space-y-1">
           <Label htmlFor={passwordId}>Dein Passwort</Label>
@@ -98,8 +116,12 @@ export function DeleteGroupDialog({
             id={passwordId}
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setPasswordInvalid(false);
+            }}
             autoComplete="current-password"
+            aria-invalid={passwordInvalid || undefined}
           />
         </div>
         {error && <InlineMessage kind="error">{error}</InlineMessage>}

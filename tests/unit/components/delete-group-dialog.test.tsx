@@ -30,9 +30,10 @@ describe("DeleteGroupDialog", () => {
         (_, el) =>
           el?.tagName === "P" &&
           el.textContent ===
-            "Das löscht alle Spieltage, Ergebnisse und Einladungen von Padelfreunde. Die Konten der Mitglieder bleiben.",
+            "Das löscht alle Spieltage, Ergebnisse und Einladungen von Padelfreunde. Die Mitglieder verlieren den Zugriff auf diese Daten, ihre Konten bleiben.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("Das kann nicht rückgängig gemacht werden.")).toBeInTheDocument();
     expect(screen.getByText("Padelfreunde", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abbrechen" })).toHaveFocus();
 
@@ -42,10 +43,15 @@ describe("DeleteGroupDialog", () => {
     expect(pwInput).toHaveAttribute("type", "password");
     expect(pwInput).toHaveAttribute("autocomplete", "current-password");
     expect(confirm).toBeDisabled();
+    expect(nameInput).toHaveAttribute("autocapitalize", "none");
+    expect(nameInput).toHaveAttribute("autocorrect", "off");
+    expect(nameInput).toHaveAttribute("spellcheck", "false");
+    expect(nameInput).toHaveAccessibleDescription("Gib den Namen genau so ein: Padelfreunde");
 
     fireEvent.change(nameInput, { target: { value: "padelfreunde" } });
     fireEvent.change(pwInput, { target: { value: "geheim" } });
     expect(confirm).toBeDisabled();
+    expect(nameInput).toHaveAccessibleDescription("Der Name stimmt noch nicht.");
 
     fireEvent.change(nameInput, { target: { value: "Padelfreunde" } });
     fireEvent.change(pwInput, { target: { value: "" } });
@@ -53,6 +59,7 @@ describe("DeleteGroupDialog", () => {
 
     fireEvent.change(pwInput, { target: { value: "geheim" } });
     expect(confirm).toBeEnabled();
+    expect(nameInput).toHaveAccessibleDescription("Gib den Namen genau so ein: Padelfreunde");
     fireEvent.click(confirm);
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
@@ -82,5 +89,28 @@ describe("DeleteGroupDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
     expect(await screen.findByText(text)).toHaveAttribute("role", "alert");
     expect(assign).not.toHaveBeenCalled();
+    const pw = screen.getByLabelText("Dein Passwort");
+    if (error === "wrong_password") {
+      expect(pw).toHaveAttribute("aria-invalid", "true");
+      fireEvent.change(pw, { target: { value: "y" } });
+    }
+    expect(pw).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("cannot be closed by Escape while the delete is in flight", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const onClose = vi.fn();
+    render(<DeleteGroupDialog open onClose={onClose} name="Padelfreunde" />);
+    fireEvent.change(screen.getByLabelText("Gruppenname zur Bestätigung"), {
+      target: { value: "Padelfreunde" },
+    });
+    fireEvent.change(screen.getByLabelText("Dein Passwort"), { target: { value: "x" } });
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Abbrechen" })).toBeDisabled());
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByTestId("dialog-backdrop"));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
