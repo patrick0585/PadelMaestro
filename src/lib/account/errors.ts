@@ -13,3 +13,10 @@ export class InvalidTokenError extends Error {
     this.name = "InvalidTokenError";
   }
 }
+
+export class WrongPasswordError extends Error {
+  constructor() {
+    super("wrong password");
+    this.name = "WrongPasswordError";
+  }
+}

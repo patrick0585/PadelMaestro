@@ -96,6 +96,8 @@ An installation can host several groups; every player is a member of at least on
 
 Members join through invitation links created on the admin page (`/admin`, section "Einladen"). New groups start from a founder link created with `pnpm invite:founder`. With `PUBLIC_SIGNUP=true`, any logged-in player can found a group without a founder link. The flag is off by default; only the exact value `true` enables it.
 
+**Account.** Every person can download their data as JSON from `/profil` (`GET /api/profile/export`) and delete their account there (password required, refused while they own a group). Deletion anonymises the player ("Gelöschter Spieler"); results and finished game days stay, and the e-mail address becomes free again. Accounts without a password are removed by an admin as before.
+
 "Remove player" ends the membership; match history, rankings and jokers stay intact. `session.user.isAdmin` is derived from the role (owner or admin), not stored on the player.
 
 ## Common tasks

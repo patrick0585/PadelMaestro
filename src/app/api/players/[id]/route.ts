@@ -12,6 +12,7 @@ import {
   SharedAccountError,
 } from "@/lib/players/errors";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
+import { isPlaceholderEmail } from "@/lib/auth/email";
 
 const PatchSchema = z
   .object({
@@ -21,7 +22,11 @@ const PatchSchema = z
       .refine(isValidUsername, { message: "invalid username" })
       .optional(),
     name: z.string().min(1).max(64).optional(),
-    email: z.string().email().optional(),
+    email: z
+      .string()
+      .email()
+      .refine((e) => !isPlaceholderEmail(e))
+      .optional(),
     isAdmin: z.boolean().optional(),
     role: z.enum(["member", "admin"]).optional(),
   })

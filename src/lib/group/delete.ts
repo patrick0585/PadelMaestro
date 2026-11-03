@@ -1,19 +1,15 @@
 import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/auth/group-context";
 import { verifyPassword } from "@/lib/auth/hash";
+import { WrongPasswordError } from "@/lib/account/errors";
 import { findGroupMembership } from "./active-membership";
+
+export { WrongPasswordError } from "@/lib/account/errors";
 
 export class NameMismatchError extends Error {
   constructor() {
     super("group name does not match");
     this.name = "NameMismatchError";
-  }
-}
-
-export class WrongPasswordError extends Error {
-  constructor() {
-    super("wrong password");
-    this.name = "WrongPasswordError";
   }
 }
 

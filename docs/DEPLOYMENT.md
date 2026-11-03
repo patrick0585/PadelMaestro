@@ -208,6 +208,8 @@ The script prints a one-time password. **Copy it now** — it is only shown once
 
 The first admin becomes the owner of the group "Padelmaestro"; any admin bootstrapped later is a plain admin. To hand the owner role to someone else, run `pnpm tenancy:set-owner <EMAIL>` the same way (the previous owner becomes admin).
 
+Accounts delete themselves from `/profil` (anonymised in place); admins still remove players from a group, which is the only way for accounts without a password.
+
 With more than one group, pass `--group <slug>` to `bootstrap:admin`, `tenancy:set-owner`, `seed:*` and `import:historical` (the slug is shown on `/admin`, or list them with `sudo -u postgres psql padel_tracker -c 'SELECT name, slug FROM "Group";'`; `pnpm invite:founder --list` shows founder links only). Without the flag the scripts abort once a second group exists. `import:statistik` deletes all players, seasons, game days, memberships and invitations (groups stay) and refuses to run with more than one group.
 
 Every multi-tenancy migration (PR 1, 2, 4 and 6; PR 3 and 5 had no migration) was rehearsed against a production dump; see `docs/superpowers/plans/2026-11-02-tenancy-pr*-rehearsal.md` for the protocols. Migrations that drop columns (PR 6) need the service stopped during the deploy, see the PR 6 rehearsal doc. The public-use migrations (invitations, active group) were rehearsed the same way; see `docs/superpowers/plans/2026-11-03-public-use-pr*-rehearsal.md`. They only add tables or nullable columns and need no downtime.

@@ -81,6 +81,16 @@ describe("POST /api/players", () => {
     expect(res.status).toBe(403);
   });
 
+  it("returns 400 for a placeholder address", async () => {
+    const { session } = await setupGroupWithAdmin();
+    authMock.mockResolvedValue(session);
+    const res = await POST(
+      postReq({ email: "x@anonym.invalid", name: "X", password: "hunter22extra" }),
+    );
+    expect(res.status).toBe(400);
+    expect(await prisma.player.count({ where: { email: "x@anonym.invalid" } })).toBe(0);
+  });
+
   it("returns 400 for short password", async () => {
     const { session } = await setupGroupWithAdmin();
     authMock.mockResolvedValue(session);

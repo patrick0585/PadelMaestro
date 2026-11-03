@@ -9,9 +9,10 @@ import {
   DuplicateUsernameError,
 } from "@/lib/players/create";
 import { normaliseUsername, isValidUsername } from "@/lib/auth/username";
+import { isPlaceholderEmail } from "@/lib/auth/email";
 
 const CreateSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().refine((e) => !isPlaceholderEmail(e)),
   name: z.string().min(1),
   password: z.string().min(8),
   isAdmin: z.boolean().optional(),
