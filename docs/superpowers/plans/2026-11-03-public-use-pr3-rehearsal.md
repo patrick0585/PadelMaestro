@@ -1,7 +1,7 @@
 # Migrationsprobe PR 3 (Öffentliche Nutzung: Gruppen)
 
 Datum: 2026-11-03
-Dump: Produktions-Backup (pg_dump, custom format, 119 KB; `db-2026-11-03-pre-public-2.dump`, Stand **vor** dem PR-2-Deploy), eingespielt in eine Wegwerf-Postgres-16-DB (Docker, Port 5439).
+Dump: Produktions-Backup (pg_dump, custom format, 119 KB; `/root/backups/2026-11-03-pre-public-2/db.dump`, Stand **vor** dem PR-2-Deploy), eingespielt in eine Wegwerf-Postgres-16-DB (Docker, Port 5439).
 
 Der Dump enthält die PR-2-Migration `20261104100000_invitations` noch nicht, Produktion hat sie inzwischen. `migrate deploy` wendet deshalb zuerst diese und dann die neue Migration `20261105100000_active_group` an. Für PR 3 zählt nur die letzte; die erste ist in der PR-2-Probe geprüft.
 
@@ -96,8 +96,9 @@ Keine Downtime nötig.
    - `.../profil` ohne Login = 307 auf die Login-Seite.
    - Nach Login zeigt die Navigation „Padelmaestro“ als Gruppenname (eine Mitgliedschaft: nur der Name, kein Wechsler).
    - `/admin` zeigt für den Besitzer unten den Abschnitt „Gruppe“; der Bearbeiten-Dialog hat die Rollen-Auswahl.
+   - Nach Login zeigt `/profil` den Abschnitt „Gruppe“.
    - `tail -n 50 /srv/padel/logs/app.err.log` seit dem Neustart ohne `[startup]`-Zeile.
-6. Prüf-SQL: Zeilenzahlen wie in Schritt 1 unverändert; `SELECT count(*), count("activeGroupId") FROM "Player";` zeigt 0 gesetzte Werte, solange niemand die Gruppe gewechselt hat.
+6. Prüf-SQL: Zeilenzahlen wie in Schritt 1 (inkl. Invitation und InvitationUse) unverändert; `SELECT count(*), count("activeGroupId") FROM "Player";` zeigt 0 gesetzte Werte, solange niemand die Gruppe gewechselt hat.
 
 ## Rollback
 
