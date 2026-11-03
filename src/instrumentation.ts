@@ -1,13 +1,12 @@
-import { resolveTransportName } from "@/lib/mail/transport";
-
-// Fails the start on a broken mail config instead of on the first send.
+// A throw here only makes Next answer every request with 500 while the
+// process keeps running, so a broken mail config exits explicitly.
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const name = resolveTransportName(process.env);
-  if (name === "resend" && !process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY is required for MAIL_TRANSPORT=resend");
-  }
-  if (name === "console" && process.env.NODE_ENV === "production") {
-    console.warn("[mail] MAIL_TRANSPORT=console: mails are only logged");
+  const { checkMailConfig } = await import("@/lib/mail/startup-check");
+  try {
+    checkMailConfig(process.env);
+  } catch (e) {
+    console.error("[startup]", e instanceof Error ? e.message : e);
+    process.exit(1);
   }
 }
