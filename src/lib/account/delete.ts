@@ -64,6 +64,9 @@ async function anonymise(playerId: string, now: Date): Promise<void> {
       orderBy: { group: { name: "asc" } },
     });
     if (lateOwned.length > 0) throw new OwnerOfGroupError(lateOwned.map((m) => m.group));
+    await tx.jokerUse.deleteMany({
+      where: { playerId, gameDay: { status: "planned" } },
+    });
     await tx.gameDayParticipant.deleteMany({
       where: { playerId, gameDay: { status: "planned" } },
     });

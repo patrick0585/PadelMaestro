@@ -116,6 +116,24 @@ describe("deleteOwnAccount", () => {
     await prisma.gameDayParticipant.create({
       data: { gameDayId: planned.id, playerId: a.id, attendance: "confirmed" },
     });
+    const plannedJokerDay = await createTestGameDay(group.id, season.id, {
+      status: "planned",
+      date: new Date("2026-12-08"),
+    });
+    await prisma.gameDayParticipant.create({
+      data: { gameDayId: plannedJokerDay.id, playerId: p.id, attendance: "joker" },
+    });
+    for (const day of [plannedJokerDay, finished]) {
+      await prisma.jokerUse.create({
+        data: {
+          playerId: p.id,
+          seasonId: season.id,
+          gameDayId: day.id,
+          ppgAtUse: "1.500",
+          pointsCredited: "22.50",
+        },
+      });
+    }
     for (const day of [running, finished]) {
       await prisma.match.create({
         data: {
@@ -209,6 +227,9 @@ describe("deleteOwnAccount", () => {
     expect(
       await prisma.match.count({ where: { team1PlayerAId: p.id, gameDayId: { in: [running.id, finished.id] } } }),
     ).toBe(2);
+
+    const jokers = await prisma.jokerUse.findMany({ where: { playerId: p.id } });
+    expect(jokers.map((j) => j.gameDayId)).toEqual([finished.id]);
 
     expect(await prisma.emailToken.count({ where: { playerId: p.id } })).toBe(0);
     expect(await prisma.invitationUse.count({ where: { playerId: p.id } })).toBe(1);
