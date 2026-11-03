@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { LegalFooter } from "@/components/legal-footer";
 import { PadelLogo } from "@/components/padel-logo";
 
 export function LegalPage({
@@ -25,16 +25,11 @@ export function LegalPage({
           <h1 className="text-2xl font-extrabold text-foreground">{title}</h1>
           <p className="text-sm text-foreground-muted">Stand: {date}</p>
         </div>
-        <div className="space-y-4 rounded-2xl border border-border bg-surface p-6 text-sm text-foreground [&_h2]:mt-6 [&_h2]:text-base [&_h2]:font-semibold">
+        <div className="space-y-4 rounded-2xl border border-border bg-surface p-6 text-sm leading-relaxed text-foreground [&_h2]:mt-8 [&_h2]:text-base [&_h2]:font-semibold [&_h2:first-child]:mt-0 [&_h3]:mt-4 [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4">
           {children}
         </div>
-        <Link
-          href="/login"
-          className="mt-4 flex min-h-11 items-center justify-center rounded-xl text-sm text-foreground-muted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          Zur Anmeldung
-        </Link>
       </article>
+      <LegalFooter showLogin />
     </div>
   );
 }

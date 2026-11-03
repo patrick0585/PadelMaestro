@@ -11,7 +11,7 @@ export default function Content() {
       <h2>Hosting</h2>
       <p className="text-foreground-muted">Betrieb auf einem IONOS-Server in Deutschland.</p>
       <h2>Mailversand</h2>
-      <p className="text-foreground-muted">Resend als Auftragsverarbeiter für Transaktionsmails (Bestätigung, Passwort zurücksetzen), mit EU-Region.</p>
+      <p className="text-foreground-muted">Mailversand über Resend (EU-Region, falls gewählt; Drittlandtransfer wird geprüft) für Transaktionsmails (Bestätigung, Passwort zurücksetzen, Änderungshinweis).</p>
       <h2>Gespeicherte Daten</h2>
       <p className="text-foreground-muted">Name, E-Mail-Adresse, Passwort-Hash, Spielergebnisse, Gruppenmitgliedschaften und Protokolleinträge.</p>
       <h2>Cookies</h2>

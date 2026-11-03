@@ -14,6 +14,7 @@ describe("legal content", () => {
     }
   });
 
+  // Merge-Sperre: bleibt absichtlich rot, bis die echten Texte eingesetzt sind (Task 3).
   it("no legal module is still a placeholder", () => {
     expect(modules.every((m) => m.PLACEHOLDER === false)).toBe(true);
   });

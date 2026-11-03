@@ -79,6 +79,7 @@ describe("ProfilePage ohne Gruppe", () => {
     authMock.mockResolvedValue(groupless);
     render(await ProfilePage());
     expect(screen.getByText("Passwort ändern")).toBeInTheDocument();
+    expect(screen.getAllByRole("navigation", { name: "Rechtliches" })).toHaveLength(1);
     expect(screen.queryByRole("heading", { name: "Gruppe" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Gruppe verlassen" })).toBeNull();
   });

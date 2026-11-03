@@ -6,6 +6,7 @@ import { findOwnInvitationUse, previewInvitation } from "@/lib/invitations/looku
 import { findGroupMembership } from "@/lib/group/active-membership";
 import type { InvitationInvalidReason } from "@/lib/invitations/errors";
 import { PadelLogo } from "@/components/padel-logo";
+import { LegalFooter } from "@/components/legal-footer";
 import { SignupForm } from "./signup-form";
 import { JoinButton } from "./join-button";
 
@@ -30,6 +31,7 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
           <h1 className="break-words text-2xl font-extrabold text-foreground">{title}</h1>
         </div>
         {children}
+        <LegalFooter />
       </div>
     </div>
   );

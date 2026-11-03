@@ -1,5 +1,6 @@
 import { LoginForm } from "./login-form";
 import { PadelLogo } from "@/components/padel-logo";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default async function LoginPage({
   searchParams,
@@ -16,6 +17,7 @@ export default async function LoginPage({
           <p className="mt-1 text-sm text-foreground-muted">Bitte melde dich an.</p>
         </div>
         <LoginForm next={typeof next === "string" ? next : undefined} />
+        <LegalFooter />
       </div>
     </div>
   );

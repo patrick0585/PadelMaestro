@@ -1,5 +1,6 @@
 import { ResetForm } from "./reset-form";
 import { PadelLogo } from "@/components/padel-logo";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default async function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -11,6 +12,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl font-extrabold text-foreground">Neues Passwort</h1>
         </div>
         <ResetForm token={token} />
+        <LegalFooter />
       </div>
     </div>
   );

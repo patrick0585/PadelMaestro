@@ -1,5 +1,6 @@
 import { RequestForm } from "./request-form";
 import { PadelLogo } from "@/components/padel-logo";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default function ForgotPasswordPage() {
   return (
@@ -10,6 +11,7 @@ export default function ForgotPasswordPage() {
           <h1 className="text-2xl font-extrabold text-foreground">Passwort vergessen</h1>
         </div>
         <RequestForm />
+        <LegalFooter />
       </div>
     </div>
   );

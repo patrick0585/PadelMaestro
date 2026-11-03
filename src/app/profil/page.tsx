@@ -11,6 +11,7 @@ import { AvatarUploader } from "./avatar-uploader";
 import { EmailForm } from "./email-form";
 import { EmailNotice } from "@/components/email-notice";
 import { AccountSection } from "./account-section";
+import { LegalFooter } from "@/components/legal-footer";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,8 @@ export default async function ProfilePage() {
       </Card>
 
       <AccountSection hasPassword={player?.passwordHash != null} />
+
+      <LegalFooter />
     </div>
   );
 }

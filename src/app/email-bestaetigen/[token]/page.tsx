@@ -1,5 +1,6 @@
 import { ConfirmButton } from "./confirm-button";
 import { PadelLogo } from "@/components/padel-logo";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default async function ConfirmEmailPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -11,6 +12,7 @@ export default async function ConfirmEmailPage({ params }: { params: Promise<{ t
           <h1 className="text-2xl font-extrabold text-foreground">E-Mail-Adresse bestätigen</h1>
         </div>
         <ConfirmButton token={token} />
+        <LegalFooter />
       </div>
     </div>
   );
