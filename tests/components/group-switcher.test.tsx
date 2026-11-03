@@ -62,6 +62,14 @@ describe("<GroupSwitcher>", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
+  it("keeps the negative margin off the trigger so the name is not cut short", () => {
+    render(<GroupSwitcher groups={groups} activeGroupId="g1" />);
+    const trigger = screen.getByRole("button", { name: /Gruppe wechseln/ });
+    expect(trigger).not.toHaveClass("-ml-2");
+    expect(trigger).not.toHaveClass("max-w-full");
+    expect(trigger.parentElement).toHaveClass("-ml-2");
+  });
+
   it("falls back to the first group's name when the active id is unknown", () => {
     render(<GroupSwitcher groups={groups} activeGroupId={null} />);
     expect(screen.getByRole("button", { name: /Gruppe wechseln/ })).toHaveTextContent(

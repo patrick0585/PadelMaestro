@@ -107,7 +107,7 @@ export function GroupSwitcher({
   return (
     <div
       ref={rootRef}
-      className="relative min-w-0"
+      className="relative -ml-2 min-w-0"
       onKeyDown={(e) => {
         if (open && e.key === "Escape") closeMenu(true);
       }}
@@ -132,7 +132,7 @@ export function GroupSwitcher({
         aria-busy={pending}
         disabled={pending}
         onClick={() => (open ? closeMenu(true) : openMenu())}
-        className="-ml-2 flex min-h-11 max-w-full items-center gap-1 rounded-xl px-2 text-sm font-semibold text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
+        className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
       >
         <span className="sr-only">Gruppe wechseln:</span>{" "}
         <span className={NAME_WIDTH} title={active.name}>
