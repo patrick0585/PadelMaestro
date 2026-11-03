@@ -22,10 +22,19 @@ describe("TransferOwnerDialog", () => {
 
     render(<TransferOwnerDialog open onClose={onClose} player={player} />);
     expect(screen.getByRole("heading", { name: "Besitz übertragen" })).toBeInTheDocument();
-    expect(screen.getByText("Martin wird Besitzer der Gruppe. Du wirst Admin.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === "P" &&
+          el.textContent ===
+            "Martin wird Besitzer der Gruppe. Du wirst Admin. Das kannst nur Martin wieder rückgängig machen.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Martin", { selector: "strong" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Abbrechen" })).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Besitz übertragen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Besitz an Martin übertragen" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -43,10 +52,10 @@ describe("TransferOwnerDialog", () => {
     );
     const onClose = vi.fn();
     render(<TransferOwnerDialog open onClose={onClose} player={player} />);
-    fireEvent.click(screen.getByRole("button", { name: "Besitz übertragen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Besitz an Martin übertragen" }));
     expect(
       await screen.findByText("Du kannst den Besitz nicht an dich selbst übertragen."),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("role", "alert");
     expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -60,7 +60,7 @@ export function PlayersSection({
                   {p.username && <span className="ml-2">· @{p.username}</span>}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {p.role === "owner" ? (
                   <Badge variant="primary">Besitzer</Badge>
                 ) : (
@@ -94,7 +94,8 @@ export function PlayersSection({
                 {viewerRole === "owner" && p.role !== "owner" && (
                   <Button
                     variant="ghost"
-                    aria-label={`Besitz an ${p.name} übertragen`}
+                    size="sm"
+                    aria-label={`Besitz übertragen an ${p.name}`}
                     onClick={() => setTransferFor(p)}
                   >
                     Besitz übertragen

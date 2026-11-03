@@ -53,13 +53,13 @@ describe("PlayersSection", () => {
 
   it("zeigt 'Besitz übertragen' nur dem Besitzer und nicht in seiner eigenen Zeile", () => {
     const { unmount } = render(<PlayersSection players={players} viewerRole="owner" />);
-    expect(screen.getByLabelText("Besitz an Armin übertragen")).toBeInTheDocument();
-    expect(screen.getByLabelText("Besitz an Martin übertragen")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Besitz an Olga übertragen")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Besitz übertragen an Armin")).toBeInTheDocument();
+    expect(screen.getByLabelText("Besitz übertragen an Martin")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Besitz übertragen an Olga")).not.toBeInTheDocument();
     unmount();
 
     render(<PlayersSection players={players} viewerRole="admin" />);
     expect(screen.queryByText("Besitz übertragen")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^Besitz an/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Besitz übertragen/)).not.toBeInTheDocument();
   });
 });

@@ -69,15 +69,16 @@ export function TransferOwnerDialog({
     <Dialog open={open} onClose={onClose} title="Besitz übertragen">
       <div className="space-y-3">
         <p className="text-sm text-foreground">
-          {player?.name} wird Besitzer der Gruppe. Du wirst Admin.
+          <strong>{player?.name}</strong> wird Besitzer der Gruppe. Du wirst Admin. Das kannst nur{" "}
+          <strong>{player?.name}</strong> wieder rückgängig machen.
         </p>
         {error && <InlineMessage kind="error">{error}</InlineMessage>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={loading} autoFocus>
             Abbrechen
           </Button>
-          <Button type="button" variant="primary" onClick={onConfirm} loading={loading}>
-            Besitz übertragen
+          <Button type="button" variant="destructive" onClick={onConfirm} loading={loading}>
+            Besitz an {player?.name} übertragen
           </Button>
         </div>
       </div>
