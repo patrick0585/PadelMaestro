@@ -7,7 +7,10 @@ import { setTransportForTests } from "@/lib/mail/send";
 import { rateLimitResetForTests } from "@/lib/rate-limit";
 import { verifyPassword } from "@/lib/auth/hash";
 import { POST as requestReset } from "@/app/api/password-reset/request/route";
+import { resetRequestTiming } from "@/lib/account/reset-timing";
 import { POST as confirmReset } from "@/app/api/password-reset/confirm/route";
+
+const DEFAULT_MIN_RESPONSE_MS = resetRequestTiming.minResponseMs;
 
 function req(url: string, body: unknown, ip = "1.1.1.1"): Request {
   return new Request(`http://test${url}`, {
@@ -33,6 +36,7 @@ beforeEach(async () => {
   clearMemoryOutbox();
   rateLimitResetForTests();
   setTransportForTests(null);
+  resetRequestTiming.minResponseMs = 0;
 });
 
 afterEach(() => setTransportForTests(null));
@@ -53,6 +57,26 @@ describe("POST /api/password-reset/request", () => {
     expect((await call({ email: "nobody@example.com" })).status).toBe(204);
     expect((await call({ email: "offen@example.com" })).status).toBe(204);
     expect(memoryOutbox).toHaveLength(0);
+  });
+
+  it("pads 204 and 503 responses to the minimum duration", async () => {
+    resetRequestTiming.minResponseMs = 250;
+    await member("maxi@example.com");
+    const timed = async (email: string) => {
+      const start = performance.now();
+      const res = await call({ email });
+      return { status: res.status, ms: performance.now() - start };
+    };
+    const unknown = await timed("nobody@example.com");
+    const known = await timed("maxi@example.com");
+    setTransportForTests({ send: () => Promise.reject(new Error("down")) });
+    const failed = await timed("maxi@example.com");
+    expect([unknown.status, known.status, failed.status]).toEqual([204, 204, 503]);
+    for (const r of [unknown, known, failed]) expect(r.ms).toBeGreaterThanOrEqual(240);
+  });
+
+  it("defaults to a one-second floor", () => {
+    expect(DEFAULT_MIN_RESPONSE_MS).toBe(1000);
   });
 
   it("400 invalid on bad input", async () => {

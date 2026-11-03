@@ -5,6 +5,7 @@ import { rateLimitedResponse } from "@/lib/rate-limit-response";
 import { requestPasswordReset } from "@/lib/account/password-reset";
 import { emailField } from "@/lib/account/schemas";
 import { MailSendError } from "@/lib/mail/send";
+import { delay, resetRequestTiming } from "@/lib/account/reset-timing";
 
 const Schema = z.object({ email: emailField });
 
@@ -26,8 +27,16 @@ export async function POST(req: Request) {
   });
   if (!emailLimit.allowed) return rateLimitedResponse(emailLimit);
 
+  const [res] = await Promise.all([
+    handle(parsed.data.email),
+    delay(resetRequestTiming.minResponseMs),
+  ]);
+  return res;
+}
+
+async function handle(email: string): Promise<Response> {
   try {
-    await requestPasswordReset(parsed.data.email);
+    await requestPasswordReset(email);
   } catch (e) {
     if (e instanceof MailSendError) {
       return NextResponse.json({ error: "mail_failed" }, { status: 503 });
