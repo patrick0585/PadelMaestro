@@ -56,7 +56,7 @@ describe("tokens after an address change", () => {
     expect(open).toBe(0);
   });
 
-  it("confirmed change rejects an old reset token, revokes all tokens and bumps sessionVersion", async () => {
+  it("confirmed change rejects an old reset token, revokes all tokens and keeps sessionVersion", async () => {
     const { me } = await setup();
     await requestPasswordReset("alt@example.com");
     const reset = tokenFromOutbox(RESET);
@@ -68,7 +68,7 @@ describe("tokens after an address change", () => {
     ).rejects.toBeInstanceOf(InvalidTokenError);
     const stored = await prisma.player.findUniqueOrThrow({ where: { id: me.id } });
     expect(stored.email).toBe("neu@example.com");
-    expect(stored.sessionVersion).toBe(me.sessionVersion + 1);
+    expect(stored.sessionVersion).toBe(me.sessionVersion);
     expect(await prisma.emailToken.count({ where: { playerId: me.id, usedAt: null } })).toBe(0);
   });
 

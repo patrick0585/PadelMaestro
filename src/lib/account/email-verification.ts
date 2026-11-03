@@ -148,12 +148,7 @@ export async function confirmEmailToken(
       const changed = row.email !== row.player.email;
       await tx.player.update({
         where: { id: row.playerId },
-        data: {
-          email: row.email,
-          pendingEmail: null,
-          emailVerifiedAt: now,
-          ...(changed && { sessionVersion: { increment: 1 } }),
-        },
+        data: { email: row.email, pendingEmail: null, emailVerifiedAt: now },
       });
       if (changed) await revokeOpenTokens(tx, row.playerId, undefined, now);
 

@@ -41,7 +41,7 @@ Der Dump enthält `20261102180000_drop_player_is_admin` noch nicht (`Player.isAd
 | Tabelle `EmailToken` (`to_regclass`) | fehlt | vorhanden | vorhanden, 0 Zeilen |
 | Player mit `emailVerifiedAt IS NOT NULL` | – | 0 | 0 |
 | Player mit `@padel.local`-Adresse | 6 | – | 6 (alle sehen den Platzhalter-Hinweis) |
-| Spalte `sessionVersion` an `Player` (2. Lauf) | fehlt | `integer NOT NULL DEFAULT 0` | vorhanden, alle 6 Player auf 0 |
+| Spalte `sessionVersion` an `Player` (2. Lauf) | fehlt | `integer NOT NULL DEFAULT 0` | A: vorhanden, alle 6 Player auf 0; B: — (nicht wiederholt) |
 
 Das `UPDATE … lower(email)` der Migration ist auf diesem Stand also wirkungslos. `prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code` meldet in beiden Varianten und im zweiten Lauf A „No difference detected.“ (Exit 0), also kein Drift.
 
