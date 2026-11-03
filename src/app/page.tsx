@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
 import { DayPpgStrip } from "@/components/day-ppg-strip";
+import { EmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,8 @@ export default async function DashboardPage() {
           <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
         </div>
       </header>
+
+      <EmailNotice playerId={session.user.id} />
 
       {heroState && <DashboardHero state={heroState} />}
 
