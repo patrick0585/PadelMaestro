@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { ResendVerificationButton } from "@/components/resend-verification-button";
+import { isPlaceholderEmail } from "@/lib/auth/email";
 
 type Status =
   | { kind: "idle" }
@@ -73,7 +74,7 @@ export function EmailForm({
       {pendingEmail && (
         <p className="text-sm break-all text-foreground-muted">Bestätigung ausstehend für {pendingEmail}</p>
       )}
-      {!emailVerified && <ResendVerificationButton />}
+      {!emailVerified && (pendingEmail || !isPlaceholderEmail(email)) && <ResendVerificationButton />}
       <form onSubmit={onSubmit} className="space-y-3 border-t border-border pt-3">
         <div>
           <Label htmlFor="new-email">Neue E-Mail-Adresse</Label>

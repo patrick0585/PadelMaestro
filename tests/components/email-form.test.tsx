@@ -53,4 +53,14 @@ describe("<EmailForm>", () => {
     expect(screen.getByText("Bestätigung ausstehend für n@x.de")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Mail erneut senden" })).toBeTruthy();
   });
+
+  it("no resend for an unverified placeholder address, but resend once a real address is pending", () => {
+    const { unmount } = render(
+      <EmailForm email="maxi@padel.local" pendingEmail={null} emailVerified={false} />,
+    );
+    expect(screen.queryByRole("button", { name: "Mail erneut senden" })).toBeNull();
+    unmount();
+    render(<EmailForm email="maxi@padel.local" pendingEmail="maxi@x.de" emailVerified={false} />);
+    expect(screen.getByRole("button", { name: "Mail erneut senden" })).toBeTruthy();
+  });
 });

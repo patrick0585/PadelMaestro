@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { normaliseEmail } from "@/lib/auth/email";
+import { isPlaceholderEmail, normaliseEmail } from "@/lib/auth/email";
 import { generateToken, hashToken, tokenExpiry } from "@/lib/auth/token";
 import { appUrl } from "@/lib/mail/app-url";
 import { sendMail } from "@/lib/mail/send";
@@ -83,6 +83,7 @@ export async function requestEmailChange(i: {
 
 export async function sendVerification(i: { playerId: string }): Promise<void> {
   const player = await loadPlayer(i.playerId);
+  if (isPlaceholderEmail(player.pendingEmail ?? player.email)) return;
   if (player.pendingEmail) {
     return issueVerification(player, player.pendingEmail, player.pendingEmail);
   }

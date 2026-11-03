@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { isPlaceholderEmail } from "@/lib/auth/email";
 import { EmailNoticeClient } from "./email-notice-client";
 
 export async function EmailNotice({
@@ -13,7 +14,7 @@ export async function EmailNotice({
     select: { email: true, emailVerifiedAt: true, pendingEmail: true },
   });
   if (!player || player.emailVerifiedAt) return null;
-  const variant = player.email.endsWith("@padel.local") ? "placeholder" : "unverified";
+  const variant = isPlaceholderEmail(player.email) ? "placeholder" : "unverified";
   return (
     <EmailNoticeClient
       variant={variant}

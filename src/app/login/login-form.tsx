@@ -21,6 +21,11 @@ export function LoginForm() {
       setError("Falsche Anmeldedaten");
       return;
     }
+    try {
+      window.sessionStorage.removeItem("email-notice-dismissed");
+    } catch {
+      // storage blocked: the notice just stays dismissed
+    }
     window.location.assign("/");
   }
 

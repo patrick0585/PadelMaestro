@@ -251,6 +251,13 @@ describe("email verification", () => {
     expect(await prisma.emailToken.count({ where: { playerId: done.id } })).toBe(0);
   });
 
+  it("sendVerification is a no-op for a placeholder address", async () => {
+    const me = await member("maxi@padel.local");
+    await sendVerification({ playerId: me.id });
+    expect(memoryOutbox).toHaveLength(0);
+    expect(await prisma.emailToken.count({ where: { playerId: me.id } })).toBe(0);
+  });
+
   it("sendVerification resends to pendingEmail and invalidates the previous token", async () => {
     const me = await member("alt@example.com", new Date());
     await requestEmailChange({ playerId: me.id, newEmail: "neu@example.com" });
