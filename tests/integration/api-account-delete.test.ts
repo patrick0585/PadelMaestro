@@ -75,4 +75,19 @@ describe("DELETE /api/profile", () => {
     }
     expect((await DELETE(req({ password: "geheim123" }))).status).toBe(429);
   });
+
+  it("409 anonymisation_collision when the anonymised address is taken", async () => {
+    const g = await createTestGroup("A");
+    const p = await createMember(g.id, {
+      name: "M",
+      email: "m@x.de",
+      passwordHash: await hashPassword("geheim123"),
+    });
+    await prisma.player.create({ data: { name: "B", email: `geloescht-${p.id}@anonym.invalid` } });
+    authMock.mockResolvedValue({ user: { id: p.id } });
+    const res = await DELETE(req({ password: "geheim123" }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "anonymisation_collision" });
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).deletedAt).toBeNull();
+  });
 });

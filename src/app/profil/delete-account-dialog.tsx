@@ -16,6 +16,9 @@ function errorText(status: number, body: ErrorBody): string {
     const names = (body.groups ?? []).map((g) => `„${g.name}“`).join(", ");
     return `Du bist Besitzer von ${names}. Übertrage den Besitz oder lösche die Gruppe zuerst.`;
   }
+  if (status === 409 && body.error === "anonymisation_collision") {
+    return "Löschen gerade nicht möglich. Bitte den Betreiber kontaktieren.";
+  }
   if (status === 429) return "Zu viele Versuche. Bitte versuche es später erneut.";
   return FALLBACK;
 }

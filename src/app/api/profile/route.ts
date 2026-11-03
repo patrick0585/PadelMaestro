@@ -3,7 +3,11 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { rateLimitedResponse } from "@/lib/rate-limit-response";
-import { OwnerOfGroupError, deleteOwnAccount } from "@/lib/account/delete";
+import {
+  AnonymisationCollisionError,
+  OwnerOfGroupError,
+  deleteOwnAccount,
+} from "@/lib/account/delete";
 import { WrongPasswordError } from "@/lib/account/errors";
 import { PlayerNotFoundError } from "@/lib/players/errors";
 
@@ -33,6 +37,9 @@ export async function DELETE(req: Request) {
     }
     if (e instanceof OwnerOfGroupError) {
       return NextResponse.json({ error: "owner_of_group", groups: e.groups }, { status: 409 });
+    }
+    if (e instanceof AnonymisationCollisionError) {
+      return NextResponse.json({ error: "anonymisation_collision" }, { status: 409 });
     }
     if (e instanceof PlayerNotFoundError) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });

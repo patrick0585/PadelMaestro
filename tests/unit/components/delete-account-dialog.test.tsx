@@ -84,6 +84,20 @@ describe("DeleteAccountDialog", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the operator hint on 409 anonymisation_collision", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue({ status: 409, json: async () => ({ error: "anonymisation_collision" }) }),
+    );
+    render(<DeleteAccountDialog open onClose={vi.fn()} />);
+    submit();
+    expect(
+      await screen.findByText("Löschen gerade nicht möglich. Bitte den Betreiber kontaktieren."),
+    ).toBeInTheDocument();
+  });
+
   it.each([
     [429, "Zu viele Versuche. Bitte versuche es später erneut."],
     [500, "Löschen fehlgeschlagen."],

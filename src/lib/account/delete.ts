@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { PlayerNotFoundError, WrongPasswordError } from "./errors";
@@ -6,6 +7,13 @@ export class OwnerOfGroupError extends Error {
   constructor(public readonly groups: { id: string; name: string }[]) {
     super("player still owns groups");
     this.name = "OwnerOfGroupError";
+  }
+}
+
+export class AnonymisationCollisionError extends Error {
+  constructor(playerId: string) {
+    super(`anonymised e-mail already taken for ${playerId}`);
+    this.name = "AnonymisationCollisionError";
   }
 }
 
@@ -31,6 +39,18 @@ export async function deleteOwnAccount(i: {
   });
   if (owned.length > 0) throw new OwnerOfGroupError(owned.map((m) => m.group));
 
+  try {
+    await anonymise(playerId, now);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = (e.meta?.target ?? []) as string[];
+      if (target.includes("email")) throw new AnonymisationCollisionError(playerId);
+    }
+    throw e;
+  }
+}
+
+async function anonymise(playerId: string, now: Date): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.membership.updateMany({
       where: { playerId, removedAt: null },

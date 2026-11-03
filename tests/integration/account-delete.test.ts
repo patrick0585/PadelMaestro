@@ -10,7 +10,11 @@ import {
   createTestSeason,
 } from "../helpers/group";
 import { hashPassword } from "@/lib/auth/hash";
-import { deleteOwnAccount, OwnerOfGroupError } from "@/lib/account/delete";
+import {
+  AnonymisationCollisionError,
+  deleteOwnAccount,
+  OwnerOfGroupError,
+} from "@/lib/account/delete";
 import { WrongPasswordError, PlayerNotFoundError } from "@/lib/account/errors";
 import { transferOwnership } from "@/lib/group/transfer";
 import { createInvitation } from "@/lib/invitations/create";
@@ -390,4 +394,28 @@ describe("deleteOwnAccount", () => {
     expect(ranking.map((r) => r.playerId)).not.toContain(p.id);
     expect(ranking.map((r) => r.playerId).sort()).toEqual([a.id, b.id, c.id].sort());
   });
+
+  it("anonymisation e-mail collision throws AnonymisationCollisionError and leaves the account unchanged", async () => {
+    const { group } = await setupGroup();
+    const p = await createMember(group.id, {
+      name: "Paula",
+      email: "paula@example.com",
+      passwordHash: hash,
+    });
+    await prisma.player.create({
+      data: { name: "Blocker", email: `geloescht-${p.id}@anonym.invalid` },
+    });
+    const snapshot = async () => ({
+      player: await prisma.player.findUniqueOrThrow({ where: { id: p.id } }),
+      memberships: await prisma.membership.findMany({ where: { playerId: p.id } }),
+      audit: await prisma.auditLog.count(),
+    });
+    const before = await snapshot();
+
+    await expect(
+      deleteOwnAccount({ playerId: p.id, password: PASSWORD, now: NOW }),
+    ).rejects.toBeInstanceOf(AnonymisationCollisionError);
+    expect(await snapshot()).toEqual(before);
+  });
+
 });
