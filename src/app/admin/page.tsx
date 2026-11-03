@@ -124,7 +124,7 @@ export default async function AdminPage({
         </InlineMessage>
       )}
 
-      <PlayersSection players={playersForUi} />
+      <PlayersSection players={playersForUi} viewerRole={ctx.role} />
 
       <InvitationsSection initial={invitations} />
 

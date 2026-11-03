@@ -54,10 +54,17 @@ export async function deletePlayer(input: DeletePlayerInput): Promise<void> {
     });
     if (activeParticipation) throw new ActiveParticipationError();
 
-    await tx.membership.update({
-      where: { groupId_playerId: { groupId: input.groupId, playerId: target.id } },
+    // Re-checked under the row lock: a concurrent ownership transfer may have promoted the target.
+    const removed = await tx.membership.updateMany({
+      where: {
+        groupId: input.groupId,
+        playerId: target.id,
+        removedAt: null,
+        role: { not: "owner" },
+      },
       data: { removedAt: new Date() },
     });
+    if (removed.count !== 1) throw new OwnerProtectedError();
 
     await tx.auditLog.create({
       data: {
