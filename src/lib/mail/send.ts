@@ -14,6 +14,8 @@ export class MailSendError extends Error {
   }
 }
 
+const DEFAULT_FROM = "Padelmaestro <noreply@padelmaestro.de>";
+
 let transport: MailTransport | null = null;
 
 function createTransport(): MailTransport {
@@ -26,9 +28,9 @@ function createTransport(): MailTransport {
     return consoleTransport;
   }
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.MAIL_FROM;
-  if (!apiKey || !from) {
-    throw new Error("RESEND_API_KEY and MAIL_FROM are required for resend");
+  const from = process.env.MAIL_FROM || DEFAULT_FROM;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is required for MAIL_TRANSPORT=resend");
   }
   return createResendTransport(apiKey, from);
 }
@@ -38,8 +40,8 @@ export function setTransportForTests(t: MailTransport | null): void {
 }
 
 export async function sendMail(msg: MailMessage): Promise<void> {
-  transport ??= createTransport();
   try {
+    transport ??= createTransport();
     await transport.send(msg);
   } catch (e) {
     throw new MailSendError(`Mail to ${msg.to} failed`, { cause: e });
