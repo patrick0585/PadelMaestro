@@ -55,3 +55,26 @@ export async function previewInvitation(
     throw e;
   }
 }
+
+export type OwnInvitationUse = {
+  kind: InvitationKind;
+  groupId: string | null;
+  groupName: string | null;
+  foundedGroupId: string | null;
+};
+
+export async function findOwnInvitationUse(
+  token: string,
+  playerId: string,
+): Promise<OwnInvitationUse | null> {
+  const use = await prisma.invitationUse.findFirst({
+    where: { playerId, invitation: { tokenHash: hashToken(token) } },
+    select: {
+      foundedGroupId: true,
+      invitation: { select: { kind: true, groupId: true, group: { select: { name: true } } } },
+    },
+  });
+  if (!use) return null;
+  const { kind, groupId, group } = use.invitation;
+  return { kind, groupId, groupName: group?.name ?? null, foundedGroupId: use.foundedGroupId };
+}

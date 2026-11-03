@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { previewInvitation } from "@/lib/invitations/lookup";
+import { findOwnInvitationUse, previewInvitation } from "@/lib/invitations/lookup";
 import { findGroupMembership } from "@/lib/group/active-membership";
 import type { InvitationInvalidReason } from "@/lib/invitations/errors";
 import { PadelLogo } from "@/components/padel-logo";
@@ -35,8 +35,57 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function AlreadyMember({ groupLabel }: { groupLabel: string }) {
+  return (
+    <Shell title={`Einladung zu ${groupLabel}`}>
+      <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+        <p className="text-sm text-foreground">Du bist schon Mitglied von {groupLabel}.</p>
+        <Link href="/" className={LINK_CLASS}>
+          Zum Dashboard
+        </Link>
+      </div>
+    </Shell>
+  );
+}
+
 export default async function InvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const session = await auth();
+
+  if (session) {
+    const own = await findOwnInvitationUse(token, session.user.id);
+    if (own?.kind === "founder") {
+      return own.foundedGroupId === null ? (
+        <Shell title="Gruppe gründen">
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+            <p className="text-sm text-foreground">
+              Du hast diesen Link schon eingelöst. Gründe jetzt deine Gruppe.
+            </p>
+            <Link href="/gruppe/neu" className={LINK_CLASS}>
+              Gruppe gründen
+            </Link>
+          </div>
+        </Shell>
+      ) : (
+        <Shell title="Schon erledigt">
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+            <p className="text-sm text-foreground">Mit diesem Link hast du schon eine Gruppe gegründet.</p>
+            <Link href="/" className={LINK_CLASS}>
+              Zum Dashboard
+            </Link>
+          </div>
+        </Shell>
+      );
+    }
+    if (
+      own?.kind === "member" &&
+      own.groupId !== null &&
+      (await findGroupMembership(prisma, own.groupId, session.user.id)) !== null
+    ) {
+      return <AlreadyMember groupLabel={own.groupName ?? "einer Gruppe"} />;
+    }
+  }
+
   const preview = await previewInvitation(token);
 
   if (!preview.ok) {
@@ -47,8 +96,8 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
           <p className="text-sm text-foreground-muted">
             Frag die Person, die dich eingeladen hat, nach einem neuen Link.
           </p>
-          <Link href="/login" className={LINK_CLASS}>
-            Zur Anmeldung
+          <Link href={session ? "/" : "/login"} className={LINK_CLASS}>
+            {session ? "Zum Dashboard" : "Zur Anmeldung"}
           </Link>
         </div>
       </Shell>
@@ -58,7 +107,6 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
   const groupLabel = preview.groupName ?? "einer Gruppe";
   const title =
     preview.kind === "founder" ? "Einladung: eigene Gruppe gründen" : `Einladung zu ${groupLabel}`;
-  const session = await auth();
 
   if (!session) {
     return (
@@ -73,18 +121,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
     preview.groupId !== null &&
     (await findGroupMembership(prisma, preview.groupId, session.user.id)) !== null;
 
-  if (alreadyMember) {
-    return (
-      <Shell title={title}>
-        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-          <p className="text-sm text-foreground">Du bist schon Mitglied von {groupLabel}.</p>
-          <Link href="/" className={LINK_CLASS}>
-            Zum Dashboard
-          </Link>
-        </div>
-      </Shell>
-    );
-  }
+  if (alreadyMember) return <AlreadyMember groupLabel={groupLabel} />;
 
   return (
     <Shell title={title}>
