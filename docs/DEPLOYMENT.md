@@ -309,7 +309,7 @@ Open `https://<DOMAIN>/login` in a browser. Expect:
 - Admin tab (⚙️) visible in the bottom-nav
 - Spieler → "Spieler hinzufügen" works, new player appears in the list
 
-If any step fails: `sudo journalctl -u padel -n 100 --no-pager`.
+If any step fails: `sudo tail -n 100 /srv/padel/logs/app.err.log` (app output goes to `/srv/padel/logs/app.log` / `app.err.log`; `journalctl -u padel` only shows systemd state lines).
 
 ---
 
@@ -333,7 +333,7 @@ The script (`scripts/deploy.sh` in the repo) does exactly this:
 
 If any step fails the script exits non-zero and the service stays on the previous build (no broken restart).
 
-**Env changes.** `deploy.sh` does not touch `.env`. If a release needs new variables, edit `/srv/padel/app/.env` *before* running it. The mail release (migration only adds columns/tables, no downtime needed) requires `MAIL_TRANSPORT=console` (or `resend`) in `.env` first: without it the process exits right after start with `[startup] MAIL_TRANSPORT must be …` in the error log (check in `src/instrumentation.ts`), and systemd keeps restarting it. Use `console` only until section 11 is done.
+**Env changes.** `deploy.sh` does not touch `.env`. If a release needs new variables, edit `/srv/padel/app/.env` *before* running it. The mail release (migration only adds columns/tables, no downtime needed) requires `MAIL_TRANSPORT=console` (or `resend`) in `.env` first: without it the process exits right after start with `[startup] MAIL_TRANSPORT must be …` in `/srv/padel/logs/app.err.log` (check in `src/instrumentation.ts`), and systemd keeps restarting it. Use `console` only until section 11 is done.
 
 ---
 
@@ -435,7 +435,7 @@ sudo systemctl restart padel   # reconnect the app to the freshly-restarted Post
 
 | Task | Command |
 |---|---|
-| Service logs | `sudo journalctl -u padel -f` |
+| Service logs | `sudo tail -f /srv/padel/logs/app.log /srv/padel/logs/app.err.log` |
 | App file logs | `sudo tail -f /srv/padel/logs/app.log` |
 | Caddy logs | `sudo journalctl -u caddy -f` |
 | DB console | `sudo -u padel psql $DATABASE_URL` |
@@ -462,7 +462,7 @@ Transactional mails (address confirmation, password reset, change notice) go out
    `MAIL_FROM` defaults to `Padelmaestro <noreply@padelmaestro.de>` and must use the verified domain.
 6. `sudo systemctl restart padel`
 7. Test: on the profile page enter a real address under „Neue E-Mail-Adresse", then confirm via the link in the received mail.
-8. On problems: `sudo journalctl -u padel -n 100 --no-pager | grep '\[mail\]'`.
+8. On problems: `sudo grep '\[mail\]' /srv/padel/logs/app.log /srv/padel/logs/app.err.log | tail -n 50`.
 
 ---
 
