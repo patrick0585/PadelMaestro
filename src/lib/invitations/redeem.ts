@@ -6,6 +6,7 @@ import { hashToken } from "@/lib/auth/token";
 import { sendVerification } from "@/lib/account/email-verification";
 import { EmailTakenError } from "@/lib/account/errors";
 import { joinGroup } from "@/lib/group/join";
+import { findGroupMembership } from "@/lib/group/active-membership";
 import { InvitationInvalidError } from "./errors";
 import { findRedeemableInvitation } from "./lookup";
 
@@ -94,30 +95,72 @@ export async function joinWithInvitation(i: {
   now?: Date;
 }): Promise<JoinResult> {
   const now = i.now ?? new Date();
+  try {
+    return await joinInTransaction(i.token, i.playerId, now);
+  } catch (e) {
+    // A concurrent request of the same account won the race (double submit).
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = (e.meta?.target ?? []) as string[];
+      const settled = target.includes("playerId") ? await settledJoin(i.token, i.playerId) : null;
+      if (settled) return settled;
+    }
+    throw e;
+  }
+}
+
+async function settledJoin(token: string, playerId: string): Promise<JoinResult | null> {
+  const inv = await prisma.invitation.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: { id: true, kind: true, groupId: true },
+  });
+  if (!inv) return null;
+  if (inv.kind === "founder") {
+    const use = await prisma.invitationUse.findUnique({
+      where: { invitationId_playerId: { invitationId: inv.id, playerId } },
+      select: { id: true },
+    });
+    return use ? { kind: "founder", outcome: "already_redeemed" } : null;
+  }
+  if (!inv.groupId) return null;
+  const membership = await findGroupMembership(prisma, inv.groupId, playerId);
+  return membership ? { kind: "member", groupId: inv.groupId, outcome: "already_member" } : null;
+}
+
+async function joinInTransaction(token: string, playerId: string, now: Date): Promise<JoinResult> {
   return prisma.$transaction(async (tx) => {
     // A founder link this account already used stays idempotent even once exhausted.
     const prior = await tx.invitationUse.findFirst({
       where: {
-        playerId: i.playerId,
-        invitation: { tokenHash: hashToken(i.token), kind: "founder" },
+        playerId,
+        invitation: { tokenHash: hashToken(token), kind: "founder" },
       },
       select: { id: true },
     });
     if (prior) return { kind: "founder", outcome: "already_redeemed" };
 
-    const inv = await findRedeemableInvitation(tx, i.token, now);
+    const inv = await findRedeemableInvitation(tx, token, now);
     if (inv.kind === "founder") {
-      await consumeUse(tx, inv.id, i.playerId, now);
+      await consumeUse(tx, inv.id, playerId, now);
+      await tx.auditLog.create({
+        data: {
+          actorId: playerId,
+          groupId: null,
+          action: "invitation.redeem_founder",
+          entityType: "Invitation",
+          entityId: inv.id,
+          payload: { invitationId: inv.id },
+        },
+      });
       return { kind: "founder", outcome: "redeemed" };
     }
     if (!inv.groupId) throw new InvitationInvalidError("unknown");
 
-    const { outcome } = await joinGroup(tx, { groupId: inv.groupId, playerId: i.playerId, now });
+    const { outcome } = await joinGroup(tx, { groupId: inv.groupId, playerId, now });
     if (outcome !== "already_member") {
-      await consumeUse(tx, inv.id, i.playerId, now);
+      await consumeUse(tx, inv.id, playerId, now);
       await tx.auditLog.create({
         data: {
-          actorId: i.playerId,
+          actorId: playerId,
           groupId: inv.groupId,
           action: "membership.join",
           entityType: "Group",

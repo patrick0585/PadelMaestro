@@ -264,10 +264,36 @@ describe("joinWithInvitation", () => {
     expect(use.playerId).toBe(me.id);
     expect(use.foundedGroupId).toBeNull();
     expect((await prisma.invitation.findUniqueOrThrow({ where: { id: link.id } })).usedCount).toBe(1);
+    const audit = await prisma.auditLog.findMany({ where: { action: "invitation.redeem_founder" } });
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      actorId: me.id,
+      groupId: null,
+      entityType: "Invitation",
+      entityId: link.id,
+      payload: { invitationId: link.id },
+    });
 
     // link is now exhausted (maxUses 1); the same account still gets an idempotent answer
     const again = await joinWithInvitation({ token: link.token, playerId: me.id, now: NOW });
     expect(again).toEqual({ kind: "founder", outcome: "already_redeemed" });
+    expect(await prisma.invitationUse.count({ where: { invitationId: link.id } })).toBe(1);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: link.id } })).usedCount).toBe(1);
+  });
+
+  it("two concurrent joins of the same account on a member link both succeed with one membership and one use", async () => {
+    const { group, link } = await setup();
+    const other = await createTestGroup("Andere");
+    const me = await createMember(other.id, { name: "Ich", email: "ich@example.com" });
+
+    const results = await Promise.allSettled([
+      joinWithInvitation({ token: link.token, playerId: me.id, now: NOW }),
+      joinWithInvitation({ token: link.token, playerId: me.id, now: NOW }),
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["fulfilled", "fulfilled"]);
+    const outcomes = results.map((r) => (r.status === "fulfilled" && r.value.kind === "member" ? r.value.outcome : null));
+    expect(outcomes.sort()).toEqual(["already_member", "joined"]);
+    expect(await prisma.membership.count({ where: { groupId: group.id, playerId: me.id } })).toBe(1);
     expect(await prisma.invitationUse.count({ where: { invitationId: link.id } })).toBe(1);
     expect((await prisma.invitation.findUniqueOrThrow({ where: { id: link.id } })).usedCount).toBe(1);
   });
