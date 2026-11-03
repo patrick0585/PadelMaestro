@@ -32,6 +32,10 @@ Rohmaterial für die Datenschutzerklärung, keine Datenschutzerklärung. Nicht j
 - Account-Löschung und Datenexport folgen in einem späteren PR
 - Geplant: Self-Service im Profil
 
+## Offene Punkte
+
+- Drittlandtransfer (Resend, USA): SCC / EU-Region prüfen
+
 ## Kontakt
 
 - Siehe Impressum
