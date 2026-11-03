@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,9 @@ import { EmailForm } from "./email-form";
 import { EmailNotice } from "@/components/email-notice";
 
 export const dynamic = "force-dynamic";
+
+const LINK_CLASS =
+  "rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const ROLE_LABELS = { owner: "Besitzer", admin: "Admin", member: "Mitglied" } as const;
 
@@ -73,8 +77,11 @@ export default async function ProfilePage() {
             </div>
             {ctx.role === "owner" ? (
               <p className="text-sm text-foreground-muted">
-                Als Besitzer kannst du die Gruppe nicht verlassen. Übertrage den Besitz im
-                Admin-Bereich.
+                Als Besitzer kannst du die Gruppe nicht verlassen. Übertrage den Besitz im{" "}
+                <Link href="/admin" className={LINK_CLASS}>
+                  Admin-Bereich
+                </Link>
+                .
               </p>
             ) : (
               <LeaveGroupButton groupId={ctx.groupId} groupName={group.name} />
