@@ -23,7 +23,7 @@ describe("DeleteGroupDialog", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DeleteGroupDialog open onClose={vi.fn()} name="Padelfreunde" />);
+    render(<DeleteGroupDialog open onClose={vi.fn()} groupId="g-1" name="Padelfreunde" />);
     expect(screen.getByRole("heading", { name: "Gruppe löschen" })).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -67,13 +67,18 @@ describe("DeleteGroupDialog", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/groups/active");
     expect(init.method).toBe("DELETE");
-    expect(JSON.parse(init.body)).toEqual({ name: "Padelfreunde", password: "geheim" });
+    expect(JSON.parse(init.body)).toEqual({
+      groupId: "g-1",
+      name: "Padelfreunde",
+      password: "geheim",
+    });
   });
 
   it.each([
     [400, "name_mismatch", "Der Name stimmt nicht."],
     [403, "wrong_password", "Passwort falsch."],
     [403, "forbidden", "Nur der Besitzer kann die Gruppe löschen."],
+    [409, "stale_group", "Die aktive Gruppe hat sich geändert. Bitte die Seite neu laden."],
     [429, "rate_limited", "Zu viele Versuche, bitte später."],
     [500, "boom", "Löschen fehlgeschlagen."],
   ])("shows the message for %i %s", async (status, error, text) => {
@@ -81,7 +86,7 @@ describe("DeleteGroupDialog", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: false, status, json: async () => ({ error }) }),
     );
-    render(<DeleteGroupDialog open onClose={vi.fn()} name="Padelfreunde" />);
+    render(<DeleteGroupDialog open onClose={vi.fn()} groupId="g-1" name="Padelfreunde" />);
     fireEvent.change(screen.getByLabelText("Gruppenname zur Bestätigung"), {
       target: { value: "Padelfreunde" },
     });
@@ -100,7 +105,7 @@ describe("DeleteGroupDialog", () => {
   it("cannot be closed by Escape while the delete is in flight", async () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
     const onClose = vi.fn();
-    render(<DeleteGroupDialog open onClose={onClose} name="Padelfreunde" />);
+    render(<DeleteGroupDialog open onClose={onClose} groupId="g-1" name="Padelfreunde" />);
     fireEvent.change(screen.getByLabelText("Gruppenname zur Bestätigung"), {
       target: { value: "Padelfreunde" },
     });

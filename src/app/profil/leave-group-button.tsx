@@ -7,9 +7,10 @@ const MESSAGES: Record<string, string> = {
   owner_protected: "Als Besitzer kannst du die Gruppe nicht verlassen.",
   last_admin: "Du bist der letzte Admin. Ernenne zuerst einen anderen.",
   active_participation: "Du bist für einen Spieltag eingeplant. Sag erst ab.",
+  stale_group: "Die aktive Gruppe hat sich geändert. Bitte die Seite neu laden.",
 };
 
-export function LeaveGroupButton({ groupName }: { groupName: string }) {
+export function LeaveGroupButton({ groupId, groupName }: { groupId: string; groupName: string }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,11 @@ export function LeaveGroupButton({ groupName }: { groupName: string }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/profile/leave-group", { method: "POST" });
+      const res = await fetch("/api/profile/leave-group", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ groupId }),
+      });
       if (res.status === 204) {
         window.location.assign("/");
         return;

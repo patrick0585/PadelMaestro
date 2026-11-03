@@ -207,7 +207,7 @@ export default async function AdminPage({
         </CardBody>
       </Card>
 
-      {group && <GroupSection name={group.name} />}
+      {group && <GroupSection groupId={ctx.groupId} name={group.name} />}
     </div>
   );
 }

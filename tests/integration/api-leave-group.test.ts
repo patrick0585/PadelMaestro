@@ -8,7 +8,12 @@ import { auth } from "@/auth";
 import { POST } from "@/app/api/profile/leave-group/route";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 
-const req = () => new Request("http://test/api/profile/leave-group", { method: "POST" });
+const req = (groupId: unknown) =>
+  new Request("http://test/api/profile/leave-group", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ groupId }),
+  });
 
 beforeEach(async () => {
   await resetDb();
@@ -23,12 +28,23 @@ describe("POST /api/profile/leave-group", () => {
     const admin = await createMember(g.id, { name: "A", email: "a@x.de", role: "admin" });
 
     authMock.mockResolvedValue(null);
-    expect((await POST()).status).toBe(401);
+    expect((await POST(req(g.id))).status).toBe(401);
     authMock.mockResolvedValue(sessionFor(member, null, null));
-    expect((await POST()).status).toBe(403);
+    expect((await POST(req(g.id))).status).toBe(403);
+
+    authMock.mockResolvedValue(sessionFor(member, g.id, "member"));
+    const other = await createTestGroup("H");
+    const stale = await POST(req(other.id));
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toEqual({ error: "stale_group" });
+    expect((await POST(req("nope"))).status).toBe(400);
+    const still = await prisma.membership.findUniqueOrThrow({
+      where: { groupId_playerId: { groupId: g.id, playerId: member.id } },
+    });
+    expect(still.removedAt).toBeNull();
 
     authMock.mockResolvedValue(sessionFor(owner, g.id, "owner"));
-    const res = await POST();
+    const res = await POST(req(g.id));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "owner_protected" });
 
@@ -38,7 +54,7 @@ describe("POST /api/profile/leave-group", () => {
       data: { removedAt: new Date() },
     });
     authMock.mockResolvedValue(sessionFor(admin, g.id, "admin"));
-    const r2 = await POST();
+    const r2 = await POST(req(g.id));
     expect(r2.status).toBe(409);
     expect(await r2.json()).toEqual({ error: "last_admin" });
 
@@ -48,12 +64,12 @@ describe("POST /api/profile/leave-group", () => {
       data: { gameDayId: day.id, playerId: member.id, attendance: "joker" },
     });
     authMock.mockResolvedValue(sessionFor(member, g.id, "member"));
-    const r3 = await POST();
+    const r3 = await POST(req(g.id));
     expect(r3.status).toBe(409);
     expect(await r3.json()).toEqual({ error: "active_participation" });
 
     await prisma.gameDayParticipant.deleteMany({});
-    const ok = await POST();
+    const ok = await POST(req(g.id));
     expect(ok.status).toBe(204);
     const m = await prisma.membership.findUniqueOrThrow({
       where: { groupId_playerId: { groupId: g.id, playerId: member.id } },

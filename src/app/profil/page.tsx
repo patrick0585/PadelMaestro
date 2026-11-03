@@ -77,7 +77,7 @@ export default async function ProfilePage() {
                 Admin-Bereich.
               </p>
             ) : (
-              <LeaveGroupButton groupName={group.name} />
+              <LeaveGroupButton groupId={ctx.groupId} groupName={group.name} />
             )}
           </CardBody>
         </Card>

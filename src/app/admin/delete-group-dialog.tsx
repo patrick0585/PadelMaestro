@@ -11,6 +11,7 @@ function errorText(status: number, code: string | undefined): string {
   if (status === 400 && code === "name_mismatch") return "Der Name stimmt nicht.";
   if (status === 403 && code === "wrong_password") return "Passwort falsch.";
   if (status === 403) return "Nur der Besitzer kann die Gruppe löschen.";
+  if (status === 409 && code === "stale_group") return "Die aktive Gruppe hat sich geändert. Bitte die Seite neu laden.";
   if (status === 429) return "Zu viele Versuche, bitte später.";
   return FALLBACK;
 }
@@ -18,10 +19,12 @@ function errorText(status: number, code: string | undefined): string {
 export function DeleteGroupDialog({
   open,
   onClose,
+  groupId,
   name,
 }: {
   open: boolean;
   onClose: () => void;
+  groupId: string;
   name: string;
 }) {
   const nameId = useId();
@@ -61,7 +64,7 @@ export function DeleteGroupDialog({
       res = await fetch("/api/groups/active", {
         method: "DELETE",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: typedName, password }),
+        body: JSON.stringify({ groupId, name: typedName, password }),
         signal: controller.signal,
       });
     } catch {

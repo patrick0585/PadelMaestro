@@ -7,7 +7,7 @@ import { Input, Label } from "@/components/ui/input";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { DeleteGroupDialog } from "./delete-group-dialog";
 
-export function GroupSection({ name }: { name: string }) {
+export function GroupSection({ groupId, name }: { groupId: string; name: string }) {
   const router = useRouter();
   const inputId = useId();
   const [value, setValue] = useState(name);
@@ -24,7 +24,7 @@ export function GroupSection({ name }: { name: string }) {
     const res = await fetch("/api/groups/active", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: value }),
+      body: JSON.stringify({ groupId, name: value }),
     }).catch(() => null);
     setLoading(false);
     if (res?.status === 200) {
@@ -34,9 +34,18 @@ export function GroupSection({ name }: { name: string }) {
       router.refresh();
       return;
     }
+    const code =
+      res?.status === 409
+        ? ((await res.json().catch(() => null)) as { error?: string } | null)?.error
+        : undefined;
     setMessage({
       kind: "error",
-      text: res?.status === 400 ? "Der Name muss 2–40 Zeichen lang sein." : "Speichern fehlgeschlagen.",
+      text:
+        code === "stale_group"
+          ? "Die aktive Gruppe hat sich geändert. Bitte die Seite neu laden."
+          : res?.status === 400
+            ? "Der Name muss 2–40 Zeichen lang sein."
+            : "Speichern fehlgeschlagen.",
     });
   }
 
@@ -78,7 +87,12 @@ export function GroupSection({ name }: { name: string }) {
             Gruppe löschen
           </Button>
         </div>
-        <DeleteGroupDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} name={name} />
+        <DeleteGroupDialog
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          groupId={groupId}
+          name={name}
+        />
       </CardBody>
     </Card>
   );
