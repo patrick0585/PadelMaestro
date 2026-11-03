@@ -30,6 +30,8 @@ describe("GET /api/profile/export", () => {
     const res = await GET();
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     const body = await res.json();
     const date = body.exportedAt.slice(0, 10);
     expect(res.headers.get("content-disposition")).toBe(

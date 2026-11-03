@@ -32,6 +32,8 @@ export async function GET() {
       headers: {
         "content-type": "application/json; charset=utf-8",
         "content-disposition": `attachment; filename="padelmaestro-export-${date}.json"`,
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
       },
     });
   } catch (e) {
