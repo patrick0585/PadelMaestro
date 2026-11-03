@@ -3,7 +3,11 @@ import { z } from "zod";
 import { guardOwner } from "@/lib/auth/route-guard";
 import { ForbiddenError } from "@/lib/auth/group-context";
 import { PlayerNotFoundError } from "@/lib/players/errors";
-import { SelfTransferError, transferOwnership } from "@/lib/group/transfer";
+import {
+  SelfTransferError,
+  TargetCannotLoginError,
+  transferOwnership,
+} from "@/lib/group/transfer";
 
 const Body = z.object({ playerId: z.string().uuid() });
 
@@ -25,6 +29,9 @@ export async function POST(req: Request) {
     }
     if (e instanceof SelfTransferError) {
       return NextResponse.json({ error: "self_transfer" }, { status: 409 });
+    }
+    if (e instanceof TargetCannotLoginError) {
+      return NextResponse.json({ error: "target_cannot_login" }, { status: 409 });
     }
     if (e instanceof ForbiddenError) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });

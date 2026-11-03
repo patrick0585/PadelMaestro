@@ -91,7 +91,7 @@ export function PlayersSection({
                 <Button variant="ghost" size="sm" onClick={() => setAvatarFor(p)}>
                   Avatar
                 </Button>
-                {viewerRole === "owner" && p.role !== "owner" && (
+                {viewerRole === "owner" && p.role !== "owner" && p.hasPassword && (
                   <Button
                     variant="ghost"
                     size="sm"

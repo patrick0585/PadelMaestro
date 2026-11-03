@@ -58,4 +58,20 @@ describe("TransferOwnerDialog", () => {
     ).toHaveAttribute("role", "alert");
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("shows the cannot-login message on 409 target_cannot_login", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: "target_cannot_login" }),
+      }),
+    );
+    render(<TransferOwnerDialog open onClose={vi.fn()} player={player} />);
+    fireEvent.click(screen.getByRole("button", { name: "Besitz an Martin übertragen" }));
+    expect(
+      await screen.findByText("Dieses Mitglied hat kein Passwort und kann sich nicht anmelden."),
+    ).toHaveAttribute("role", "alert");
+  });
 });

@@ -34,7 +34,11 @@ describe("POST /api/groups/active/transfer-owner", () => {
     const group = await createTestGroup();
     const owner = await createMember(group.id, { name: "Olga", email: "o@example.com", role: "owner" });
     const admin = await createMember(group.id, { name: "Armin", email: "a@example.com", role: "admin" });
-    const target = await createMember(group.id, { name: "Martin", email: "m@example.com" });
+    const target = await createMember(group.id, {
+      name: "Martin",
+      email: "m@example.com",
+      passwordHash: "x",
+    });
 
     authMock.mockResolvedValue(null);
     const unauth = await post({ playerId: target.id });
@@ -54,6 +58,12 @@ describe("POST /api/groups/active/transfer-owner", () => {
     const self = await post({ playerId: owner.id });
     expect(self.status).toBe(409);
     expect(await self.json()).toEqual({ error: "self_transfer" });
+
+    const statsOnly = await createMember(group.id, { name: "Stats", email: "s@example.com" });
+    const noLogin = await post({ playerId: statsOnly.id });
+    expect(noLogin.status).toBe(409);
+    expect(await noLogin.json()).toEqual({ error: "target_cannot_login" });
+    expect(await roleOf(group.id, statsOnly.id)).toBe("member");
 
     const missing = await post({ playerId: "00000000-0000-4000-8000-000000000000" });
     expect(missing.status).toBe(404);

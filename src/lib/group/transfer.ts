@@ -10,6 +10,13 @@ export class SelfTransferError extends Error {
   }
 }
 
+export class TargetCannotLoginError extends Error {
+  constructor() {
+    super("new owner has no password or a deleted account");
+    this.name = "TargetCannotLoginError";
+  }
+}
+
 export async function transferOwnership(i: {
   groupId: string;
   actorId: string;
@@ -23,10 +30,20 @@ export async function transferOwnership(i: {
     if (!(await findGroupMembership(tx, groupId, newOwnerId))) {
       throw new PlayerNotFoundError(newOwnerId);
     }
+    const target = await tx.player.findUnique({
+      where: { id: newOwnerId },
+      select: { passwordHash: true, deletedAt: true },
+    });
+    if (!target?.passwordHash || target.deletedAt) throw new TargetCannotLoginError();
 
     // Conditional updates: a concurrent removal or transfer makes count 0 and rolls back.
     const promoted = await tx.membership.updateMany({
-      where: { groupId, playerId: newOwnerId, removedAt: null },
+      where: {
+        groupId,
+        playerId: newOwnerId,
+        removedAt: null,
+        player: { passwordHash: { not: null }, deletedAt: null },
+      },
       data: { role: "owner" },
     });
     if (promoted.count !== 1) throw new PlayerNotFoundError(newOwnerId);

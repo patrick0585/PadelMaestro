@@ -5,10 +5,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { InlineMessage } from "@/components/ui/inline-message";
 
-const ERRORS: Record<number, string> = {
-  403: "Nur der Besitzer kann den Besitz übertragen.",
-  404: "Spieler nicht gefunden.",
-  409: "Du kannst den Besitz nicht an dich selbst übertragen.",
+const ERRORS: Record<string, string> = {
+  forbidden: "Nur der Besitzer kann den Besitz übertragen.",
+  not_found: "Spieler nicht gefunden.",
+  self_transfer: "Du kannst den Besitz nicht an dich selbst übertragen.",
+  target_cannot_login: "Dieses Mitglied hat kein Passwort und kann sich nicht anmelden.",
 };
 const FALLBACK = "Übertragen fehlgeschlagen.";
 
@@ -62,7 +63,10 @@ export function TransferOwnerDialog({
       router.refresh();
       return;
     }
-    setError(ERRORS[res.status] ?? FALLBACK);
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    if (controller.signal.aborted) return;
+    const code = body?.error ?? "";
+    setError(Object.hasOwn(ERRORS, code) ? ERRORS[code] : FALLBACK);
   }
 
   return (

@@ -62,4 +62,17 @@ describe("PlayersSection", () => {
     expect(screen.queryByText("Besitz übertragen")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/^Besitz übertragen/)).not.toBeInTheDocument();
   });
+
+  it("blendet 'Besitz übertragen' für Mitglieder ohne Passwort aus", () => {
+    render(
+      <PlayersSection
+        players={[
+          row({ id: "o", name: "Olga", role: "owner" }),
+          row({ id: "s", name: "Stats", role: "member", hasPassword: false }),
+        ]}
+        viewerRole="owner"
+      />,
+    );
+    expect(screen.queryByLabelText("Besitz übertragen an Stats")).not.toBeInTheDocument();
+  });
 });

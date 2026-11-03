@@ -5,7 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
 import { createTestGroup, createMember } from "../helpers/group";
-import { transferOwnership, SelfTransferError } from "@/lib/group/transfer";
+import { transferOwnership, SelfTransferError, TargetCannotLoginError } from "@/lib/group/transfer";
 import { ForbiddenError } from "@/lib/auth/group-context";
 import { OwnerProtectedError, PlayerNotFoundError } from "@/lib/players/errors";
 import { updatePlayer } from "@/lib/players/update";
@@ -13,8 +13,17 @@ import { deletePlayer } from "@/lib/players/delete";
 
 async function setup() {
   const group = await createTestGroup();
-  const owner = await createMember(group.id, { name: "Olga", email: "o@example.com", role: "owner" });
-  const target = await createMember(group.id, { name: "Martin", email: "m@example.com" });
+  const owner = await createMember(group.id, {
+    name: "Olga",
+    email: "o@example.com",
+    role: "owner",
+    passwordHash: "x",
+  });
+  const target = await createMember(group.id, {
+    name: "Martin",
+    email: "m@example.com",
+    passwordHash: "x",
+  });
   return { group, owner, target };
 }
 
@@ -80,6 +89,26 @@ describe("transferOwnership", () => {
     expect(await roleOf(group.id, admin.id)).toBe("admin");
     expect(await roleOf(group.id, removed.id)).toBe("member");
     expect(await activeOwners(group.id)).toBe(1);
+    expect(await prisma.auditLog.count({ where: { action: "group.transfer_owner" } })).toBe(0);
+  });
+
+  it("transferOwnership rejects a target without password or a deleted account", async () => {
+    const { group, owner } = await setup();
+    const statsOnly = await createMember(group.id, { name: "Stats", email: "s@example.com" });
+    const deleted = await createMember(group.id, {
+      name: "Del",
+      email: "d@example.com",
+      passwordHash: "x",
+    });
+    await prisma.player.update({ where: { id: deleted.id }, data: { deletedAt: new Date() } });
+
+    for (const target of [statsOnly, deleted]) {
+      await expect(
+        transferOwnership({ groupId: group.id, actorId: owner.id, newOwnerId: target.id }),
+      ).rejects.toBeInstanceOf(TargetCannotLoginError);
+      expect(await roleOf(group.id, target.id)).toBe("member");
+    }
+    expect(await roleOf(group.id, owner.id)).toBe("owner");
     expect(await prisma.auditLog.count({ where: { action: "group.transfer_owner" } })).toBe(0);
   });
 
