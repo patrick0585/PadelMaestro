@@ -1,0 +1,131 @@
+import { Prisma, type InvitationKind } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { hashPassword } from "@/lib/auth/hash";
+import { normaliseEmail } from "@/lib/auth/email";
+import { hashToken } from "@/lib/auth/token";
+import { sendVerification } from "@/lib/account/email-verification";
+import { EmailTakenError } from "@/lib/account/errors";
+import { joinGroup } from "@/lib/group/join";
+import { InvitationInvalidError } from "./errors";
+import { findRedeemableInvitation } from "./lookup";
+
+async function consumeUse(
+  tx: Prisma.TransactionClient,
+  invitationId: string,
+  playerId: string,
+  now: Date,
+): Promise<void> {
+  // Same account re-using the same link (e.g. after removal): one use per account.
+  const known = await tx.invitationUse.findUnique({
+    where: { invitationId_playerId: { invitationId, playerId } },
+    select: { id: true },
+  });
+  if (known) return;
+  await tx.invitationUse.create({ data: { invitationId, playerId, usedAt: now } });
+  // Atomic guard: a concurrent redeemer may have taken the last use.
+  const claimed = await tx.invitation.updateMany({
+    where: { id: invitationId, revokedAt: null, usedCount: { lt: prisma.invitation.fields.maxUses } },
+    data: { usedCount: { increment: 1 } },
+  });
+  if (claimed.count !== 1) throw new InvitationInvalidError("exhausted");
+}
+
+export async function signupWithInvitation(i: {
+  token: string;
+  name: string;
+  email: string;
+  password: string;
+  now?: Date;
+}): Promise<{ playerId: string; kind: InvitationKind; groupId: string | null }> {
+  const now = i.now ?? new Date();
+  const email = normaliseEmail(i.email);
+  const passwordHash = await hashPassword(i.password);
+
+  let result: { playerId: string; kind: InvitationKind; groupId: string | null };
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const inv = await findRedeemableInvitation(tx, i.token, now);
+      if (await tx.player.findFirst({ where: { email }, select: { id: true } })) {
+        throw new EmailTakenError(email);
+      }
+      const player = await tx.player.create({
+        data: { name: i.name, email, passwordHash, termsAcceptedAt: now, emailVerifiedAt: null },
+        select: { id: true },
+      });
+      if (inv.kind === "member" && inv.groupId) {
+        await joinGroup(tx, { groupId: inv.groupId, playerId: player.id, now });
+      }
+      await consumeUse(tx, inv.id, player.id, now);
+      await tx.auditLog.create({
+        data: {
+          actorId: player.id,
+          groupId: inv.kind === "member" ? inv.groupId : null,
+          action: "player.signup",
+          entityType: "Player",
+          entityId: player.id,
+          payload: { invitationId: inv.id, kind: inv.kind },
+        },
+      });
+      return { playerId: player.id, kind: inv.kind, groupId: inv.groupId };
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = (e.meta?.target ?? []) as string[];
+      if (target.includes("email")) throw new EmailTakenError(email);
+    }
+    throw e;
+  }
+
+  try {
+    await sendVerification({ playerId: result.playerId });
+  } catch (e) {
+    console.error("[signup] verification mail failed", e);
+  }
+  return result;
+}
+
+export type JoinResult =
+  | { kind: "member"; groupId: string; outcome: "joined" | "reactivated" | "already_member" }
+  | { kind: "founder"; outcome: "redeemed" | "already_redeemed" };
+
+export async function joinWithInvitation(i: {
+  token: string;
+  playerId: string;
+  now?: Date;
+}): Promise<JoinResult> {
+  const now = i.now ?? new Date();
+  return prisma.$transaction(async (tx) => {
+    // A founder link this account already used stays idempotent even once exhausted.
+    const prior = await tx.invitationUse.findFirst({
+      where: {
+        playerId: i.playerId,
+        invitation: { tokenHash: hashToken(i.token), kind: "founder" },
+      },
+      select: { id: true },
+    });
+    if (prior) return { kind: "founder", outcome: "already_redeemed" };
+
+    const inv = await findRedeemableInvitation(tx, i.token, now);
+    if (inv.kind === "founder") {
+      await consumeUse(tx, inv.id, i.playerId, now);
+      return { kind: "founder", outcome: "redeemed" };
+    }
+    if (!inv.groupId) throw new InvitationInvalidError("unknown");
+
+    const { outcome } = await joinGroup(tx, { groupId: inv.groupId, playerId: i.playerId, now });
+    if (outcome !== "already_member") {
+      await consumeUse(tx, inv.id, i.playerId, now);
+      await tx.auditLog.create({
+        data: {
+          actorId: i.playerId,
+          groupId: inv.groupId,
+          action: "membership.join",
+          entityType: "Group",
+          entityId: inv.groupId,
+          payload: { invitationId: inv.id, outcome },
+        },
+      });
+    }
+    return { kind: "member", groupId: inv.groupId, outcome };
+  });
+}
