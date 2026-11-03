@@ -102,7 +102,10 @@ export default async function AdminPage({
 
   const group =
     ctx.role === "owner"
-      ? await prisma.group.findUniqueOrThrow({ where: { id: ctx.groupId }, select: { name: true } })
+      ? await prisma.group.findUniqueOrThrow({
+          where: { id: ctx.groupId },
+          select: { name: true, slug: true },
+        })
       : null;
 
   const playersForUi = players.map((p) => ({
@@ -207,7 +210,7 @@ export default async function AdminPage({
         </CardBody>
       </Card>
 
-      {group && <GroupSection groupId={ctx.groupId} name={group.name} />}
+      {group && <GroupSection groupId={ctx.groupId} name={group.name} slug={group.slug} />}
     </div>
   );
 }

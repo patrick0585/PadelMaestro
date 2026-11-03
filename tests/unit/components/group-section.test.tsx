@@ -15,7 +15,7 @@ describe("GroupSection", () => {
       json: async () => ({ error: "stale_group" }),
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<GroupSection groupId="g-1" name="Padelfreunde" />);
+    render(<GroupSection groupId="g-1" name="Padelfreunde" slug="padelfreunde" />);
     fireEvent.change(screen.getByLabelText("Gruppenname"), { target: { value: "Neu" } });
     fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));
     expect(
@@ -23,5 +23,13 @@ describe("GroupSection", () => {
     ).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ groupId: "g-1", name: "Neu" });
+  });
+
+  it("shows the slug under the name field", () => {
+    render(<GroupSection groupId="g-1" name="Padelfreunde" slug="padelfreunde-1a2b3c" />);
+    expect(screen.getByText("Slug: padelfreunde-1a2b3c")).toHaveClass(
+      "text-xs",
+      "text-foreground-muted",
+    );
   });
 });

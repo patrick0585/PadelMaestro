@@ -7,7 +7,15 @@ import { Input, Label } from "@/components/ui/input";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { DeleteGroupDialog } from "./delete-group-dialog";
 
-export function GroupSection({ groupId, name }: { groupId: string; name: string }) {
+export function GroupSection({
+  groupId,
+  name,
+  slug,
+}: {
+  groupId: string;
+  name: string;
+  slug: string;
+}) {
   const router = useRouter();
   const inputId = useId();
   const [value, setValue] = useState(name);
@@ -72,6 +80,7 @@ export function GroupSection({ groupId, name }: { groupId: string; name: string 
               Umbenennen
             </Button>
           </div>
+          <p className="text-xs text-foreground-muted">Slug: {slug}</p>
           {message && <InlineMessage kind={message.kind}>{message.text}</InlineMessage>}
         </form>
         <div className="flex flex-col gap-3 border-t border-border pt-4">
