@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { LegalFooter } from "@/components/legal-footer";
 
 describe("LegalFooter", () => {
-  it("renders the three legal links without a login link by default", () => {
+  it("renders the three legal links without a home link by default", () => {
     render(<LegalFooter />);
     const nav = screen.getByRole("navigation", { name: "Rechtliches" });
     expect(nav).toBeInTheDocument();
@@ -13,11 +13,11 @@ describe("LegalFooter", () => {
       "href",
       "/nutzungsbedingungen",
     );
-    expect(screen.queryByRole("link", { name: "Zur Anmeldung" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Zur Startseite" })).toBeNull();
   });
 
-  it("adds the login link with showLogin", () => {
-    render(<LegalFooter showLogin />);
-    expect(screen.getByRole("link", { name: "Zur Anmeldung" })).toHaveAttribute("href", "/login");
+  it("adds the home link with showHome", () => {
+    render(<LegalFooter showHome />);
+    expect(screen.getByRole("link", { name: "Zur Startseite" })).toHaveAttribute("href", "/");
   });
 });

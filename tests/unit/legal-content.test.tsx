@@ -1,3 +1,4 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import * as impressum from "@/content/legal/impressum";
 import * as datenschutz from "@/content/legal/datenschutz";
@@ -10,12 +11,19 @@ describe("legal content", () => {
     for (const m of modules) {
       expect(m.title.length).toBeGreaterThan(0);
       expect(m.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Number.isNaN(Date.parse(m.updatedAt))).toBe(false);
       expect(typeof m.default).toBe("function");
     }
   });
 
   // Merge-Sperre: bleibt absichtlich rot, bis die echten Texte eingesetzt sind (Task 3).
   it("no legal module is still a placeholder", () => {
-    expect(modules.every((m) => m.PLACEHOLDER === false)).toBe(true);
+    for (const m of modules) {
+      const Content = m.default;
+      const markup = renderToStaticMarkup(<Content />);
+      expect(markup).not.toContain("PLATZHALTER");
+      expect(markup).not.toContain("Text folgt");
+      expect(m.PLACEHOLDER).toBe(false);
+    }
   });
 });

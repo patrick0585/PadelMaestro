@@ -9,7 +9,7 @@ const LINKS = [
   { href: "/nutzungsbedingungen", label: "Nutzungsbedingungen" },
 ];
 
-export function LegalFooter({ showLogin = false }: { showLogin?: boolean }) {
+export function LegalFooter({ showHome = false }: { showHome?: boolean }) {
   return (
     <nav
       aria-label="Rechtliches"
@@ -20,9 +20,9 @@ export function LegalFooter({ showLogin = false }: { showLogin?: boolean }) {
           {l.label}
         </Link>
       ))}
-      {showLogin && (
-        <Link href="/login" className={`${ITEM_CLASS} font-semibold text-primary`}>
-          Zur Anmeldung
+      {showHome && (
+        <Link href="/" className={`${ITEM_CLASS} font-semibold text-primary`}>
+          Zur Startseite
         </Link>
       )}
     </nav>

@@ -1,3 +1,4 @@
+// Echte Texte: nur h2/h3/p/ul/ol/a/strong verwenden, keine Farbklassen; PLACEHOLDER auf false setzen und updatedAt aktualisieren.
 export const title = "Impressum";
 export const updatedAt = "2026-11-03";
 export const PLACEHOLDER: boolean = true;
