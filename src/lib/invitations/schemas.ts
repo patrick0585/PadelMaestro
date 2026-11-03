@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { emailField, newPasswordField, tokenField } from "@/lib/account/schemas";
+import { isPlaceholderEmail } from "@/lib/auth/email";
 
 export const signupSchema = z.object({
   token: tokenField,
   name: z.string().trim().min(1).max(60),
-  email: emailField,
+  email: emailField.refine((e) => !isPlaceholderEmail(e)),
   password: newPasswordField,
   acceptTerms: z.literal(true),
 });

@@ -61,15 +61,20 @@ describe("POST /api/signup", () => {
     expect(m).not.toBeNull();
   });
 
-  it("400 when acceptTerms is missing or false, or password shorter than 8", async () => {
+  it("400 when acceptTerms is missing or false, password shorter than 8, or a placeholder address", async () => {
     const { inv } = await setup();
     const { acceptTerms: _a, ...noTerms } = valid(inv.token);
-    for (const body of [noTerms, valid(inv.token, { acceptTerms: false }), valid(inv.token, { password: "kurz123" })]) {
+    for (const body of [
+      noTerms,
+      valid(inv.token, { acceptTerms: false }),
+      valid(inv.token, { password: "kurz123" }),
+      valid(inv.token, { email: "neu@padel.local" }),
+    ]) {
       const res = await call(body);
       expect(res.status).toBe(400);
       expect(await res.json()).toEqual({ error: "invalid" });
     }
-    expect(await prisma.player.count({ where: { email: "neu@example.com" } })).toBe(0);
+    expect(await prisma.player.count({ where: { email: { in: ["neu@example.com", "neu@padel.local"] } } })).toBe(0);
   });
 
   it("409 email_taken for an existing address", async () => {
