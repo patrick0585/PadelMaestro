@@ -6,9 +6,10 @@ import { rateLimitedResponse } from "@/lib/rate-limit-response";
 import { requestEmailChange } from "@/lib/account/email-verification";
 import { EmailTakenError, PlayerNotFoundError } from "@/lib/account/errors";
 import { emailField } from "@/lib/account/schemas";
+import { isPlaceholderEmail } from "@/lib/auth/email";
 import { MailSendError } from "@/lib/mail/send";
 
-const Schema = z.object({ email: emailField });
+const Schema = z.object({ email: emailField.refine((e) => !isPlaceholderEmail(e)) });
 
 export async function POST(req: Request) {
   const session = await auth();

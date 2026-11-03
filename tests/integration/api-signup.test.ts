@@ -69,6 +69,7 @@ describe("POST /api/signup", () => {
       valid(inv.token, { acceptTerms: false }),
       valid(inv.token, { password: "kurz123" }),
       valid(inv.token, { email: "neu@padel.local" }),
+      valid(inv.token, { email: "geloescht-x@anonym.invalid" }),
     ]) {
       const res = await call(body);
       expect(res.status).toBe(400);

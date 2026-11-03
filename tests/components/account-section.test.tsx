@@ -16,7 +16,7 @@ describe("<AccountSection>", () => {
     expect(link).toHaveAttribute("download");
     expect(
       screen.getByText(
-        "Löscht dein Konto und entfernt dich aus allen Gruppen. Spielergebnisse bleiben anonym erhalten.",
+        "Löscht dein Konto und entfernt dich aus allen Gruppen. Deine Spielergebnisse bleiben ohne deinen Namen erhalten.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -27,6 +27,7 @@ describe("<AccountSection>", () => {
 
     render(<AccountSection hasPassword={false} />);
     expect(screen.getByRole("link", { name: "Daten exportieren" })).toHaveAttribute("download");
+    expect(screen.getByText("Lade alle deine Daten als JSON herunter.")).toBeInTheDocument();
     expect(
       screen.getByText("Dieses Konto hat kein Passwort und kann nur von einem Admin entfernt werden."),
     ).toBeInTheDocument();

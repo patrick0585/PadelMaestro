@@ -15,7 +15,9 @@ export function AccountSection({ hasPassword }: { hasPassword: boolean }) {
       <CardBody className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Konto</h2>
         <p className="text-sm text-foreground-muted">
-          Lade alle deine Daten als JSON herunter oder lösche dein Konto.
+          {hasPassword
+            ? "Lade alle deine Daten als JSON herunter oder lösche dein Konto."
+            : "Lade alle deine Daten als JSON herunter."}
         </p>
         <div>
           <a href="/api/profile/export" download className={EXPORT_LINK_CLASS}>
@@ -25,13 +27,13 @@ export function AccountSection({ hasPassword }: { hasPassword: boolean }) {
         {hasPassword ? (
           <div className="space-y-2">
             <p className="text-sm text-foreground-muted">
-              Löscht dein Konto und entfernt dich aus allen Gruppen. Spielergebnisse bleiben anonym
-              erhalten.
+              Löscht dein Konto und entfernt dich aus allen Gruppen. Deine Spielergebnisse bleiben ohne
+              deinen Namen erhalten.
             </p>
             <Button
               type="button"
               variant="ghost"
-              className="min-h-11 !text-destructive"
+              className="min-h-11 !border-transparent !text-destructive"
               onClick={() => setDeleting(true)}
             >
               Konto löschen

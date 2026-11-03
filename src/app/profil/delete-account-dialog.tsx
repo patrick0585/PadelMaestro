@@ -13,15 +13,16 @@ type ErrorBody = { error?: string; groups?: { id: string; name: string }[] };
 function errorText(status: number, body: ErrorBody): string {
   if (status === 403 && body.error === "wrong_password") return "Passwort falsch.";
   if (status === 409 && body.error === "owner_of_group") {
-    const names = (body.groups ?? []).map((g) => g.name).join(", ");
-    return `Du bist Besitzer von: ${names}. Übertrage den Besitz oder lösche die Gruppe zuerst.`;
+    const names = (body.groups ?? []).map((g) => `„${g.name}“`).join(", ");
+    return `Du bist Besitzer von ${names}. Übertrage den Besitz oder lösche die Gruppe zuerst.`;
   }
-  if (status === 429) return "Zu viele Versuche, bitte später.";
+  if (status === 429) return "Zu viele Versuche. Bitte versuche es später erneut.";
   return FALLBACK;
 }
 
 export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const passwordId = useId();
+  const errorId = useId();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,11 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
       return;
     }
     if (res.status === 204) {
-      await signOut({ callbackUrl: "/login" });
+      try {
+        await signOut({ callbackUrl: "/login" });
+      } catch {
+        window.location.assign("/login");
+      }
       return;
     }
     setLoading(false);
@@ -71,7 +76,8 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
         </p>
         <p className="text-sm text-foreground">
           Du wirst aus allen Gruppen entfernt und abgemeldet. Deine Spielergebnisse bleiben ohne
-          deinen Namen erhalten.
+          deinen Namen erhalten. Dein Profil und dein Login werden gelöscht. Exportiere vorher deine
+          Daten, wenn du sie behalten willst.
         </p>
         <div className="space-y-1">
           <Label htmlFor={passwordId}>Dein Passwort</Label>
@@ -85,9 +91,10 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
             }}
             autoComplete="current-password"
             aria-invalid={passwordInvalid || undefined}
+            aria-describedby={error ? errorId : undefined}
           />
         </div>
-        {error && <InlineMessage kind="error">{error}</InlineMessage>}
+        {error && <InlineMessage kind="error" id={errorId}>{error}</InlineMessage>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading} autoFocus>
             Abbrechen

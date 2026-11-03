@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach, onTestFinished } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
@@ -7,7 +7,9 @@ import { DeleteAccountDialog } from "@/app/profil/delete-account-dialog";
 
 const signOutMock = signOut as unknown as ReturnType<typeof vi.fn>;
 
-beforeEach(() => signOutMock.mockReset());
+beforeEach(() => {
+  signOutMock.mockReset();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 function submit(password = "geheim") {
@@ -25,7 +27,7 @@ describe("DeleteAccountDialog", () => {
     expect(screen.getByText("Das kann nicht rückgängig gemacht werden.")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Du wirst aus allen Gruppen entfernt und abgemeldet. Deine Spielergebnisse bleiben ohne deinen Namen erhalten.",
+        "Du wirst aus allen Gruppen entfernt und abgemeldet. Deine Spielergebnisse bleiben ohne deinen Namen erhalten. Dein Profil und dein Login werden gelöscht. Exportiere vorher deine Daten, wenn du sie behalten willst.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abbrechen" })).toHaveFocus();
@@ -55,6 +57,9 @@ describe("DeleteAccountDialog", () => {
     expect(await screen.findByText("Passwort falsch.")).toHaveAttribute("role", "alert");
     expect(screen.getByLabelText("Dein Passwort")).toHaveAttribute("aria-invalid", "true");
     expect(signOutMock).not.toHaveBeenCalled();
+    const alertId = screen.getByText("Passwort falsch.").id;
+    expect(alertId).not.toBe("");
+    expect(screen.getByLabelText("Dein Passwort")).toHaveAttribute("aria-describedby", alertId);
     unmount();
 
     vi.stubGlobal(
@@ -74,19 +79,31 @@ describe("DeleteAccountDialog", () => {
     submit();
     expect(
       await screen.findByText(
-        "Du bist Besitzer von: Padelfreunde, Dienstags. Übertrage den Besitz oder lösche die Gruppe zuerst.",
+        "Du bist Besitzer von „Padelfreunde“, „Dienstags“. Übertrage den Besitz oder lösche die Gruppe zuerst.",
       ),
     ).toBeInTheDocument();
   });
 
   it.each([
-    [429, "Zu viele Versuche, bitte später."],
+    [429, "Zu viele Versuche. Bitte versuche es später erneut."],
     [500, "Löschen fehlgeschlagen."],
   ])("shows the text for %i", async (status, text) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status, json: async () => ({}) }));
     render(<DeleteAccountDialog open onClose={vi.fn()} />);
     submit();
     expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
+  it("falls back to /login when signOut throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 204, json: async () => ({}) }));
+    signOutMock.mockRejectedValue(new Error("boom"));
+    const assign = vi.fn();
+    const orig = window.location;
+    Object.defineProperty(window, "location", { configurable: true, value: { assign } });
+    onTestFinished(() => Object.defineProperty(window, "location", { configurable: true, value: orig }));
+    render(<DeleteAccountDialog open onClose={vi.fn()} />);
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/login"));
   });
 
   it("cannot be closed by Escape while the request is in flight", async () => {

@@ -71,6 +71,13 @@ describe("POST /api/profile/email", () => {
     expect(memoryOutbox).toHaveLength(0);
   });
 
+  it("400 for placeholder and .invalid addresses", async () => {
+    const me = await member("alt@example.com");
+    loginAs(me.id);
+    expect((await call({ email: "x@anonym.invalid" })).status).toBe(400);
+    expect((await call({ email: "x@padel.local" })).status).toBe(400);
+  });
+
   it("400 on invalid input", async () => {
     const me = await member("alt@example.com");
     loginAs(me.id);
