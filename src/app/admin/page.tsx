@@ -13,6 +13,7 @@ import { StartGameDayButton } from "./start-game-day-button";
 import { DeleteGameDayButton } from "./delete-game-day-button";
 import { PlayersSection } from "./players-section";
 import { InvitationsSection } from "./invitations-section";
+import { GroupSection } from "./group-section";
 import { listOpenInvitations } from "@/lib/invitations/manage";
 import {
   ParticipantsRoster,
@@ -98,6 +99,11 @@ export default async function AdminPage({
     createdAt: i.createdAt.toISOString(),
     uses: i.uses.map((u) => ({ ...u, usedAt: u.usedAt.toISOString() })),
   }));
+
+  const group =
+    ctx.role === "owner"
+      ? await prisma.group.findUniqueOrThrow({ where: { id: ctx.groupId }, select: { name: true } })
+      : null;
 
   const playersForUi = players.map((p) => ({
     id: p.id,
@@ -200,6 +206,8 @@ export default async function AdminPage({
           </p>
         </CardBody>
       </Card>
+
+      {group && <GroupSection name={group.name} />}
     </div>
   );
 }
