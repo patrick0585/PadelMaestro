@@ -4,6 +4,7 @@ import { normaliseUsername } from "@/lib/auth/username";
 import { normaliseEmail } from "@/lib/auth/email";
 import { countOtherAdmins, findGroupMembership } from "@/lib/group/active-membership";
 import { isAdminRole, roleForAdminFlag } from "@/lib/auth/roles";
+import { revokeOpenTokens } from "@/lib/account/tokens";
 import {
   DuplicateEmailError,
   DuplicateUsernameError,
@@ -113,6 +114,7 @@ export async function updatePlayer(input: UpdatePlayerInput): Promise<UpdatedPla
             select: { id: true, email: true, name: true, username: true },
           })
         : { id: existing.id, email: existing.email, name: existing.name, username: existing.username };
+      if (emailChanged) await revokeOpenTokens(tx, existing.id);
 
       let role = membership.role;
       if (newIsAdmin !== undefined && role !== "owner") {

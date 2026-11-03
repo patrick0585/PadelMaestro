@@ -6,6 +6,7 @@ import { appUrl } from "@/lib/mail/app-url";
 import { sendMail } from "@/lib/mail/send";
 import { emailChangedMail, verifyEmailMail } from "@/lib/mail/templates";
 import { EmailTakenError, InvalidTokenError, PlayerNotFoundError } from "./errors";
+import { revokeOpenTokens } from "./tokens";
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -25,13 +26,6 @@ async function loadPlayer(playerId: string) {
   return player;
 }
 
-function revokeOpenTokens(tx: Prisma.TransactionClient, playerId: string, now: Date) {
-  return tx.emailToken.updateMany({
-    where: { playerId, purpose: "verify_email", usedAt: null },
-    data: { usedAt: now },
-  });
-}
-
 // Mail goes out after the write, so a failed send leaves the token in place for a resend.
 async function issueVerification(
   player: { id: string; name: string },
@@ -41,7 +35,7 @@ async function issueVerification(
   const now = new Date();
   const { token, hash } = generateToken();
   await prisma.$transaction(async (tx) => {
-    await revokeOpenTokens(tx, player.id, now);
+    await revokeOpenTokens(tx, player.id, "verify_email", now);
     await tx.player.update({ where: { id: player.id }, data: { pendingEmail } });
     await tx.emailToken.create({
       data: {
@@ -69,7 +63,7 @@ export async function requestEmailChange(i: {
       // Back to the confirmed address: drop a pending change, nothing to send.
       if (player.pendingEmail) {
         await prisma.$transaction(async (tx) => {
-          await revokeOpenTokens(tx, player.id, new Date());
+          await revokeOpenTokens(tx, player.id, "verify_email");
           await tx.player.update({ where: { id: player.id }, data: { pendingEmail: null } });
         });
       }
@@ -100,7 +94,13 @@ export async function confirmEmailToken(
   token: string,
   now: Date = new Date(),
 ): Promise<{ playerId: string; email: string }> {
-  let result: { playerId: string; email: string; name: string; from: string; wasVerified: boolean };
+  let result: {
+    playerId: string;
+    email: string;
+    name: string;
+    from: string;
+    wasVerified: boolean;
+  } | null;
   let target = "";
   try {
     result = await prisma.$transaction(async (tx) => {
@@ -112,10 +112,23 @@ export async function confirmEmailToken(
           expiresAt: { gt: now },
         },
         include: {
-          player: { select: { name: true, email: true, emailVerifiedAt: true, deletedAt: true } },
+          player: {
+            select: {
+              name: true,
+              email: true,
+              pendingEmail: true,
+              emailVerifiedAt: true,
+              deletedAt: true,
+            },
+          },
         },
       });
       if (!row || row.player.deletedAt) throw new InvalidTokenError();
+      // The address may have moved on since the mail went out (admin edit, newer request).
+      if (row.email !== (row.player.pendingEmail ?? row.player.email)) {
+        await tx.emailToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: now } });
+        return null;
+      }
       target = row.email;
 
       const owner = await tx.player.findFirst({
@@ -131,12 +144,18 @@ export async function confirmEmailToken(
       });
       if (claimed.count !== 1) throw new InvalidTokenError();
 
+      const changed = row.email !== row.player.email;
       await tx.player.update({
         where: { id: row.playerId },
-        data: { email: row.email, pendingEmail: null, emailVerifiedAt: now },
+        data: {
+          email: row.email,
+          pendingEmail: null,
+          emailVerifiedAt: now,
+          ...(changed && { sessionVersion: { increment: 1 } }),
+        },
       });
+      if (changed) await revokeOpenTokens(tx, row.playerId, undefined, now);
 
-      const changed = row.email !== row.player.email;
       await tx.auditLog.create({
         data: {
           actorId: row.playerId,
@@ -161,6 +180,7 @@ export async function confirmEmailToken(
     }
     throw e;
   }
+  if (!result) throw new InvalidTokenError();
 
   if (result.wasVerified && result.from !== result.email) {
     try {

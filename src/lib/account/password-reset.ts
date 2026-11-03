@@ -6,6 +6,7 @@ import { appUrl } from "@/lib/mail/app-url";
 import { sendMail } from "@/lib/mail/send";
 import { passwordResetMail } from "@/lib/mail/templates";
 import { InvalidTokenError } from "./errors";
+import { revokeOpenTokens } from "./tokens";
 
 const RESET_TTL_MS = 60 * 60 * 1000;
 
@@ -20,10 +21,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const now = new Date();
   const { token, hash } = generateToken();
   await prisma.$transaction(async (tx) => {
-    await tx.emailToken.updateMany({
-      where: { playerId: player.id, purpose: "password_reset", usedAt: null },
-      data: { usedAt: now },
-    });
+    await revokeOpenTokens(tx, player.id, "password_reset", now);
     await tx.emailToken.create({
       data: {
         playerId: player.id,
@@ -45,7 +43,7 @@ export async function confirmPasswordReset(i: {
 }): Promise<void> {
   const now = i.now ?? new Date();
   const passwordHash = await hashPassword(i.newPassword);
-  await prisma.$transaction(async (tx) => {
+  const ok = await prisma.$transaction(async (tx) => {
     const row = await tx.emailToken.findFirst({
       where: {
         tokenHash: hashToken(i.token),
@@ -53,9 +51,13 @@ export async function confirmPasswordReset(i: {
         usedAt: null,
         expiresAt: { gt: now },
       },
-      include: { player: { select: { deletedAt: true } } },
+      include: { player: { select: { email: true, deletedAt: true } } },
     });
     if (!row || row.player.deletedAt) throw new InvalidTokenError();
+    if (row.email !== row.player.email) {
+      await tx.emailToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: now } });
+      return false;
+    }
 
     // Guards against a concurrent confirm of the same token.
     const claimed = await tx.emailToken.updateMany({
@@ -65,10 +67,7 @@ export async function confirmPasswordReset(i: {
     if (claimed.count !== 1) throw new InvalidTokenError();
 
     await tx.player.update({ where: { id: row.playerId }, data: { passwordHash, sessionVersion: { increment: 1 } } });
-    await tx.emailToken.updateMany({
-      where: { playerId: row.playerId, purpose: "password_reset", usedAt: null },
-      data: { usedAt: now },
-    });
+    await revokeOpenTokens(tx, row.playerId, "password_reset", now);
     await tx.auditLog.create({
       data: {
         actorId: row.playerId,
@@ -78,5 +77,7 @@ export async function confirmPasswordReset(i: {
         payload: { playerId: row.playerId, via: "email" },
       },
     });
+    return true;
   });
+  if (!ok) throw new InvalidTokenError();
 }
