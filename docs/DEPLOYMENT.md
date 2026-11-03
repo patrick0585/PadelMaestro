@@ -292,18 +292,10 @@ sudo tee /etc/caddy/Caddyfile > /dev/null <<'CADDY'
 <DOMAIN> {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3000
+}
 
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        Referrer-Policy "same-origin"
-    }
-
-    log {
-        output file /var/log/caddy/padel.log
-        format json
-    }
+www.<DOMAIN> {
+    redir https://<DOMAIN>{uri} permanent
 }
 CADDY
 sudo sed -i "s/<DOMAIN>/<DOMAIN>/g" /etc/caddy/Caddyfile   # substitutes the placeholder
@@ -313,7 +305,7 @@ sudo journalctl -u caddy -n 30 --no-pager
 
 Caddy fetches a Let's Encrypt cert automatically on the first request (~10 seconds). Tail the journal if something looks off.
 
-Invitation URLs carry their token in the path; the access log records request URIs, so keep `/var/log/caddy` not world-readable (default) or skip `/einladung/*` from logging.
+Caddy keeps no access log here. Failed proxied requests are logged by Caddy to the systemd journal (includes client IP and request URI; invitation links carry their token in the path), and the journal is capped at 14 days via `MaxRetentionSec=14day` in `/etc/systemd/journald.conf`.
 
 ---
 

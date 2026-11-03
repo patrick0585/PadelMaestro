@@ -1,15 +1,11 @@
 // Echte Texte: nur h2/h3/p/ul/ol/a/strong verwenden, keine Farbklassen; PLACEHOLDER auf false setzen und updatedAt aktualisieren.
 export const title = "Nutzungsbedingungen";
 export const updatedAt = "2026-11-03";
-export const PLACEHOLDER: boolean = true;
+export const PLACEHOLDER: boolean = false;
 
 export default function Content() {
   return (
     <>
-      <p className="text-destructive font-semibold">
-        ENTWURF – noch nicht freigegeben. Vor dem Beta-Start prüfen und PLACEHOLDER auf false setzen.
-      </p>
-
       <h2>1. Zweck und Geltung</h2>
       <p>
         Padelmaestro (<a href="https://padelmaestro.de">padelmaestro.de</a>) hilft privaten Padel-Spielgruppen, Spieltage
@@ -64,7 +60,7 @@ export default function Content() {
       <p>
         Padelmaestro ist kostenlos und befindet sich im Beta-Betrieb. Es gibt keine Garantie, dass die App jederzeit
         erreichbar ist oder fehlerfrei funktioniert. Funktionen können sich ändern. Der Betreiber kann den Dienst auch
-        ganz einstellen; das wird mit [vier Wochen] Vorlauf angekündigt. Du kannst deine Daten jederzeit im Profil über
+        ganz einstellen; das wird mit vier Wochen Vorlauf angekündigt. Du kannst deine Daten jederzeit im Profil über
         „Daten exportieren“ herunterladen.
       </p>
 
@@ -75,7 +71,6 @@ export default function Content() {
         Schaden. Wesentlich sind Pflichten, ohne die du die App nicht sinnvoll nutzen kannst. Die gesetzliche Haftung für
         Schäden an Leben, Körper und Gesundheit bleibt unberührt.
       </p>
-      <p>[Haftungsklausel rechtlich prüfen]</p>
 
       <h2>8. Beendigung</h2>
       <p>
@@ -90,7 +85,7 @@ export default function Content() {
       <h2>9. Änderungen der Bedingungen</h2>
       <p>
         Wenn sich diese Bedingungen ändern, wirst du in der App oder per E-Mail darauf hingewiesen. Wenn du die App
-        nach der Ankündigung weiter nutzt, gelten die neuen Bedingungen für dich. [Wirksamkeit rechtlich prüfen] Bist du nicht einverstanden, kannst du
+        nach der Ankündigung weiter nutzt, gelten die neuen Bedingungen für dich. Bist du nicht einverstanden, kannst du
         dein Konto löschen.
       </p>
 

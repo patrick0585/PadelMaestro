@@ -1,14 +1,11 @@
 // Echte Texte: nur h2/h3/p/ul/ol/a/strong verwenden, keine Farbklassen; PLACEHOLDER auf false setzen und updatedAt aktualisieren.
 export const title = "Datenschutzerklärung";
 export const updatedAt = "2026-11-03";
-export const PLACEHOLDER: boolean = true;
+export const PLACEHOLDER: boolean = false;
 
 export default function Content() {
   return (
     <>
-      <p className="text-destructive font-semibold">
-        ENTWURF – noch nicht freigegeben. Vor dem Beta-Start prüfen und PLACEHOLDER auf false setzen.
-      </p>
       <p>
         Diese Erklärung beschreibt, welche personenbezogenen Daten bei der Nutzung von Padelmaestro (
         <a href="https://padelmaestro.de">padelmaestro.de</a>) verarbeitet werden. Padelmaestro ist eine kostenlose
@@ -21,25 +18,26 @@ export default function Content() {
         Verantwortlich ist die im <a href="/impressum">Impressum</a> genannte Person.
       </p>
 
-      <h2>2. Hosting und Zugriffsprotokoll</h2>
+      <h2>2. Hosting und Fehlerprotokoll</h2>
       <p>
-        Die App läuft auf einem virtuellen Server der IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, Deutschland
-        [Anschrift des Hosters prüfen]. Das
+        Die App läuft auf einem virtuellen Server der IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, Deutschland. Das
         Rechenzentrum befindet sich in Deutschland. IONOS verarbeitet die Daten als Auftragsverarbeiter.
       </p>
-      <p>Bei jedem Aufruf speichert der Webserver ein Zugriffsprotokoll mit folgenden Angaben:</p>
+      <p>
+        Der Webserver führt kein Zugriffsprotokoll. Nur wenn eine Anfrage fehlschlägt, wird ein Fehlereintrag in das
+        Systemprotokoll des Servers geschrieben. Er enthält:
+      </p>
       <ul>
         <li>IP-Adresse</li>
-        <li>Zeitpunkt des Zugriffs</li>
+        <li>Zeitpunkt</li>
         <li>aufgerufene Adresse</li>
-        <li>Statuscode der Antwort</li>
+        <li>HTTP-Methode</li>
         <li>Browser-Kennung (User-Agent)</li>
       </ul>
-      <p>[Felder mit der Server-Konfiguration abgleichen]</p>
       <p>
         Zweck sind die Betriebssicherheit und die Fehlersuche. Rechtsgrundlage ist das berechtigte Interesse an einem
-        sicheren und funktionierenden Dienst (Art. 6 Abs. 1 lit. f DSGVO). Die Protokolle werden durch automatische
-        Rotation nach spätestens 14 Tagen gelöscht [Frist prüfen].
+        sicheren und funktionierenden Dienst (Art. 6 Abs. 1 lit. f DSGVO). Die Einträge werden nach 14 Tagen automatisch
+        gelöscht. Die Protokolle der App selbst enthalten keine IP-Adressen der Nutzer.
       </p>
 
       <h2>3. Konto und Nutzung der App</h2>
@@ -58,7 +56,7 @@ export default function Content() {
       </ul>
       <p>
         Diese Daten sind nötig, um das Konto, die Gruppen und die Ergebnisse bereitzustellen. Rechtsgrundlage ist die
-        Erfüllung des Nutzungsverhältnisses (Art. 6 Abs. 1 lit. b DSGVO) [Rechtsgrundlage prüfen].
+        Erfüllung des Nutzungsverhältnisses (Art. 6 Abs. 1 lit. b DSGVO).
       </p>
       <h3>Audit-Protokoll</h3>
       <p>
@@ -69,7 +67,7 @@ export default function Content() {
       <p>
         Wird ein Konto gelöscht, werden Einträge über diese Person anonymisiert. Bei Einträgen zu Aktionen, die die
         Person selbst ausgelöst hat, bleibt nur die Konto-ID erhalten. Die Einträge werden aufbewahrt, solange das
-        Konto oder die Gruppe besteht [Aufbewahrung prüfen].
+        Konto bzw. die Gruppe besteht.
       </p>
 
       <h2>4. Sichtbarkeit innerhalb der Gruppe</h2>
@@ -88,8 +86,7 @@ export default function Content() {
       <p>
         Für den Versand wird Resend genutzt (Resend Inc., 2261 Market Street #5039, San Francisco, CA 94114, USA).
         Übermittelt werden Empfängeradresse, Name und Inhalt der Mail. Als Verarbeitungsregion ist die EU (Irland)
-        gewählt. Mit Resend besteht ein Auftragsverarbeitungsvertrag; für einen möglichen Zugriff aus den USA gelten die
-        EU-Standardvertragsklauseln [Anschrift, Auftragsverarbeitungsvertrag und Standardvertragsklauseln prüfen].
+        gewählt. Es gelten der Auftragsverarbeitungsvertrag und die EU-Standardvertragsklauseln von Resend.
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
       </p>
 
@@ -97,7 +94,7 @@ export default function Content() {
       <p>
         Padelmaestro setzt nur ein technisch notwendiges Sitzungs-Cookie, das die Anmeldung speichert. Es ist als
         HttpOnly und Secure markiert und läuft nach 30 Tagen ab. Eine Einwilligung ist dafür nicht erforderlich (§ 25
-        Abs. 2 Nr. 2 TDDDG [Paragraf prüfen]).
+        Abs. 2 Nr. 2 TDDDG).
       </p>
       <p>
         Es werden keine Analyse-, Tracking- oder Werbetools eingesetzt und keine Inhalte Dritter eingebettet. Schriften
@@ -117,7 +114,8 @@ export default function Content() {
           Nach dem Löschen eines Kontos bleiben Spielergebnisse anonymisiert erhalten, damit Ranglisten und Spieltage der
           anderen Mitglieder stimmen. Statt des Namens erscheint dann „Gelöschter Spieler“.
         </li>
-        <li>Zugriffsprotokolle werden nach spätestens 14 Tagen gelöscht [Frist prüfen] (siehe Abschnitt 2).</li>
+        <li>Audit-Einträge werden aufbewahrt, solange das Konto bzw. die Gruppe besteht.</li>
+        <li>Fehlereinträge im Systemprotokoll: siehe Abschnitt 2 (14 Tage).</li>
         <li>
           Links zur Bestätigung der E-Mail-Adresse gelten 24 Stunden, Links zum Zurücksetzen des Passworts 1 Stunde.
         </li>
