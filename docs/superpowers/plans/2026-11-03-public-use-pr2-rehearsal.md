@@ -60,11 +60,32 @@ Aus dem Worktree, 2026-11-03:
 
 ## Deploy-Ablauf
 
+Voraussetzung: PR 1 ist deployt (letzte Migration `20261103120000_session_version`).
+
 Keine Downtime nötig.
 
-1. Vorab-Prüfung (`sudo -u postgres psql padel_tracker`): `SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL ORDER BY migration_name DESC LIMIT 1;` muss `20261103120000_session_version` sein. Sonst abbrechen und zuerst PR 1 deployen.
-2. Kein `.env`-Eintrag nötig. `PUBLIC_SIGNUP` bleibt ungesetzt (= aus).
-3. Dump nach `/root/backups/<datum>-pre-public-2/db.dump` (`sudo -u postgres pg_dump -Fc padel_tracker`).
+1. Vorab-Prüfung (`sudo -u postgres psql padel_tracker`):
+   - `SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL ORDER BY migration_name DESC LIMIT 1;` muss `20261103120000_session_version` sein. Sonst abbrechen und zuerst PR 1 deployen.
+   - Zeilenzahlen notieren, damit Schritt 6 vergleichen kann:
+     ```sql
+     SELECT 'Player' t, count(*) FROM "Player" UNION ALL
+     SELECT 'Membership', count(*) FROM "Membership" UNION ALL
+     SELECT 'Season', count(*) FROM "Season" UNION ALL
+     SELECT 'GameDay', count(*) FROM "GameDay" UNION ALL
+     SELECT 'Match', count(*) FROM "Match" UNION ALL
+     SELECT 'GameDayParticipant', count(*) FROM "GameDayParticipant" UNION ALL
+     SELECT 'JokerUse', count(*) FROM "JokerUse" UNION ALL
+     SELECT 'AuditLog', count(*) FROM "AuditLog" UNION ALL
+     SELECT 'Group', count(*) FROM "Group";
+     ```
+2. Kein neuer `.env`-Eintrag nötig. `PUBLIC_SIGNUP` bleibt ungesetzt (= aus). `APP_URL` muss aus PR 1 gesetzt sein, sonst zeigen Gründer-Links auf die falsche Adresse.
+3. Dump:
+   ```bash
+   mkdir -p /root/backups/<datum>-pre-public-2
+   sudo -u postgres pg_dump -Fc padel_tracker > /root/backups/<datum>-pre-public-2/db.dump
+   ls -l /root/backups/<datum>-pre-public-2/db.dump
+   ```
+   Die Datei muss existieren und größer als 0 Byte sein.
 4. `sudo -u padel -H bash /srv/padel/app/scripts/deploy.sh` (zieht, migriert, baut, startet neu; sein Health-Check auf :3000 schlägt fälschlich fehl).
 5. Prüfen:
    - `systemctl is-active padel`, zweimal im Abstand einiger Sekunden.
@@ -72,11 +93,15 @@ Keine Downtime nötig.
    - `.../einladung/irgendwas` = 200 mit der Seite „Einladung ungültig“.
    - `.../gruppe/neu` ohne Login = 307 auf die Login-Seite.
    - `tail -n 50 /srv/padel/logs/app.err.log` seit dem Neustart ohne `[startup]`-Zeile.
-6. Prüf-SQL: Zeilenzahlen wie vor dem Deploy, `Invitation` und `InvitationUse` vorhanden und leer.
-7. Im App-Verzeichnis als padel mit geladener `.env`: `pnpm invite:founder --list` gibt `Keine offenen Gründer-Links.` aus.
+6. Prüf-SQL: Zeilenzahlen wie in Schritt 1, `Invitation` und `InvitationUse` vorhanden und leer.
+7. `sudo -u padel -H bash -c 'cd /srv/padel/app && set -a && . ./.env && set +a && pnpm invite:founder --list'` gibt `Keine offenen Gründer-Links.` aus.
 
 ## Rollback
 
-- Die Migration fügt nur einen Enum und zwei Tabellen hinzu. Der alte Code läuft damit weiter, Rollback heißt also nur: vorherigen Commit deployen. Tabellen und Enum können bleiben.
+- Die Migration fügt nur einen Enum und zwei Tabellen hinzu. Der alte Code läuft damit weiter, Rollback heißt also nur: vorherigen Stand deployen. Tabellen und Enum können bleiben.
+- So geht das mit `deploy.sh`: Das Skript macht immer `git checkout main` und `git pull --ff-only`, ein manuell ausgecheckter älterer Commit würde also sofort wieder überschrieben. Der Rollback ist deshalb ein Revert-Commit auf `main` (`git revert -m 1 <merge-commit>` lokal, auf `main` pushen bzw. per PR mergen), danach wie in Schritt 4 `sudo -u padel -H bash /srv/padel/app/scripts/deploy.sh`.
 - `.env` wurde nicht geändert, nichts zurückzusetzen.
-- Schlägt die Migration fehl: `prisma migrate resolve --rolled-back 20261104100000_invitations` (als padel im App-Verzeichnis mit geladener `.env`), Ursache beheben, erneut deployen.
+- Schlägt die Migration fehl (`deploy.sh` bricht dann vor Build und Neustart ab, der alte Code läuft weiter):
+  1. Halb angewendete Objekte entfernen, falls vorhanden: `DROP TABLE IF EXISTS "InvitationUse", "Invitation"; DROP TYPE IF EXISTS "InvitationKind";` (in `sudo -u postgres psql padel_tracker`; die Tabellen sind zu diesem Zeitpunkt neu und leer).
+  2. `prisma migrate resolve --rolled-back 20261104100000_invitations` (als padel im App-Verzeichnis mit geladener `.env`).
+  3. Ursache beheben, erneut deployen.
