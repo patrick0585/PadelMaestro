@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const signIn = vi.fn();
@@ -32,7 +32,7 @@ describe("<SignupForm>", () => {
 
   it("submits name, email, password, acceptTerms true and the token, then signs in and navigates to / for member links", async () => {
     const fn = stubFetch(201, { playerId: "p1", kind: "member", groupId: "g1" });
-    signIn.mockResolvedValue({ error: undefined });
+    signIn.mockResolvedValue({ ok: true, error: undefined });
     render(<SignupForm token="tok1" kind="member" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
@@ -58,7 +58,7 @@ describe("<SignupForm>", () => {
 
   it("navigates to /gruppe/neu after signup on a founder link", async () => {
     stubFetch(201, { playerId: "p1", kind: "founder", groupId: null });
-    signIn.mockResolvedValue({ error: undefined });
+    signIn.mockResolvedValue({ ok: true, error: undefined });
     render(<SignupForm token="tok1" kind="founder" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/gruppe/neu"));
@@ -66,7 +66,7 @@ describe("<SignupForm>", () => {
 
   it("falls back to the login page when signIn fails after signup", async () => {
     stubFetch(201, { playerId: "p1", kind: "member", groupId: "g1" });
-    signIn.mockResolvedValue({ error: "CredentialsSignin" });
+    signIn.mockResolvedValue({ ok: false });
     render(<SignupForm token="tok1" kind="member" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith(LOGIN_HREF));
@@ -77,8 +77,8 @@ describe("<SignupForm>", () => {
     render(<SignupForm token="tok1" kind="member" />);
     fill();
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("Zu dieser Adresse gibt es schon ein Konto, bitte anmelden.");
-    expect(alert.querySelector("a")?.getAttribute("href")).toBe(LOGIN_HREF);
+    expect(alert.textContent).toContain("Zu dieser Adresse gibt es schon ein Konto, bitte anmelden.");
+    expect(within(alert).getByRole("link", { name: "Zur Anmeldung" }).getAttribute("href")).toBe(LOGIN_HREF);
     expect(signIn).not.toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
   });

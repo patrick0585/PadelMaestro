@@ -27,7 +27,7 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <PadelLogo className="mx-auto mb-3 h-16 w-16" />
-          <h1 className="text-2xl font-extrabold text-foreground">{title}</h1>
+          <h1 className="break-words text-2xl font-extrabold text-foreground">{title}</h1>
         </div>
         {children}
       </div>
@@ -44,6 +44,9 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
       <Shell title="Einladung ungültig">
         <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
           <p className="text-sm text-foreground">{REASONS[preview.reason]}</p>
+          <p className="text-sm text-foreground-muted">
+            Frag die Person, die dich eingeladen hat, nach einem neuen Link.
+          </p>
           <Link href="/login" className={LINK_CLASS}>
             Zur Anmeldung
           </Link>
@@ -52,10 +55,9 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
     );
   }
 
+  const groupLabel = preview.groupName ?? "einer Gruppe";
   const title =
-    preview.kind === "founder"
-      ? "Einladung: eigene Gruppe gründen"
-      : `Einladung zu ${preview.groupName ?? ""}`;
+    preview.kind === "founder" ? "Einladung: eigene Gruppe gründen" : `Einladung zu ${groupLabel}`;
   const session = await auth();
 
   if (!session) {
@@ -75,7 +77,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
     return (
       <Shell title={title}>
         <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-          <p className="text-sm text-foreground">Du bist schon Mitglied von {preview.groupName}</p>
+          <p className="text-sm text-foreground">Du bist schon Mitglied von {groupLabel}.</p>
           <Link href="/" className={LINK_CLASS}>
             Zum Dashboard
           </Link>

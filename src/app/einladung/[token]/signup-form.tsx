@@ -41,7 +41,7 @@ export function SignupForm({ token, kind }: { token: string; kind: "founder" | "
       });
       if (res.status === 201) {
         const login = await signIn("credentials", { identifier: email.trim(), password, redirect: false });
-        if (login?.error) window.location.assign(loginHref);
+        if (!login?.ok) window.location.assign(loginHref);
         else window.location.assign(kind === "founder" ? "/gruppe/neu" : "/");
         return;
       }
@@ -120,12 +120,14 @@ export function SignupForm({ token, kind }: { token: string; kind: "founder" | "
         </div>
         {status.kind === "error" && (
           <InlineMessage kind="error">
-            {status.loginHint ? (
-              <Link href={loginHref} className="underline">
-                {status.message}
-              </Link>
-            ) : (
-              status.message
+            {status.message}
+            {status.loginHint && (
+              <>
+                {" "}
+                <Link href={loginHref} className={INLINE_LINK_CLASS}>
+                  Zur Anmeldung
+                </Link>
+              </>
             )}
           </InlineMessage>
         )}

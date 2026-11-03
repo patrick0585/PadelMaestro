@@ -21,6 +21,7 @@ export function JoinButton({
   groupName: string | null;
 }) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const groupLabel = groupName ?? "einer Gruppe";
 
   async function onClick() {
     setStatus({ kind: "submitting" });
@@ -43,9 +44,14 @@ export function JoinButton({
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+      <p className="text-sm text-foreground-muted">
+        {kind === "founder"
+          ? "Du bist angemeldet. Mit diesem Link gründest du eine eigene Gruppe."
+          : `Du bist angemeldet und trittst ${groupLabel} bei.`}
+      </p>
       {status.kind === "error" && <InlineMessage kind="error">{status.message}</InlineMessage>}
       <Button type="button" onClick={onClick} loading={status.kind === "submitting"} className="w-full">
-        {kind === "founder" ? "Gruppe gründen" : `Gruppe ${groupName ?? ""} beitreten`}
+        {kind === "founder" ? "Gruppe gründen" : `Gruppe ${groupLabel} beitreten`}
       </Button>
     </div>
   );

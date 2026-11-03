@@ -20,6 +20,7 @@ describe("<JoinButton>", () => {
   it("posts the token and navigates to / for member, /gruppe/neu for founder", async () => {
     const fn = stubFetch(200, { kind: "member", groupId: "g1", outcome: "joined" });
     const { unmount } = render(<JoinButton token="tok1" kind="member" groupName="Die Smasher" />);
+    expect(screen.getByText("Du bist angemeldet und trittst Die Smasher bei.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Gruppe Die Smasher beitreten" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
     const [url, init] = fn.mock.calls[0];
@@ -31,6 +32,7 @@ describe("<JoinButton>", () => {
     assign.mockReset();
     stubFetch(200, { kind: "founder", outcome: "granted" });
     render(<JoinButton token="tok2" kind="founder" groupName={null} />);
+    expect(screen.getByText("Du bist angemeldet. Mit diesem Link gründest du eine eigene Gruppe.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Gruppe gründen" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/gruppe/neu"));
   });
@@ -48,5 +50,11 @@ describe("<JoinButton>", () => {
     render(<JoinButton token="tok1" kind="member" groupName="Die Smasher" />);
     fireEvent.click(screen.getByRole("button", { name: "Gruppe Die Smasher beitreten" }));
     expect((await screen.findByRole("alert")).textContent).toBe("Zu viele Versuche, bitte später.");
+  });
+
+  it("falls back to a neutral group label when the name is missing", () => {
+    render(<JoinButton token="tok1" kind="member" groupName={null} />);
+    expect(screen.getByRole("button", { name: "Gruppe einer Gruppe beitreten" })).toBeTruthy();
+    expect(screen.getByText("Du bist angemeldet und trittst einer Gruppe bei.")).toBeTruthy();
   });
 });
