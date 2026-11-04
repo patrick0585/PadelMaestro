@@ -14,12 +14,23 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function CloseSeasonDialog({
   currentName,
   maxJokers,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   currentName: string;
   maxJokers: number;
+  // Gesteuert: Auslöser liegt dann außerhalb, kein eigener Knopf.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [innerOpen, setInnerOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : innerOpen;
+  const setOpen = (next: boolean) => {
+    if (!controlled) setInnerOpen(next);
+    onOpenChange?.(next);
+  };
   const [closedName, setClosedName] = useState(currentName);
   const [nextName, setNextName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,9 +88,11 @@ export function CloseSeasonDialog({
 
   return (
     <>
-      <Button type="button" variant="primary" onClick={() => setOpen(true)}>
-        Saison abschließen
-      </Button>
+      {!controlled && (
+        <Button type="button" variant="primary" onClick={() => setOpen(true)}>
+          Saison abschließen
+        </Button>
+      )}
       <Dialog open={open} onClose={() => setOpen(false)} title="Saison abschließen">
         <form onSubmit={onSubmit} className="space-y-3">
           <p className="text-sm text-foreground">

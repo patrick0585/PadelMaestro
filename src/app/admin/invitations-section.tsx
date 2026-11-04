@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { Card, CardBody } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { GroupedList, ListRow, PrimaryAction, SectionFooter, SectionLabel } from "@/components/ui/list";
 import { InlineMessage } from "@/components/ui/inline-message";
 import type { OpenInvitation } from "@/lib/invitations/manage";
 import { MEMBER_MAX_USES, MEMBER_TTL_MS } from "@/lib/invitations/constants";
@@ -28,6 +27,18 @@ function formatDate(iso: string) {
     year: "numeric",
   });
 }
+
+function formatDay(iso: string) {
+  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+}
+
+function usageText(inv: SerializedOpenInvitation) {
+  const used = inv.usedCount === 0 ? "unbenutzt" : `${inv.usedCount}× benutzt`;
+  return `${used} · bis ${formatDay(inv.expiresAt)}`;
+}
+
+const TINTED =
+  "min-h-11 flex-1 rounded-xl bg-primary-soft px-3 text-[14.5px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 export function InvitationsSection({ initial }: { initial: SerializedOpenInvitation[] }) {
   const [invitations, setInvitations] = useState(initial);
@@ -111,19 +122,25 @@ export function InvitationsSection({ initial }: { initial: SerializedOpenInvitat
   }
 
   const canCopy = typeof navigator !== "undefined" && navigator.clipboard !== undefined;
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  async function onShare(url: string) {
+    try {
+      await navigator.share({ url });
+    } catch (e) {
+      // Abbruch durch den Nutzer ist kein Fehler
+      if (!(e instanceof DOMException && e.name === "AbortError")) setError(GENERIC_ERROR);
+    }
+  }
 
   return (
-    <Card>
-      <CardBody className="space-y-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Einladen</h2>
-          <p className="text-sm text-foreground-muted">
-            Teile den Link. Er gilt {TTL_DAYS} Tage und für bis zu {MEMBER_MAX_USES} Beitritte.
-          </p>
-        </div>
-        <form onSubmit={onCreate} className="flex flex-wrap items-end gap-2">
-          <div className="min-w-0 flex-1 basis-48">
-            <Label htmlFor="invitation-note">Notiz (optional)</Label>
+    <div>
+      <form onSubmit={onCreate}>
+        <GroupedList>
+          <label htmlFor="invitation-note" className="block px-3 pt-2.5 text-[14.5px]">
+            Notiz (optional)
+          </label>
+          <div className="px-3 pb-2.5">
             <Input
               id="invitation-note"
               value={note}
@@ -133,112 +150,125 @@ export function InvitationsSection({ initial }: { initial: SerializedOpenInvitat
               className="h-11"
             />
           </div>
-          <Button type="submit" loading={creating} className="w-full sm:w-auto">
-            Einladungslink erstellen
-          </Button>
-        </form>
-        {createdUrl && (
-          <div className="space-y-2 rounded-xl border border-primary bg-primary/10 p-3">
-            <p className="text-sm font-semibold text-foreground">Dein Link ist fertig</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                readOnly
-                value={createdUrl}
-                aria-label="Einladungslink"
-                onFocus={(e) => e.currentTarget.select()}
-                className="h-11 min-w-0 flex-1 basis-56"
-              />
-              {canCopy && (
-                <>
-                  <Button type="button" onClick={() => onCopy(createdUrl)}>
-                    {copied ? "Kopiert" : "Kopieren"}
-                  </Button>
-                  <span role="status" aria-live="polite" className="sr-only">
-                    {copied ? "Link kopiert" : ""}
-                  </span>
-                </>
-              )}
-            </div>
-            <p className="text-sm text-foreground">
-              {canCopy
-                ? "Kopiere den Link jetzt, später wird er nicht mehr angezeigt."
-                : "Tippe auf den Link, um ihn zu markieren."}
-            </p>
+        </GroupedList>
+        <div className="mt-3">
+          <PrimaryAction type="submit" disabled={creating}>
+            {creating ? "Wird erstellt…" : "Einladungslink erstellen"}
+          </PrimaryAction>
+        </div>
+        <SectionFooter>
+          Der Link gilt {TTL_DAYS} Tage und für bis zu {MEMBER_MAX_USES} Beitritte.
+        </SectionFooter>
+      </form>
+      {error && (
+        <div className="mt-3">
+          <InlineMessage kind="error">{error}</InlineMessage>
+        </div>
+      )}
+      {createdUrl && (
+        <>
+          <SectionLabel>Neuer Link</SectionLabel>
+          <p className="text-sm font-semibold text-foreground sr-only">Dein Link ist fertig</p>
+          <Input
+            readOnly
+            value={createdUrl}
+            aria-label="Einladungslink"
+            onFocus={(e) => e.currentTarget.select()}
+            className="h-11"
+          />
+          <div className="mt-2 flex gap-2">
+            {canCopy && (
+              <button type="button" className={TINTED} onClick={() => onCopy(createdUrl)}>
+                {copied ? "Kopiert" : "Kopieren"}
+              </button>
+            )}
+            {canShare && (
+              <button type="button" className={TINTED} onClick={() => onShare(createdUrl)}>
+                Teilen ⇪
+              </button>
+            )}
           </div>
-        )}
-        {error && <InlineMessage kind="error">{error}</InlineMessage>}
-        {invitations.length === 0 ? (
-          <p className="text-sm text-foreground-muted">
-            Noch keine offenen Links. Erstelle oben einen und teile ihn.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {invitations.map((inv) => (
-              <li key={inv.id} className="space-y-2 rounded-xl border border-border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1 text-sm">
-                    <div className="line-clamp-2 break-words font-medium text-foreground">
-                      {inv.note ?? "Einladungslink"}
-                    </div>
-                    <div className="text-xs text-foreground-muted">
-                      gültig bis {formatDate(inv.expiresAt)} · {inv.usedCount} von {inv.maxUses}{" "}
-                      verwendet
-                    </div>
-                  </div>
-                  {confirming === inv.id ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-foreground">Wirklich widerrufen?</span>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        loading={revoking === inv.id}
-                        onClick={() => onRevoke(inv.id)}
-                      >
-                        Ja, widerrufen
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        disabled={revoking === inv.id}
-                        onClick={() => setConfirming(null)}
-                      >
-                        Abbrechen
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
+          <span role="status" aria-live="polite" className="sr-only">
+            {copied ? "Link kopiert" : ""}
+          </span>
+          <SectionFooter>
+            {canCopy
+              ? "Kopiere den Link jetzt, später wird er nicht mehr angezeigt."
+              : "Tippe auf den Link, um ihn zu markieren."}
+          </SectionFooter>
+        </>
+      )}
+      <SectionLabel>Offene Links</SectionLabel>
+      {invitations.length === 0 ? (
+        <GroupedList>
+          <ListRow title={<span className="text-foreground-muted">Keine offenen Links</span>} />
+        </GroupedList>
+      ) : (
+        <GroupedList>
+          {invitations.map((inv) => (
+            <div
+              key={inv.id}
+              className="relative not-first:before:absolute not-first:before:left-3.5 not-first:before:right-0 not-first:before:top-0 not-first:before:h-px not-first:before:bg-border not-first:before:content-['']"
+            >
+              <ListRow
+                title={<span className="line-clamp-2 whitespace-normal break-words">{inv.note ?? "Einladungslink"}</span>}
+                subtitle={usageText(inv)}
+                trailing={
+                  confirming === inv.id ? undefined : (
+                    <button
                       type="button"
-                      variant="ghost"
                       aria-label={`Link ${inv.note ?? "Einladungslink"} widerrufen`}
                       onClick={() => setConfirming(inv.id)}
+                      className="min-h-11 shrink-0 rounded px-1 text-[13px] text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       Widerrufen
-                    </Button>
-                  )}
+                    </button>
+                  )
+                }
+              />
+              {confirming === inv.id && (
+                <div className="flex flex-wrap items-center gap-3 px-3.5 pb-2.5">
+                  <span className="text-sm text-foreground">Wirklich widerrufen?</span>
+                  <button
+                    type="button"
+                    disabled={revoking === inv.id}
+                    onClick={() => onRevoke(inv.id)}
+                    className="min-h-11 rounded px-1 text-[14.5px] font-semibold text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                  >
+                    Ja, widerrufen
+                  </button>
+                  <button
+                    type="button"
+                    disabled={revoking === inv.id}
+                    onClick={() => setConfirming(null)}
+                    className="min-h-11 rounded px-1 text-[14.5px] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                  >
+                    Abbrechen
+                  </button>
                 </div>
-                {inv.uses.length > 0 && (
-                  <details className="group text-sm">
-                    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-lg px-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
-                      <ChevronRight
-                        className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
-                        aria-hidden
-                      />
-                      Beigetreten ({inv.uses.length})
-                    </summary>
-                    <ul className="space-y-1 px-1 pt-1 text-foreground">
-                      {inv.uses.map((u) => (
-                        <li key={u.playerId}>
-                          {u.playerName} · {formatDate(u.usedAt)}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardBody>
-    </Card>
+              )}
+              {inv.uses.length > 0 && (
+                <details className="group px-3.5 pb-1 text-sm">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-lg text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
+                      aria-hidden
+                    />
+                    Beigetreten ({inv.uses.length})
+                  </summary>
+                  <ul className="space-y-1 pb-2 pl-5 text-foreground">
+                    {inv.uses.map((u) => (
+                      <li key={u.playerId}>
+                        {u.playerName} · {formatDate(u.usedAt)}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          ))}
+        </GroupedList>
+      )}
+    </div>
   );
 }

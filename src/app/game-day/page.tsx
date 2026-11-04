@@ -31,6 +31,18 @@ function normalizeAttendance(value: string): RosterAttendance {
     : "pending";
 }
 
+function CreateGameDayLink() {
+  return (
+    <Link
+      href="/admin/spieltage"
+      aria-label="Spieltag anlegen"
+      className="grid size-11 place-items-center rounded-xl border border-border bg-surface text-xl font-semibold text-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <span aria-hidden="true">＋</span>
+    </Link>
+  );
+}
+
 export default async function GameDayPage() {
   const session = await auth();
   if (!session) redirect("/login");
@@ -75,7 +87,10 @@ export default async function GameDayPage() {
     return (
       <Card>
         <CardBody>
-          <h1 className="text-lg font-semibold text-foreground">Kein aktiver Spieltag</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-lg font-semibold text-foreground">Kein aktiver Spieltag</h1>
+            {session.user.isAdmin && <CreateGameDayLink />}
+          </div>
           <p className="mt-2 text-sm text-muted-foreground">
             Ein Admin muss zuerst einen Spieltag anlegen.
           </p>
@@ -146,6 +161,7 @@ export default async function GameDayPage() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <RefreshButton />
+          {session.user.isAdmin && <CreateGameDayLink />}
           {session.user.isAdmin && day.status === "in_progress" && (
             <Link
               href="/game-day/print"

@@ -1,13 +1,14 @@
 import Image from "next/image";
 import { initials } from "@/lib/player/initials";
 
-export type AvatarSize = 32 | 40 | 48 | 64 | 96;
+export type AvatarSize = 32 | 40 | 48 | 64 | 72 | 96;
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
   32: "h-8 w-8 text-xs",
   40: "h-10 w-10 text-sm",
   48: "h-12 w-12 text-sm",
   64: "h-16 w-16 text-base",
+  72: "h-[72px] w-[72px] text-2xl",
   96: "h-24 w-24 text-xl",
 };
 

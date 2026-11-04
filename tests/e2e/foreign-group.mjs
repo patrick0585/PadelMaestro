@@ -21,6 +21,7 @@ import {
   ensureNotOnLogin,
   adminCreateDay,
   adminStartDay,
+  openPlannedDay,
   getMatches,
   enterScore,
   writeFindings,
@@ -191,6 +192,7 @@ async function main() {
     // c. Founder creates a member link.
     const memberLink = await step("c. Mitglieder-Link erstellen", async () => {
       const page = pages.founder;
+      await page.goto(`${BASE}/admin/einladen`, { waitUntil: "domcontentloaded" });
       await hydrated(page.locator("#invitation-note"));
       await page.locator("#invitation-note").fill("E2E Mitglieder");
       await page.getByRole("button", { name: "Einladungslink erstellen" }).click();
@@ -288,8 +290,8 @@ async function main() {
 
     await step("f3. Spieltag starten", async () => {
       const page = pages.founder;
-      await page.goto(`${BASE}/admin`, { waitUntil: "domcontentloaded" });
-      await hydrated(page.locator('button:has-text("Spieltag starten")'));
+      if (!(await openPlannedDay(page))) await fail(page, "no-planned-day", { url: page.url() });
+      await hydrated(page.locator('[data-testid="start-game-day"]'));
       await adminStartDay(page);
       await page.goto(`${BASE}/game-day`, { waitUntil: "domcontentloaded" });
       if ((await page.getByText(/Match 1 · Vorschau/i).count()) > 0) {
