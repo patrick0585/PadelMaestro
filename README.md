@@ -138,6 +138,8 @@ scripts/                 one-off CLI helpers (seed, bootstrap, import)
 docs/                    deployment notes, onboarding HTML, design specs
 ```
 
+Die iOS-App (Capacitor-Hülle) ist in [docs/IOS.md](docs/IOS.md) beschrieben.
+
 ## Roadmap
 
 - [x] Phase 1 — invitation + password auth, attendance, balanced pairings, score entry with optimistic locking, season ranking, Joker (2/season, PPG snapshot)
