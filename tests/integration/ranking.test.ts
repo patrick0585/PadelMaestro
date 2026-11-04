@@ -135,7 +135,7 @@ describe("computeRanking", () => {
       ),
     );
 
-    // Day 1 (finished): p1 gold (3 pts), p2 silver (1 pt), p3 + p4 tied last (1 pt each — alphabetical → p3 bronze)
+    // Day 1 (finished): p1 + p2 share gold (3 pts each), p3 + p4 share bronze (1 pt each)
     const day1 = await prisma.gameDay.create({
       data: {
         groupId: season.groupId,
@@ -158,7 +158,7 @@ describe("computeRanking", () => {
       },
     });
 
-    // Day 2 (finished): p1 gold again, p3 silver, p2 bronze
+    // Day 2 (finished): p1 + p3 share gold (5 pts), p2 + p4 share bronze (1 pt)
     const day2 = await prisma.gameDay.create({
       data: {
         groupId: season.groupId,
@@ -219,12 +219,12 @@ describe("computeRanking", () => {
     const ranking = await computeRanking(season.id);
     const byId = new Map(ranking.map((r) => [r.playerId, r]));
     expect(byId.get(p1.id)?.medals).toEqual({ gold: 2, silver: 0, bronze: 0 });
-    expect(byId.get(p2.id)?.medals).toEqual({ gold: 0, silver: 1, bronze: 1 });
-    expect(byId.get(p3.id)?.medals).toEqual({ gold: 0, silver: 1, bronze: 1 });
-    expect(byId.get(p4.id)?.medals).toEqual({ gold: 0, silver: 0, bronze: 0 });
+    expect(byId.get(p2.id)?.medals).toEqual({ gold: 1, silver: 0, bronze: 1 });
+    expect(byId.get(p3.id)?.medals).toEqual({ gold: 1, silver: 0, bronze: 1 });
+    expect(byId.get(p4.id)?.medals).toEqual({ gold: 0, silver: 0, bronze: 2 });
   });
 
-  it("breaks podium ties alphabetically (de locale) when two players have identical points and matches", async () => {
+  it("awards shared medals when players tie on points and matches (1, 1, 3, 3)", async () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({
       data: {
@@ -236,8 +236,9 @@ describe("computeRanking", () => {
         isActive: true,
       },
     });
-    // Names chosen so the German locale tiebreaker is exercised: "Älice" sorts
-    // before "Bob" under de collation, "Carl" before "Dave".
+    // Names chosen so the German locale sort is exercised: "Älice" sorts
+    // before "Bob" under de collation, "Carl" before "Dave". Row order must
+    // not influence medals — tied players share them.
     const [alice, bob, carl, dave] = await Promise.all(
       ["Älice", "Bob", "Carl", "Dave"].map((n) =>
         createMember(season.groupId, { name: n, email: `${n}@x`, passwordHash: "x" }),
@@ -269,9 +270,64 @@ describe("computeRanking", () => {
     const ranking = await computeRanking(season.id);
     const byId = new Map(ranking.map((r) => [r.playerId, r]));
     expect(byId.get(alice.id)?.medals).toEqual({ gold: 1, silver: 0, bronze: 0 });
-    expect(byId.get(bob.id)?.medals).toEqual({ gold: 0, silver: 1, bronze: 0 });
+    expect(byId.get(bob.id)?.medals).toEqual({ gold: 1, silver: 0, bronze: 0 });
     expect(byId.get(carl.id)?.medals).toEqual({ gold: 0, silver: 0, bronze: 1 });
-    expect(byId.get(dave.id)?.medals).toEqual({ gold: 0, silver: 0, bronze: 0 });
+    expect(byId.get(dave.id)?.medals).toEqual({ gold: 0, silver: 0, bronze: 1 });
+  });
+
+  it("awards three golds and no silver or bronze on a three-way tie for first", async () => {
+    const year = new Date().getFullYear();
+    const season = await prisma.season.create({
+      data: {
+        groupId: (await createTestGroup()).id,
+        name: `Saison ${year}`,
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    });
+    const [a, b, c, d] = await Promise.all(
+      ["A", "B", "C", "D"].map((n) =>
+        createMember(season.groupId, { name: n, email: `${n}@x`, passwordHash: "x" }),
+      ),
+    );
+    const day = await prisma.gameDay.create({
+      data: {
+        groupId: season.groupId,
+        seasonId: season.id,
+        date: new Date("2026-04-21"),
+        playerCount: 4,
+        status: "finished",
+      },
+    });
+    // D partners each of A/B/C once and always loses: A, B, C end on 6 pts, D on 0.
+    const games = [
+      [a.id, d.id, b.id, c.id],
+      [b.id, d.id, a.id, c.id],
+      [c.id, d.id, a.id, b.id],
+    ];
+    for (const [i, [t1a, t1b, t2a, t2b]] of games.entries()) {
+      await prisma.match.create({
+        data: {
+          gameDayId: day.id,
+          matchNumber: i + 1,
+          team1PlayerAId: t1a,
+          team1PlayerBId: t1b,
+          team2PlayerAId: t2a,
+          team2PlayerBId: t2b,
+          team1Score: 0,
+          team2Score: 3,
+        },
+      });
+    }
+
+    const ranking = await computeRanking(season.id);
+    const byId = new Map(ranking.map((r) => [r.playerId, r]));
+    for (const p of [a, b, c]) {
+      expect(byId.get(p.id)?.medals).toEqual({ gold: 1, silver: 0, bronze: 0 });
+    }
+    expect(byId.get(d.id)?.medals).toEqual({ gold: 0, silver: 0, bronze: 0 });
   });
 
   it("does not award a phantom bronze on a 2-player game day", async () => {

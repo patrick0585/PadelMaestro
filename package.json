@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "e2e": "node tests/e2e/run.mjs",
     "e2e:reset": "node tests/e2e/reset-state.mjs",
+    "e2e:foreign": "node tests/e2e/foreign-group.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",

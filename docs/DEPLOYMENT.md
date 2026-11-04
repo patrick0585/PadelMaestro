@@ -303,6 +303,8 @@ sudo systemctl reload caddy
 sudo journalctl -u caddy -n 30 --no-pager
 ```
 
+The security headers (HSTS, `X-Content-Type-Options`, `Referrer-Policy: same-origin`, `X-Frame-Options`, `Permissions-Policy`) are set by the app itself in `next.config.ts`, so they ship with every deploy; Caddy needs no `header` block. If you add one anyway, use the same values and no `includeSubDomains` (other projects live on subdomains of this VPS). Responses that Caddy generates itself (e.g. 502 while the app restarts) carry no headers. Check with `curl -sI https://<DOMAIN>/login`.
+
 Caddy fetches a Let's Encrypt cert automatically on the first request (~10 seconds). Tail the journal if something looks off.
 
 Caddy keeps no access log here. Failed proxied requests are logged by Caddy to the systemd journal (includes client IP and request URI; invitation links carry their token in the path), and the journal is capped at 14 days via `MaxRetentionSec=14day` in `/etc/systemd/journald.conf`.

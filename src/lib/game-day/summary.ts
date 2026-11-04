@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { GameDayStatus } from "@prisma/client";
+import { assignRanks, rankingModeFor } from "./competition-rank";
 
 export interface GameDaySummaryRow {
   playerId: string;
@@ -7,6 +8,8 @@ export interface GameDaySummaryRow {
   avatarVersion: number;
   points: number;
   matches: number;
+  // Rank within the day; ties share a rank (see rankingModeFor for the scheme).
+  rank: number;
 }
 
 export interface GameDaySummary {
@@ -14,6 +17,7 @@ export interface GameDaySummary {
   date: Date;
   status: GameDayStatus;
   rows: GameDaySummaryRow[];
+  // All rows with rank <= 3; ties can yield more than three entries.
   podium: GameDaySummaryRow[];
 }
 
@@ -65,7 +69,7 @@ export async function computeGameDaySummary(
   const nameById = new Map(players.map((p) => [p.id, p.name]));
   const versionById = new Map(players.map((p) => [p.id, p.avatarVersion]));
 
-  const rows: GameDaySummaryRow[] = playerIds.map((pid) => ({
+  const sorted = playerIds.map((pid) => ({
     playerId: pid,
     playerName: nameById.get(pid) ?? "Unbekannt",
     avatarVersion: versionById.get(pid) ?? 0,
@@ -73,17 +77,20 @@ export async function computeGameDaySummary(
     matches: totals.get(pid)!.matches,
   }));
 
-  rows.sort((a, b) => {
+  sorted.sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     if (b.matches !== a.matches) return b.matches - a.matches;
     return a.playerName.localeCompare(b.playerName, "de");
   });
+
+  const ranks = assignRanks(sorted, rankingModeFor(day.date));
+  const rows: GameDaySummaryRow[] = sorted.map((r, i) => ({ ...r, rank: ranks[i] }));
 
   return {
     gameDayId: day.id,
     date: day.date,
     status: day.status,
     rows,
-    podium: rows.slice(0, 3),
+    podium: rows.filter((r) => r.rank <= 3),
   };
 }
