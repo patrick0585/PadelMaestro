@@ -10,6 +10,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "cap:sync": "cap sync ios",
+    "cap:open": "cap open ios",
     "e2e": "node tests/e2e/run.mjs",
     "e2e:reset": "node tests/e2e/reset-state.mjs",
     "e2e:foreign": "node tests/e2e/foreign-group.mjs",
@@ -35,6 +37,10 @@
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
     "@dnd-kit/core": "^6.3.1",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
@@ -52,6 +58,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.0",
     "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "^4.2.2",
     "@testing-library/jest-dom": "^6.9.1",
