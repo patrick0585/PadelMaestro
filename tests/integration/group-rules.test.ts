@@ -96,12 +96,37 @@ describe("group joker rules", () => {
   });
 
   it("keeps existing JokerUse credits when the group rule changes later", async () => {
-    const { group, season, player } = await setup({ jokerGamesCredited: 15 });
+    const { group, season, player } = await setup({ jokerGamesCredited: 10 });
+    const others = await Promise.all(
+      ["B", "C", "D"].map((n) =>
+        createMember(group.id, { name: n, email: `${n}@x`, passwordHash: "x" }),
+      ),
+    );
+    const earlier = await createTestGameDay(group.id, season.id, {
+      date: new Date(Date.UTC(2026, 2, 1)),
+      status: "finished",
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: earlier.id,
+        matchNumber: 1,
+        team1PlayerAId: player.id,
+        team1PlayerBId: others[0].id,
+        team2PlayerAId: others[1].id,
+        team2PlayerBId: others[2].id,
+        team1Score: 3,
+        team2Score: 1,
+      },
+    });
     const gd = await plannedDay(group.id, season.id, player.id, 1);
     const use = await recordJokerUse({ playerId: player.id, gameDayId: gd.id });
+    expect(Number(use.ppgAtUse)).toBeGreaterThan(0);
+
     await prisma.group.update({ where: { id: group.id }, data: { jokerGamesCredited: 5 } });
+
     const after = await prisma.jokerUse.findUniqueOrThrow({ where: { id: use.id } });
-    expect(after.gamesCredited).toBe(15);
-    expect(after.pointsCredited.toString()).toBe(use.pointsCredited.toString());
+    expect(after.gamesCredited).toBe(10);
+    expect(Number(after.pointsCredited)).toBeCloseTo(10 * Number(after.ppgAtUse), 2);
+    expect(Number(after.pointsCredited)).toBeGreaterThan(0);
   });
 });
