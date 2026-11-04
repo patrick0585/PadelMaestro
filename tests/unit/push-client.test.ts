@@ -33,6 +33,7 @@ describe("unregisterThisDevice", () => {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token: "abc123" }),
+      signal: expect.any(AbortSignal),
     });
     expect(localStorage.getItem("pm.pushToken")).toBeNull();
   });

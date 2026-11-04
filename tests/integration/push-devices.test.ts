@@ -12,7 +12,7 @@ import { POST, DELETE } from "@/app/api/push/devices/route";
 import { PATCH } from "@/app/api/profile/push/route";
 
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
-const TOKEN = "ab12cd34ef56";
+const TOKEN = "ab12cd34".repeat(8);
 
 function req(method: string, url: string, body?: unknown): Request {
   return new Request(`http://test${url}`, {
@@ -47,6 +47,25 @@ describe("push devices lib", () => {
     const second = await prisma.pushDevice.findUniqueOrThrow({ where: { token: TOKEN } });
     expect(await prisma.pushDevice.count()).toBe(1);
     expect(second.lastSeenAt.getTime()).toBeGreaterThan(first.lastSeenAt.getTime());
+  });
+
+  it("keeps at most 10 devices per player, dropping the oldest by lastSeenAt", async () => {
+    const { a, b } = await setup();
+    const tok = (n: number) => n.toString(16).padStart(2, "0").repeat(32);
+    await registerDevice({ playerId: b.id, token: tok(99) });
+    for (let n = 1; n <= 10; n++) {
+      await registerDevice({ playerId: a.id, token: tok(n) });
+      await new Promise((r) => setTimeout(r, 3));
+    }
+    await registerDevice({ playerId: a.id, token: tok(1) });
+    await new Promise((r) => setTimeout(r, 3));
+    await registerDevice({ playerId: a.id, token: tok(11) });
+    const left = (await prisma.pushDevice.findMany({ where: { playerId: a.id } })).map((d) => d.token);
+    expect(left).toHaveLength(10);
+    expect(left).toContain(tok(1));
+    expect(left).toContain(tok(11));
+    expect(left).not.toContain(tok(2));
+    expect(await prisma.pushDevice.count({ where: { playerId: b.id } })).toBe(1);
   });
 
   it("moves the token to the player who registers it last", async () => {
@@ -85,6 +104,7 @@ describe("push routes", () => {
     expect(bad.status).toBe(400);
     expect(await bad.json()).toEqual({ error: "invalid" });
     expect((await POST(req("POST", "/api/push/devices", { token: TOKEN, platform: "android" }))).status).toBe(400);
+    expect((await POST(req("POST", "/api/push/devices", { token: "ab12", platform: "ios" }))).status).toBe(400);
     expect((await POST(req("POST", "/api/push/devices", { token: "a".repeat(201), platform: "ios" }))).status).toBe(400);
 
     expect((await POST(req("POST", "/api/push/devices", { token: TOKEN, platform: "ios" }))).status).toBe(204);
@@ -114,7 +134,7 @@ describe("account deletion", () => {
     const p = await createMember(group.id, { name: "P", email: "p@example.com", passwordHash: hash });
     const q = await createMember(group.id, { name: "Q", email: "q@example.com" });
     await registerDevice({ playerId: p.id, token: TOKEN });
-    await registerDevice({ playerId: q.id, token: "ffee00" });
+    await registerDevice({ playerId: q.id, token: "ffee0011".repeat(8) });
     await deleteOwnAccount({ playerId: p.id, password: "geheim-genug-123" });
     expect(await prisma.pushDevice.count({ where: { playerId: p.id } })).toBe(0);
     expect(await prisma.pushDevice.count({ where: { playerId: q.id } })).toBe(1);

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { registerDevice, unregisterDevice } from "@/lib/push/devices";
 
-const Token = z.string().min(1).max(200).regex(/^[0-9a-fA-F]+$/);
+const Token = z.string().min(64).max(200).regex(/^[0-9a-fA-F]+$/);
 const RegisterSchema = z.object({ token: Token, platform: z.literal("ios") });
 const UnregisterSchema = z.object({ token: Token });
 

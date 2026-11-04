@@ -37,6 +37,7 @@ export async function unregisterThisDevice(): Promise<void> {
       method: "DELETE",
       headers: JSON_HEADERS,
       body: JSON.stringify({ token }),
+      signal: AbortSignal.timeout(3000),
     });
   } catch {
     // Abmelden darf daran nicht scheitern

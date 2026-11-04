@@ -494,7 +494,7 @@ APNS_KEY_PATH=/srv/padel/secrets/apns.p8
 APNS_BUNDLE_ID=de.padelmaestro.app
 ```
 
-Die Schlüsseldatei (`.p8` aus dem Apple-Developer-Konto) liegt außerhalb des Repos, z. B. `/srv/padel/secrets/apns.p8`, Besitzer `padel`, Rechte `600`. Fehlt eine der Variablen, läuft der Versand im Protokoll-Modus (`[push] dry-run ...` im Log), nichts wird gesendet.
+Die Schlüsseldatei (`.p8` aus dem Apple-Developer-Konto) liegt außerhalb des Repos, z. B. `/srv/padel/secrets/apns.p8`, Besitzer `padel`, Rechte `600`. Fehlt eine der Variablen, läuft der Versand im Protokoll-Modus (`[push] dry-run ...` im Log), nichts wird gesendet. Erinnerungen, die im Protokoll-Modus schon fällig waren, werden als gesendet protokolliert und nach dem Einrichten des Apple-Schlüssels nicht nachgeholt.
 
 Die Erinnerungen verschickt ein systemd-Timer alle 5 Minuten. Einmalig als root installieren:
 
