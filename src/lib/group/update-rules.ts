@@ -18,6 +18,7 @@ export async function updateGroupRules(i: {
 }): Promise<GroupRules> {
   const { groupId, actorId, rules } = i;
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM "Group" WHERE id = ${groupId} FOR UPDATE`;
     const actor = await findGroupMembership(tx, groupId, actorId);
     if (!isAdminRole(actor?.role)) throw new ForbiddenError();
 

@@ -11,14 +11,18 @@ import {
 } from "@/components/ui/list";
 import { Input } from "@/components/ui/input";
 import { InlineMessage } from "@/components/ui/inline-message";
+import {
+  JOKERS_PER_SEASON_MAX,
+  JOKERS_PER_SEASON_MIN,
+  JOKER_GAMES_CREDITED_MAX,
+  JOKER_GAMES_CREDITED_MIN,
+} from "@/lib/joker/constants";
 import type { GroupRules } from "@/lib/group/rules";
 import { DeleteGroupDialog } from "../delete-group-dialog";
 import { TransferOwnerDialog } from "../transfer-owner-dialog";
 import { TransferPicker } from "./transfer-picker";
 
 type Candidate = { id: string; name: string };
-const JOKERS_MAX = 10;
-const CREDIT_MAX = 30;
 
 function RuleStepper({
   label,
@@ -36,7 +40,7 @@ function RuleStepper({
   const btn =
     "grid size-11 place-items-center rounded-lg text-lg font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40";
   return (
-    <span className="-my-2 -mr-2 inline-flex items-center">
+    <span role="group" aria-label={label} className="-my-2 -mr-2 inline-flex items-center">
       <button
         type="button"
         aria-label={`${label} verringern`}
@@ -46,7 +50,9 @@ function RuleStepper({
       >
         −
       </button>
-      <span className="min-w-6 text-center text-[15px] font-semibold tabular-nums">{value}</span>
+      <output aria-live="polite" className="min-w-6 text-center text-[15px] font-semibold tabular-nums">
+        {value}
+      </output>
       <button
         type="button"
         aria-label={`${label} erhöhen`}
@@ -220,8 +226,8 @@ export function SettingsView({
             <RuleStepper
               label="Joker pro Saison"
               value={draft.jokersPerSeason}
-              min={0}
-              max={JOKERS_MAX}
+              min={JOKERS_PER_SEASON_MIN}
+              max={JOKERS_PER_SEASON_MAX}
               onChange={(v) => change({ jokersPerSeason: v })}
             />
           }
@@ -232,8 +238,8 @@ export function SettingsView({
             <RuleStepper
               label="Spiele pro Joker"
               value={draft.jokerGamesCredited}
-              min={1}
-              max={CREDIT_MAX}
+              min={JOKER_GAMES_CREDITED_MIN}
+              max={JOKER_GAMES_CREDITED_MAX}
               onChange={(v) => change({ jokerGamesCredited: v })}
             />
           }

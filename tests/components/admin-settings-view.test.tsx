@@ -132,4 +132,10 @@ describe("<SettingsView>", () => {
     expect(screen.queryByRole("button", { name: /Besitz übertragen/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gruppe löschen" })).not.toBeInTheDocument();
   });
+
+  it("exposes each stepper as a labelled group containing its value", () => {
+    render(<SettingsView {...base} isOwner />);
+    const group = screen.getByRole("group", { name: "Joker pro Saison" });
+    expect(within(group).getByText("2")).toBeInTheDocument();
+  });
 });

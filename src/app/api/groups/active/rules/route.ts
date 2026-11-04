@@ -3,12 +3,18 @@ import { z } from "zod";
 import { guardMember } from "@/lib/auth/route-guard";
 import { ForbiddenError } from "@/lib/auth/group-context";
 import { isAdminRole } from "@/lib/auth/roles";
+import {
+  JOKERS_PER_SEASON_MAX,
+  JOKERS_PER_SEASON_MIN,
+  JOKER_GAMES_CREDITED_MAX,
+  JOKER_GAMES_CREDITED_MIN,
+} from "@/lib/joker/constants";
 import { RulesBelowUsedError, updateGroupRules } from "@/lib/group/update-rules";
 
 const Body = z.object({
   groupId: z.string().uuid(),
-  jokersPerSeason: z.number().int().min(0).max(10),
-  jokerGamesCredited: z.number().int().min(1).max(30),
+  jokersPerSeason: z.number().int().min(JOKERS_PER_SEASON_MIN).max(JOKERS_PER_SEASON_MAX),
+  jokerGamesCredited: z.number().int().min(JOKER_GAMES_CREDITED_MIN).max(JOKER_GAMES_CREDITED_MAX),
 });
 
 const forbidden = () => NextResponse.json({ error: "forbidden" }, { status: 403 });

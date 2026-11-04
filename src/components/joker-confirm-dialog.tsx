@@ -34,7 +34,7 @@ export function JokerConfirmDialog({
       <div className="space-y-3 text-sm text-foreground">
         <p>
           {targetName ? `${targetName} setzt` : "Du setzt"} den{" "}
-          <strong>{nth}. von {jokersTotal} Jokern</strong> ein.
+          <strong>{jokersTotal === 1 ? "deinen einzigen Joker" : `${nth}. von ${jokersTotal} Jokern`}</strong> ein.
         </p>
         {ppgSnapshot !== null ? (
           <p>

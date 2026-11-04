@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { getGroupRules } from "@/lib/group/rules";
 
 export class JokerLockedError extends Error {
   constructor(message = "Game day is locked; Joker can no longer be used") {
@@ -66,7 +65,11 @@ async function recordJokerUseInternal(args: {
     // cap check below sees all committed joker uses. Released when the tx ends.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${args.playerId}), hashtext(${gameDay.seasonId}))`;
 
-    const rules = await getGroupRules(gameDay.groupId, tx);
+    // Shared row lock so a concurrent rules update can't interleave with the cap check.
+    const [rules] = await tx.$queryRaw<
+      Array<{ jokersPerSeason: number; jokerGamesCredited: number }>
+    >`SELECT "jokersPerSeason", "jokerGamesCredited" FROM "Group" WHERE id = ${gameDay.groupId} FOR SHARE`;
+    if (!rules) throw new Error("Group not found");
     const points = ppg * rules.jokerGamesCredited;
 
     const existing = await tx.jokerUse.count({

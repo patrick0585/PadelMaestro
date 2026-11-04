@@ -41,16 +41,11 @@ function formatDate(iso: string): string {
 }
 
 type JokerErrorCode = "JOKER_LOCKED" | "JOKER_CAP_EXCEEDED" | "JOKER_NOT_FOUND";
-function jokerErrorMessages(jokersTotal: number): Record<JokerErrorCode, string> {
-  return {
-    JOKER_LOCKED: "Spieltag ist bereits gestartet — Änderungen nicht mehr möglich.",
-    JOKER_CAP_EXCEEDED:
-      jokersTotal === 1
-        ? "Du hast deinen Joker dieser Saison bereits verbraucht."
-        : `Du hast alle ${jokersTotal} Joker dieser Saison bereits verbraucht.`,
-    JOKER_NOT_FOUND: "Joker war nicht gesetzt.",
-  };
-}
+const JOKER_ERROR_MESSAGES: Record<JokerErrorCode, string> = {
+  JOKER_LOCKED: "Spieltag ist bereits gestartet — Änderungen nicht mehr möglich.",
+  JOKER_CAP_EXCEEDED: "Für diese Saison sind keine Joker mehr verfügbar.",
+  JOKER_NOT_FOUND: "Joker war nicht gesetzt.",
+};
 
 async function readErrorCode(res: Response): Promise<string | null> {
   const body = (await res.json().catch(() => null)) as { code?: string } | null;
@@ -59,7 +54,6 @@ async function readErrorCode(res: Response): Promise<string | null> {
 
 export function DashboardHero({ state }: { state: HeroState }) {
   const router = useRouter();
-  const jokersTotal = state.kind === "member" ? state.jokersTotal : 0;
   const [busy, setBusy] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,8 +102,9 @@ export function DashboardHero({ state }: { state: HeroState }) {
     }
     if (res.ok) return true;
     const code = await readErrorCode(res);
-    if (code && code in jokerErrorMessages(jokersTotal)) {
-      setError(jokerErrorMessages(jokersTotal)[code as JokerErrorCode]);
+    if (code && code in JOKER_ERROR_MESSAGES) {
+      setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
+      if (code === "JOKER_CAP_EXCEEDED") router.refresh();
     } else {
       setError(genericJokerError(res.status));
     }
@@ -130,8 +125,9 @@ export function DashboardHero({ state }: { state: HeroState }) {
     }
     if (res.ok) return true;
     const code = await readErrorCode(res);
-    if (code && code in jokerErrorMessages(jokersTotal)) {
-      setError(jokerErrorMessages(jokersTotal)[code as JokerErrorCode]);
+    if (code && code in JOKER_ERROR_MESSAGES) {
+      setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
+      if (code === "JOKER_CAP_EXCEEDED") router.refresh();
     } else {
       setError(genericJokerError(res.status));
     }
