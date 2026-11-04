@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { GameDayStatus } from "@prisma/client";
-import { assignCompetitionRanks } from "./competition-rank";
+import { assignRanks, rankingModeFor } from "./competition-rank";
 
 export interface GameDaySummaryRow {
   playerId: string;
@@ -8,7 +8,7 @@ export interface GameDaySummaryRow {
   avatarVersion: number;
   points: number;
   matches: number;
-  // Competition rank within the day (ties share a rank: 1, 1, 3).
+  // Rank within the day; ties share a rank (see rankingModeFor for the scheme).
   rank: number;
 }
 
@@ -83,7 +83,7 @@ export async function computeGameDaySummary(
     return a.playerName.localeCompare(b.playerName, "de");
   });
 
-  const ranks = assignCompetitionRanks(sorted);
+  const ranks = assignRanks(sorted, rankingModeFor(day.date));
   const rows: GameDaySummaryRow[] = sorted.map((r, i) => ({ ...r, rank: ranks[i] }));
 
   return {

@@ -18,7 +18,7 @@ export interface RankingRow {
 type MedalCounts = { gold: number; silver: number; bronze: number };
 
 // Reuses computeGameDaySummary so medal counts always match the per-player
-// season stats path — both read the same competition ranks off the podium
+// season stats path — both read the same ranks off the podium
 // (tied players share a medal).
 async function computeMedalsBySeason(
   seasonId: string,

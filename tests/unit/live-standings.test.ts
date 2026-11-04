@@ -72,7 +72,7 @@ describe("deriveLiveStandings", () => {
     expect(ids).toEqual(["a", "b", "c", "d"]);
   });
 
-  it("assigns competition ranks (1, 2, 2, 4) for tied points + matches", () => {
+  it("assigns dense ranks (1, 2, 2, 3) for tied points + matches", () => {
     const matches = [
       match("m1", 10, ["a", "b"], ["c", "d"], [10, 0]),
       match("m2", 20, ["a", "c"], ["b", "d"], [10, 0]),
@@ -81,14 +81,14 @@ describe("deriveLiveStandings", () => {
     expect(rankOf(result.rows, "a")).toBe(1);
     expect(rankOf(result.rows, "b")).toBe(2);
     expect(rankOf(result.rows, "c")).toBe(2);
-    expect(rankOf(result.rows, "d")).toBe(4);
+    expect(rankOf(result.rows, "d")).toBe(3);
   });
 
   it("flags upward movement when the latest match lifted a player past another", () => {
-    // After match 1: Anna 10, Ben 10 (tied 1st), Carl 0, Dora 0 (tied 3rd)
+    // After match 1: Anna 10, Ben 10 (tied 1st), Carl 0, Dora 0 (tied 2nd, dense)
     // After match 2 (Anna+Carl beat Ben+Dora 12:3): Anna 22, Carl 12, Ben 13, Dora 3
     // current ranks: Anna 1, Ben 2, Carl 3, Dora 4
-    // previous ranks (before match 2): Anna 1, Ben 1, Carl 3, Dora 3
+    // previous ranks (before match 2, dense): Anna 1, Ben 1, Carl 2, Dora 2
     const matches = [
       match("m1", 10, ["a", "b"], ["c", "d"], [10, 0]),
       match("m2", 20, ["a", "c"], ["b", "d"], [12, 3]),
@@ -98,8 +98,8 @@ describe("deriveLiveStandings", () => {
 
     expect(rowOf(result.rows, "a")).toMatchObject({ rank: 1, previousRank: 1 });
     expect(rowOf(result.rows, "b")).toMatchObject({ rank: 2, previousRank: 1 });
-    expect(rowOf(result.rows, "c")).toMatchObject({ rank: 3, previousRank: 3 });
-    expect(rowOf(result.rows, "d")).toMatchObject({ rank: 4, previousRank: 3 });
+    expect(rowOf(result.rows, "c")).toMatchObject({ rank: 3, previousRank: 2 });
+    expect(rowOf(result.rows, "d")).toMatchObject({ rank: 4, previousRank: 2 });
   });
 
   it("marks a player as having no previous rank if they only played the latest match", () => {
@@ -126,13 +126,13 @@ describe("deriveLiveStandings", () => {
     const b = match("aa", 10, ["a", "c"], ["b", "d"], [12, 3]);
     const result = deriveLiveStandings([a, b], PLAYERS, 16);
     // "zz" is the latest by id tiebreak. Previous = match "aa" only.
-    // After "aa": Anna 12, Carl 12, Ben 3, Dora 3 → tied ranks 1,1,3,3
+    // After "aa": Anna 12, Carl 12, Ben 3, Dora 3 → dense tied ranks 1,1,2,2
     // After both: Anna 22, Carl 12, Ben 13, Dora 3 → 1, 2, 3, 4
     expect(result.hasPreviousState).toBe(true);
     expect(rowOf(result.rows, "a")).toMatchObject({ rank: 1, previousRank: 1 });
-    expect(rowOf(result.rows, "b")).toMatchObject({ rank: 2, previousRank: 3 });
+    expect(rowOf(result.rows, "b")).toMatchObject({ rank: 2, previousRank: 2 });
     expect(rowOf(result.rows, "c")).toMatchObject({ rank: 3, previousRank: 1 });
-    expect(rowOf(result.rows, "d")).toMatchObject({ rank: 4, previousRank: 3 });
+    expect(rowOf(result.rows, "d")).toMatchObject({ rank: 4, previousRank: 2 });
   });
 
   it("returns empty rows when no match has been scored", () => {

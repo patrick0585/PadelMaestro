@@ -716,7 +716,7 @@ describe("computePlayerSeasonStats ties", () => {
     expect(pauls.recentDays[0].placement).toBe(1);
   });
 
-  it("gives both players tied at rank 2 silver and placement 2, and the last player placement 4", async () => {
+  it("gives both players tied at rank 2 silver and placement 2, and the last player placement 3 (dense)", async () => {
     const season = await makeSeason();
     const [a, b, c, d] = await Promise.all(["A", "B", "C", "D"].map((n) => makePlayer(season, n)));
     const day = await prisma.gameDay.create({
@@ -744,9 +744,9 @@ describe("computePlayerSeasonStats ties", () => {
     expect(sa.recentDays[0].placement).toBe(1);
     expect(sb.recentDays[0].placement).toBe(2);
     expect(sc.recentDays[0].placement).toBe(2);
-    expect(sd.recentDays[0].placement).toBe(4);
+    expect(sd.recentDays[0].placement).toBe(3);
     expect(sb.medals).toEqual({ gold: 0, silver: 1, bronze: 0 });
     expect(sc.medals).toEqual({ gold: 0, silver: 1, bronze: 0 });
-    expect(sd.medals).toEqual({ gold: 0, silver: 0, bronze: 0 });
+    expect(sd.medals).toEqual({ gold: 0, silver: 0, bronze: 1 });
   });
 });
