@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/auth/group-context";
+import { isAdminRole } from "@/lib/auth/roles";
 import { findGroupMembership } from "./active-membership";
 
 export async function renameGroup(i: {
@@ -11,7 +12,7 @@ export async function renameGroup(i: {
   const name = i.name.trim();
   return prisma.$transaction(async (tx) => {
     const actor = await findGroupMembership(tx, groupId, actorId);
-    if (actor?.role !== "owner") throw new ForbiddenError();
+    if (!isAdminRole(actor?.role)) throw new ForbiddenError();
     const group = await tx.group.findUniqueOrThrow({ where: { id: groupId }, select: { name: true } });
     if (group.name === name) return { name };
     await tx.group.update({ where: { id: groupId }, data: { name } });

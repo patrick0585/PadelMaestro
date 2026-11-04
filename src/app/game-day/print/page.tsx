@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { contextFromSession } from "@/lib/auth/group-context";
 import { NoGroupNotice } from "@/components/no-group-notice";
 import { prisma } from "@/lib/db";
+import { getGroupRules } from "@/lib/group/rules";
 import { PrintSheet } from "./print-sheet";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,7 @@ export default async function GameDayPrintPage() {
     );
   }
 
+  const rules = await getGroupRules(ctx.groupId);
   const dateText = new Date(day.date).toLocaleDateString("de-DE", {
     weekday: "long",
     day: "2-digit",
@@ -75,6 +77,7 @@ export default async function GameDayPrintPage() {
       playing={playing}
       joker={joker}
       matches={matches}
+      jokerGamesCredited={rules.jokerGamesCredited}
     />
   );
 }

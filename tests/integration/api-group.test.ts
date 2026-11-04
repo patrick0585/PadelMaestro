@@ -24,7 +24,7 @@ beforeEach(async () => {
 });
 
 describe("/api/groups/active", () => {
-  it("PATCH /api/groups/active 403 for admin, 200 for owner; DELETE 400 name_mismatch, 403 wrong_password, 204 then group gone", async () => {
+  it("PATCH /api/groups/active 200 for admin and owner; DELETE 400 name_mismatch, 403 wrong_password, 204 then group gone", async () => {
     const group = await createTestGroup("Padelfreunde");
     const passwordHash = await hashPassword("geheim-123");
     const owner = await createMember(group.id, {
@@ -44,9 +44,20 @@ describe("/api/groups/active", () => {
     expect((await PATCH(req("PATCH", { groupId: group.id, name: "X-Team" }))).status).toBe(401);
 
     authMock.mockResolvedValue(sessionFor(admin, group.id, "admin"));
-    const forbidden = await PATCH(req("PATCH", { groupId: group.id, name: "Adminteam" }));
+    const adminRename = await PATCH(req("PATCH", { groupId: group.id, name: "Adminteam" }));
+    expect(adminRename.status).toBe(200);
+    expect(await adminRename.json()).toEqual({ name: "Adminteam" });
+    const member = await createMember(group.id, {
+      name: "Mia",
+      email: "m@example.com",
+      role: "member",
+      passwordHash,
+    });
+    authMock.mockResolvedValue(sessionFor(member, group.id, "member"));
+    const forbidden = await PATCH(req("PATCH", { groupId: group.id, name: "Mitgliedteam" }));
     expect(forbidden.status).toBe(403);
     expect(await forbidden.json()).toEqual({ error: "forbidden" });
+    authMock.mockResolvedValue(sessionFor(admin, group.id, "admin"));
     const delForbidden = await DELETE(
       req("DELETE", { groupId: group.id, name: "Padelfreunde", password: "geheim-123" }),
     );
@@ -64,7 +75,7 @@ describe("/api/groups/active", () => {
     expect(staleDelete.status).toBe(409);
     expect(await staleDelete.json()).toEqual({ error: "stale_group" });
     expect((await prisma.group.findUniqueOrThrow({ where: { id: group.id } })).name).toBe(
-      "Padelfreunde",
+      "Adminteam",
     );
     const noGroupId = await PATCH(req("PATCH", { name: "Neu" }));
     expect(noGroupId.status).toBe(400);

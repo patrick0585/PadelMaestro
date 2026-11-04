@@ -2,13 +2,14 @@
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatDe } from "@/lib/format";
-import { JOKER_GAMES_CREDITED } from "@/lib/joker/constants";
 
 export interface JokerConfirmDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
   jokersRemaining: number;
+  jokersTotal: number;
+  gamesCredited: number;
   ppgSnapshot: number | null;
   loading?: boolean;
   targetName?: string;
@@ -19,11 +20,13 @@ export function JokerConfirmDialog({
   onClose,
   onConfirm,
   jokersRemaining,
+  jokersTotal,
+  gamesCredited,
   ppgSnapshot,
   loading = false,
   targetName,
 }: JokerConfirmDialogProps) {
-  const nth = 2 - jokersRemaining + 1;
+  const nth = jokersTotal - jokersRemaining + 1;
   const title = targetName ? `Joker für ${targetName} setzen?` : "Joker einsetzen?";
 
   return (
@@ -31,14 +34,14 @@ export function JokerConfirmDialog({
       <div className="space-y-3 text-sm text-foreground">
         <p>
           {targetName ? `${targetName} setzt` : "Du setzt"} den{" "}
-          <strong>{nth}. von 2 Jokern</strong> ein.
+          <strong>{jokersTotal === 1 ? "deinen einzigen Joker" : `${nth}. von ${jokersTotal} Jokern`}</strong> ein.
         </p>
         {ppgSnapshot !== null ? (
           <p>
             Aktuelle PPG: <strong>{formatDe(ppgSnapshot, 2)}</strong> → du bekommst{" "}
             <strong>
-              {JOKER_GAMES_CREDITED} × {formatDe(ppgSnapshot, 2)} ≈{" "}
-              {Math.round(ppgSnapshot * JOKER_GAMES_CREDITED)} Punkte
+              {gamesCredited} × {formatDe(ppgSnapshot, 2)} ≈{" "}
+              {Math.round(ppgSnapshot * gamesCredited)} Punkte
             </strong>{" "}
             gutgeschrieben.
           </p>

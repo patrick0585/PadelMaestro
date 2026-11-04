@@ -1,5 +1,4 @@
 import { PrintButton } from "./print-button";
-import { JOKER_GAMES_CREDITED } from "@/lib/joker/constants";
 
 export interface PrintMatch {
   id: string;
@@ -17,6 +16,7 @@ export interface PrintSheetProps {
   playing: string[];
   joker: string[];
   matches: PrintMatch[];
+  jokerGamesCredited: number;
 }
 
 export function PrintSheet({
@@ -26,6 +26,7 @@ export function PrintSheet({
   playing,
   joker,
   matches,
+  jokerGamesCredited,
 }: PrintSheetProps) {
   return (
     <div className="mx-auto max-w-3xl bg-white p-6 text-black print:p-0">
@@ -119,7 +120,7 @@ export function PrintSheet({
 
       <footer className="mt-6 text-[0.7rem] text-gray-700">
         Punkte pro Match (max {maxScore}): Sieger bekommt seine erspielten
-        Punkte, Verlierer den Rest. Joker zählt {JOKER_GAMES_CREDITED} × Saisonschnitt.
+        Punkte, Verlierer den Rest. Joker zählt {jokerGamesCredited} × Saisonschnitt.
       </footer>
     </div>
   );

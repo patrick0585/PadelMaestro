@@ -19,18 +19,20 @@ function row(overrides: Partial<RosterRow> = {}): RosterRow {
 
 describe("<ParticipantsRoster>", () => {
   it("renders a Joker badge when the player's attendance is joker", () => {
-    render(<ParticipantsRoster gameDayId="gd-1" participants={[row({ attendance: "joker" })]} />);
+    render(<ParticipantsRoster jokersTotal={2} jokerGamesCredited={15} gameDayId="gd-1" participants={[row({ attendance: "joker" })]} />);
     expect(screen.getByText("Joker")).toBeInTheDocument();
   });
 
   it("pool rows without a joker and with jokers remaining show a set-joker button", () => {
-    render(<ParticipantsRoster gameDayId="gd-1" participants={[row()]} />);
+    render(<ParticipantsRoster jokersTotal={2} jokerGamesCredited={15} gameDayId="gd-1" participants={[row()]} />);
     expect(screen.getByRole("button", { name: /Joker für Werner setzen/ })).toBeInTheDocument();
   });
 
   it("pool rows with no jokers remaining show a disabled 'Keine Joker übrig' button", () => {
     render(
       <ParticipantsRoster
+        jokersTotal={2}
+        jokerGamesCredited={15}
         gameDayId="gd-1"
         participants={[row({ jokersRemaining: 0 })]}
       />,
@@ -41,6 +43,8 @@ describe("<ParticipantsRoster>", () => {
   it("joker rows show a remove-joker button", () => {
     render(
       <ParticipantsRoster
+        jokersTotal={2}
+        jokerGamesCredited={15}
         gameDayId="gd-1"
         participants={[row({ attendance: "joker" })]}
       />,
@@ -58,7 +62,7 @@ describe("<ParticipantsRoster> admin joker actions", () => {
   it("opens the confirm dialog and POSTs the admin joker route on confirm", async () => {
     const fetchSpy = vi.fn().mockResolvedValue({ ok: true, status: 201 });
     vi.stubGlobal("fetch", fetchSpy);
-    render(<ParticipantsRoster gameDayId="gd-1" participants={[row()]} />);
+    render(<ParticipantsRoster jokersTotal={2} jokerGamesCredited={15} gameDayId="gd-1" participants={[row()]} />);
     await userEvent.click(screen.getByRole("button", { name: /Joker für Werner setzen/ }));
     expect(await screen.findByRole("dialog", { name: /Joker für Werner setzen/ })).toBeInTheDocument();
     await userEvent.click(
@@ -78,6 +82,8 @@ describe("<ParticipantsRoster> admin joker actions", () => {
     vi.stubGlobal("fetch", fetchSpy);
     render(
       <ParticipantsRoster
+        jokersTotal={2}
+        jokerGamesCredited={15}
         gameDayId="gd-1"
         participants={[row({ attendance: "joker" })]}
       />,
@@ -99,7 +105,7 @@ describe("<ParticipantsRoster> hydration", () => {
     const { renderToString } = await import("react-dom/server");
     const { hydrateRoot } = await import("react-dom/client");
     const { act } = await import("react");
-    const ui = <ParticipantsRoster gameDayId="gd-1" participants={[row()]} />;
+    const ui = <ParticipantsRoster jokersTotal={2} jokerGamesCredited={15} gameDayId="gd-1" participants={[row()]} />;
     const html = renderToString(ui);
     const container = document.createElement("div");
     container.innerHTML = html;

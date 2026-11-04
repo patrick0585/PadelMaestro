@@ -27,6 +27,8 @@ export type HeroState =
       total: number;
       attendance: "pending" | "confirmed" | "declined" | "joker";
       jokersRemaining: number;
+      jokersTotal: number;
+      jokerGamesCredited: number;
       ppgSnapshot: number | null;
     };
 
@@ -41,7 +43,7 @@ function formatDate(iso: string): string {
 type JokerErrorCode = "JOKER_LOCKED" | "JOKER_CAP_EXCEEDED" | "JOKER_NOT_FOUND";
 const JOKER_ERROR_MESSAGES: Record<JokerErrorCode, string> = {
   JOKER_LOCKED: "Spieltag ist bereits gestartet — Änderungen nicht mehr möglich.",
-  JOKER_CAP_EXCEEDED: "Du hast deine 2 Joker dieser Saison bereits verbraucht.",
+  JOKER_CAP_EXCEEDED: "Für diese Saison sind keine Joker mehr verfügbar.",
   JOKER_NOT_FOUND: "Joker war nicht gesetzt.",
 };
 
@@ -102,6 +104,7 @@ export function DashboardHero({ state }: { state: HeroState }) {
     const code = await readErrorCode(res);
     if (code && code in JOKER_ERROR_MESSAGES) {
       setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
+      if (code === "JOKER_CAP_EXCEEDED") router.refresh();
     } else {
       setError(genericJokerError(res.status));
     }
@@ -124,6 +127,7 @@ export function DashboardHero({ state }: { state: HeroState }) {
     const code = await readErrorCode(res);
     if (code && code in JOKER_ERROR_MESSAGES) {
       setError(JOKER_ERROR_MESSAGES[code as JokerErrorCode]);
+      if (code === "JOKER_CAP_EXCEEDED") router.refresh();
     } else {
       setError(genericJokerError(res.status));
     }
@@ -217,6 +221,8 @@ export function DashboardHero({ state }: { state: HeroState }) {
             onClose={() => setDialogOpen(false)}
             onConfirm={handleConfirmJoker}
             jokersRemaining={state.jokersRemaining}
+            jokersTotal={state.jokersTotal}
+            gamesCredited={state.jokerGamesCredited}
             ppgSnapshot={state.ppgSnapshot}
             loading={busy}
           />

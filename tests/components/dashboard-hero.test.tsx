@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DashboardHero, type HeroState } from "@/app/dashboard-hero";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 function member(overrides: Partial<Extract<HeroState, { kind: "member" }>> = {}): HeroState {
   return {
@@ -14,6 +15,8 @@ function member(overrides: Partial<Extract<HeroState, { kind: "member" }>> = {})
     total: 6,
     attendance: "pending",
     jokersRemaining: 2,
+    jokersTotal: 2,
+    jokerGamesCredited: 15,
     ppgSnapshot: 1.64,
     ...overrides,
   };
@@ -175,5 +178,26 @@ describe("<DashboardHero> (member)", () => {
     render(<DashboardHero state={member()} />);
     await userEvent.click(screen.getByRole("button", { name: "Dabei sein" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/Keine Verbindung/i);
+  });
+
+  it("shows a number-free message and refreshes on JOKER_CAP_EXCEEDED", async () => {
+    refresh.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ code: "JOKER_CAP_EXCEEDED" }),
+      }),
+    );
+    render(<DashboardHero state={member()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Joker setzen" }));
+    await userEvent.click(
+      (await screen.findAllByRole("button", { name: "Joker setzen" }))[1],
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Für diese Saison sind keine Joker mehr verfügbar.",
+    );
+    expect(refresh).toHaveBeenCalled();
   });
 });

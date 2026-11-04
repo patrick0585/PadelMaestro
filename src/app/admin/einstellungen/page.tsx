@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/admin/guard";
 import { prisma } from "@/lib/db";
 import { listActiveMembers } from "@/lib/group/members";
-import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { getGroupRules } from "@/lib/group/rules";
 import { SettingsView } from "./settings-view";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminSettingsPage() {
   const ctx = await requireAdmin();
   const isOwner = ctx.role === "owner";
+  const rules = await getGroupRules(ctx.groupId);
   const group = await prisma.group.findUniqueOrThrow({
     where: { id: ctx.groupId },
     select: { name: true, slug: true },
@@ -23,7 +24,7 @@ export default async function AdminSettingsPage() {
       groupId={ctx.groupId}
       name={group.name}
       slug={group.slug}
-      maxJokers={MAX_JOKERS_PER_SEASON}
+      rules={rules}
       transferCandidates={transferCandidates}
     />
   );

@@ -2,7 +2,7 @@ import type { ParticipantAttendance, RosterRow } from "@/app/admin/participants-
 import { prisma } from "@/lib/db";
 import { listActiveMembers } from "@/lib/group/members";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
-import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { getGroupRules, type GroupRules } from "@/lib/group/rules";
 import { getOrCreateActiveSeason } from "@/lib/season";
 
 export type ParticipantWithPlayer = {
@@ -100,7 +100,7 @@ export async function listAdminGameDays(
 }
 
 export type PlannedGameDayResult =
-  | { kind: "planned"; id: string; date: Date; roster: RosterRow[] }
+  | { kind: "planned"; id: string; date: Date; roster: RosterRow[]; rules: GroupRules }
   | { kind: "redirect"; to: string }
   | null;
 
@@ -121,9 +121,10 @@ export async function loadPlannedGameDay(
   if (day.status === "finished") return { kind: "redirect", to: `/archive/${day.id}` };
   if (day.status === "in_progress") return { kind: "redirect", to: "/game-day" };
 
-  const [players, season] = await Promise.all([
+  const [players, season, rules] = await Promise.all([
     listActiveMembers(groupId),
     getOrCreateActiveSeason(groupId),
+    getGroupRules(groupId),
   ]);
   const jokerCounts = await prisma.jokerUse.groupBy({
     by: ["playerId"],
@@ -132,12 +133,13 @@ export async function loadPlannedGameDay(
   });
   const usedById = new Map(jokerCounts.map((j) => [j.playerId, j._count._all]));
   const remaining = new Map<string, number>(
-    players.map((p) => [p.id, Math.max(0, MAX_JOKERS_PER_SEASON - (usedById.get(p.id) ?? 0))]),
+    players.map((p) => [p.id, Math.max(0, rules.jokersPerSeason - (usedById.get(p.id) ?? 0))]),
   );
   return {
     kind: "planned",
     id: day.id,
     date: day.date,
     roster: buildRosterRows(day.participants, players, remaining),
+    rules,
   };
 }

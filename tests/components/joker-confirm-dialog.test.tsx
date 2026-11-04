@@ -11,6 +11,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.63}
       />,
     );
@@ -28,6 +30,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.7}
       />,
     );
@@ -42,6 +46,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={1}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.64}
       />,
     );
@@ -55,6 +61,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={null}
       />,
     );
@@ -68,6 +76,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.5}
         targetName="Werner"
       />,
@@ -83,6 +93,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={onConfirm}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.5}
       />,
     );
@@ -97,6 +109,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.5}
         loading
       />,
@@ -108,5 +122,38 @@ describe("<JokerConfirmDialog>", () => {
       (b) => b !== screen.getByRole("button", { name: /Abbrechen/ }),
     );
     expect(confirmButton).toBeDisabled();
+  });
+
+  it("derives the wording and points from jokersTotal and gamesCredited", () => {
+    render(
+      <JokerConfirmDialog
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        jokersRemaining={2}
+        jokersTotal={3}
+        gamesCredited={10}
+        ppgSnapshot={1.5}
+      />,
+    );
+    expect(screen.getByText(/2\. von 3 Jokern/)).toBeInTheDocument();
+    expect(screen.getByText(/10 × 1,5/)).toBeInTheDocument();
+    expect(screen.getByText(/15 Punkte/)).toBeInTheDocument();
+  });
+
+  it("uses the singular wording when the group has a single joker", () => {
+    render(
+      <JokerConfirmDialog
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        jokersRemaining={1}
+        jokersTotal={1}
+        gamesCredited={15}
+        ppgSnapshot={1.63}
+      />,
+    );
+    expect(screen.getByText(/deinen einzigen Joker/)).toBeInTheDocument();
+    expect(screen.queryByText(/von 1 Jokern/)).not.toBeInTheDocument();
   });
 });
