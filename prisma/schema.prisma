@@ -8,25 +8,27 @@ datasource db {
 }
 
 model Player {
-  id              String    @id @default(uuid())
-  name            String
-  email           String    @unique
-  username        String?   @unique
-  passwordHash    String?
-  avatarData      Bytes?
-  avatarMimeType  String?
-  avatarVersion   Int       @default(0)
-  telegramId      BigInt?   @unique
-  invitedAt       DateTime  @default(now())
-  deletedAt       DateTime?
-  emailVerifiedAt DateTime?
-  pendingEmail    String?
-  termsAcceptedAt DateTime?
-  sessionVersion  Int       @default(0)
-  activeGroupId   String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  name                 String
+  email                String    @unique
+  username             String?   @unique
+  passwordHash         String?
+  avatarData           Bytes?
+  avatarMimeType       String?
+  avatarVersion        Int       @default(0)
+  telegramId           BigInt?   @unique
+  invitedAt            DateTime  @default(now())
+  deletedAt            DateTime?
+  emailVerifiedAt      DateTime?
+  pendingEmail         String?
+  termsAcceptedAt      DateTime?
+  sessionVersion       Int       @default(0)
+  activeGroupId        String?
+  pushRemindersEnabled Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
+  pushDevices        PushDevice[]
   emailTokens        EmailToken[]
   participations     GameDayParticipant[]
   matchesScored      Match[]              @relation("ScoredBy")
@@ -103,11 +105,12 @@ model GameDay {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  group        Group                @relation(fields: [groupId], references: [id])
-  season       Season               @relation(fields: [seasonId], references: [id])
-  participants GameDayParticipant[]
-  matches      Match[]
-  jokers       JokerUse[]
+  group             Group                @relation(fields: [groupId], references: [id])
+  season            Season               @relation(fields: [seasonId], references: [id])
+  participants      GameDayParticipant[]
+  matches           Match[]
+  jokers            JokerUse[]
+  pushRemindersSent PushReminderSent[]
 
   @@unique([seasonId, date])
   @@index([groupId, status])
@@ -275,4 +278,29 @@ model InvitationUse {
 
   @@unique([invitationId, playerId])
   @@index([playerId])
+}
+
+model PushDevice {
+  id          String   @id @default(uuid())
+  playerId    String
+  token       String   @unique
+  platform    String   @default("ios")
+  environment String   @default("production")
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+}
+
+model PushReminderSent {
+  id        String   @id @default(uuid())
+  gameDayId String
+  kind      String
+  sentAt    DateTime @default(now())
+
+  gameDay GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
+
+  @@unique([gameDayId, kind])
 }
