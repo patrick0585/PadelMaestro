@@ -5,6 +5,8 @@ Rohmaterial für die Datenschutzerklärung, keine Datenschutzerklärung. Nicht j
 ## Hosting und Dienstleister
 
 - Hosting auf einem IONOS-VPS in Deutschland
+- Kein Zugriffsprotokoll; Caddy schreibt nur fehlgeschlagene Anfragen ins systemd-Journal (IP, Zeitpunkt, URL, HTTP-Methode, Header), Journal auf 14 Tage begrenzt
+- App-Logs enthalten keine Client-IP-Adressen
 - Resend als Auftragsverarbeiter für den Mailversand (US-Unternehmen; EU-Region, falls gewählt)
 - Nur Transaktionsmails: Adressbestätigung, Passwort zurücksetzen, Änderungshinweis
 

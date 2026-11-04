@@ -27,6 +27,7 @@ const memberPreview = { ok: true, kind: "member", groupId: "g1", groupName: "Die
 
 async function renderPage(token = "tok1") {
   render(await Page({ params: Promise.resolve({ token }) }));
+  expect(screen.getAllByRole("navigation", { name: "Rechtliches" })).toHaveLength(1);
 }
 
 beforeEach(() => {

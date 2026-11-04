@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { auth } from "@/auth";
 import { canFoundGroup } from "@/lib/group/create";
 import { PadelLogo } from "@/components/padel-logo";
+import { LegalFooter } from "@/components/legal-footer";
 import { GroupForm } from "./group-form";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ function Shell({ title = "Neue Gruppe", children }: { title?: string; children: 
           <h1 className="break-words text-2xl font-extrabold text-foreground">{title}</h1>
         </div>
         {children}
+        <LegalFooter />
       </div>
     </div>
   );
