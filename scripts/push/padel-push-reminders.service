@@ -1,0 +1,9 @@
+[Unit]
+Description=Padelmaestro push reminders
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=padel
+WorkingDirectory=/srv/padel/app
+ExecStart=/bin/bash -c 'set -a; . ./.env; set +a; exec node_modules/.bin/tsx scripts/push-reminders.ts'

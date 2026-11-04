@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guardGroupAdmin, guardMember } from "@/lib/auth/route-guard";
 import { prisma } from "@/lib/db";
+import { notifyNewGameDay } from "@/lib/push/notify-game-day";
 import { createGameDay, GameDayDateExistsError } from "@/lib/game-day/create";
 
 const CreateSchema = z.object({ date: z.string() });
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
 
   try {
     const day = await createGameDay(g.ctx.groupId, new Date(parsed.data.date), g.ctx.userId);
+    void notifyNewGameDay(day.id, g.ctx.userId);
     return NextResponse.json({ gameDay: day }, { status: 201 });
   } catch (e) {
     if (e instanceof GameDayDateExistsError) {

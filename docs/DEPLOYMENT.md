@@ -481,6 +481,31 @@ Transactional mails (address confirmation, password reset, change notice) go out
 
 ---
 
+## 12. Push-Benachrichtigungen
+
+Die iOS-App bekommt Nachrichten über Apple Push (neuer Spieltag sofort, Erinnerungen am Vortag 18 Uhr und am Spieltag 14 Uhr).
+
+In `/srv/padel/app/.env` setzen:
+
+```
+APNS_KEY_ID=...
+APNS_TEAM_ID=...
+APNS_KEY_PATH=/srv/padel/secrets/apns.p8
+APNS_BUNDLE_ID=de.padelmaestro.app
+```
+
+Die Schlüsseldatei (`.p8` aus dem Apple-Developer-Konto) liegt außerhalb des Repos, z. B. `/srv/padel/secrets/apns.p8`, Besitzer `padel`, Rechte `600`. Fehlt eine der Variablen, läuft der Versand im Protokoll-Modus (`[push] dry-run ...` im Log), nichts wird gesendet.
+
+Die Erinnerungen verschickt ein systemd-Timer alle 5 Minuten. Einmalig als root installieren:
+
+```bash
+sudo bash /srv/padel/app/scripts/push/install.sh
+```
+
+Log: `sudo journalctl -u padel-push-reminders.service -n 50 --no-pager`.
+
+---
+
 ## Troubleshooting
 
 **`padel.service` fails with `EACCES` writing to `.next/`:**
