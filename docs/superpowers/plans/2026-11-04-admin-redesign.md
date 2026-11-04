@@ -20,7 +20,7 @@
 - Zugriff auf `/admin/**` wie heute: ohne Session → `/login`, ohne Admin-Rolle → `/ranking`; fremde/entfernte/unbekannte IDs → `notFound()`.
 - Rechte (Spec 16): Bearbeiten für alle; Rolle und Entfernen nicht beim Owner; Besitz übertragen nur Viewer=Owner, Ziel≠Owner, Ziel mit Passwort; Gruppe umbenennen/löschen nur Owner.
 - „Historische Daten" entfällt. Tab-Label „Verwaltung", Pfad bleibt `/admin`.
-- Texte deutsch; Kommentare knapp; Commits deutsch, kurz, ohne Hinweise auf Claude/KI.
+- Texte deutsch; Kommentare knapp; Commits deutsch und kurz, ohne Tool-Hinweise.
 - Tests: `set -a; . ./.env; set +a; node node_modules/vitest/vitest.mjs run <file>`; Typecheck `node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`.
 
 ## Review Focus
