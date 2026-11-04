@@ -97,46 +97,57 @@ export function plusDaysISO(days) {
   return d.toISOString().slice(0, 10);
 }
 
-// Creates a planned game day on /admin (or reuses an open one) and waits for
-// the participant roster. Returns the created date, or null when reused.
-export async function adminCreateDay(adminPage) {
-  await adminPage.goto(`${BASE}/admin`);
+// Opens the first planned game day listed under "Offen" on /admin/spieltage.
+// Returns false when there is none (running days link to /game-day instead).
+export async function openPlannedDay(adminPage) {
+  await adminPage.goto(`${BASE}/admin/spieltage`, { waitUntil: "domcontentloaded" });
+  const row = adminPage.locator('a[href^="/admin/spieltage/"]').first();
+  if ((await row.count()) === 0) return false;
+  await Promise.all([
+    adminPage.waitForURL(/\/admin\/spieltage\/[^/]+$/, { timeout: 15000 }),
+    row.click(),
+  ]);
   await adminPage.waitForLoadState("domcontentloaded");
+  return true;
+}
 
-  // If a day is already in_progress, /game-day shows it but /admin only shows
-  // planned/in_progress days. We may already have a manageable day.
-  const hasOpen = await adminPage.getByText("Offener Spieltag", { exact: false }).count();
-  const hasRunning = await adminPage.getByText("Spieltag läuft", { exact: false }).count();
-  const hasManageable = hasOpen + hasRunning > 0;
-
+// Creates a planned game day on /admin/spieltage (or opens an existing planned
+// one) and waits for the participant roster on the detail page. Returns the
+// created date, or null when reused.
+export async function adminCreateDay(adminPage) {
   let createdDate = null;
-  if (!hasManageable) {
-    let attempt = 0;
-    while (attempt < 14) {
+  if (await openPlannedDay(adminPage)) {
+    log("Reusing existing planned day");
+  } else {
+    for (let attempt = 0; attempt < 14 && !createdDate; attempt++) {
       const d = plusDaysISO(attempt);
-      await adminPage.locator("#game-day-date").fill(d);
-      await Promise.all([
-        adminPage.waitForResponse(
-          (r) => r.url().endsWith("/api/game-days") && r.request().method() === "POST",
-          { timeout: 10000 },
-        ).catch(() => null),
-        adminPage.locator('button:has-text("Spieltag anlegen")').click(),
-      ]);
-      await adminPage.waitForLoadState("domcontentloaded");
-      const errorTxt = await adminPage
-        .locator("text=Für diesen Tag existiert bereits ein Spieltag")
-        .first()
-        .count();
-      if (errorTxt === 0) {
-        createdDate = d;
-        break;
+      const dateInput = adminPage.locator("#game-day-date");
+      if (!(await dateInput.isVisible())) {
+        // Dev builds hydrate late: retry the toggle click until the form opens.
+        const toggle = adminPage.locator('[data-testid="create-game-day"]');
+        await toggle.waitFor({ timeout: 15000 });
+        for (let i = 0; i < 10 && !(await dateInput.isVisible()); i++) {
+          await toggle.click().catch(() => null);
+          await adminPage.waitForTimeout(500);
+        }
       }
-      attempt++;
+      await dateInput.fill(d);
+      await adminPage.locator('[data-testid="create-game-day-submit"]').click();
+      const outcome = await Promise.race([
+        adminPage
+          .waitForURL(/\/admin\/spieltage\/[^/]+$/, { timeout: 10000 })
+          .then(() => "created"),
+        adminPage
+          .locator("text=Für diesen Tag existiert bereits ein Spieltag")
+          .first()
+          .waitFor({ timeout: 10000 })
+          .then(() => "exists"),
+      ]).catch(() => "timeout");
+      if (outcome === "created") createdDate = d;
+      else if (outcome === "timeout") throw new Error(`Creating game day for ${d} timed out`);
     }
     if (!createdDate) throw new Error("Could not create a game day in 14 attempts");
     log("Admin created game-day for", createdDate);
-  } else {
-    log("Reusing existing manageable day");
   }
 
   // Wait for the participant roster (rendered after server refresh).
@@ -146,7 +157,7 @@ export async function adminCreateDay(adminPage) {
       .then(() => true)
       .catch(() => false);
     if (ok) break;
-    log(`Spielerpool not visible (attempt ${attempt + 1}); reloading admin`);
+    log(`Spielerpool not visible (attempt ${attempt + 1}); reloading`);
     await adminPage.reload({ waitUntil: "domcontentloaded" });
     await adminPage.waitForTimeout(800);
   }
@@ -176,7 +187,7 @@ export async function adminConfirmPlayers(adminPage, playerNames) {
 }
 
 export async function adminStartDay(adminPage) {
-  const startBtn = adminPage.locator('button:has-text("Spieltag starten")').first();
+  const startBtn = adminPage.locator('[data-testid="start-game-day"]').first();
   if ((await startBtn.count()) === 0) {
     await shot(adminPage, "no-start-button");
     throw new Error('"Spieltag starten" button not found — roster may be invalid');
