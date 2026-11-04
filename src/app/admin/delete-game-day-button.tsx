@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { GroupedList, ListRow } from "@/components/ui/list";
 
 interface Props {
   gameDayId: string;
@@ -30,7 +30,7 @@ export function DeleteGameDayButton({ gameDayId, dateLabel }: Props) {
       return;
     }
     setOpen(false);
-    router.refresh();
+    router.push("/admin/spieltage");
   }
 
   // Only planned days can be deleted now — once Spielbetrieb starts,
@@ -39,15 +39,15 @@ export function DeleteGameDayButton({ gameDayId, dateLabel }: Props) {
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setOpen(true)}
-        aria-label={`Spieltag ${dateLabel} löschen`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <GroupedList>
+        <ListRow
+          onClick={() => setOpen(true)}
+          title="Spieltag löschen"
+          tone="destructive"
+          align="center"
+          testId="delete-game-day"
+        />
+      </GroupedList>
       <Dialog open={open} onClose={() => setOpen(false)} title="Spieltag löschen">
         <p className="text-sm text-foreground">{message}</p>
         {error && (

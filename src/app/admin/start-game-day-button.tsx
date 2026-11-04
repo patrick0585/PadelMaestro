@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { PrimaryAction } from "@/components/ui/list";
 
 export function StartGameDayButton({ gameDayId }: { gameDayId: string }) {
   const router = useRouter();
@@ -15,8 +15,8 @@ export function StartGameDayButton({ gameDayId }: { gameDayId: string }) {
   }
 
   return (
-    <Button size="sm" onClick={onClick} loading={loading}>
-      Spieltag starten
-    </Button>
+    <PrimaryAction onClick={onClick} disabled={loading} testId="start-game-day">
+      {loading ? "Startet…" : "Spieltag starten"}
+    </PrimaryAction>
   );
 }

@@ -3,9 +3,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PrimaryAction } from "@/components/ui/list";
 
 export function CreateGameDayForm() {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +35,23 @@ export function CreateGameDayForm() {
       setError("Anlegen fehlgeschlagen");
       return;
     }
+    const body = (await res.json().catch(() => null)) as { gameDay?: { id?: string } } | null;
     setDate("");
-    router.refresh();
+    const id = body?.gameDay?.id;
+    if (id) router.push(`/admin/spieltage/${id}`);
+    else router.refresh();
+  }
+
+  if (!expanded) {
+    return (
+      <PrimaryAction onClick={() => setExpanded(true)} testId="create-game-day">
+        ＋ Spieltag anlegen
+      </PrimaryAction>
+    );
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-2">
+    <form onSubmit={onSubmit} data-testid="create-game-day-form" className="flex flex-wrap items-end gap-2">
       <div className="flex-1 min-w-[12rem]">
         <Label htmlFor="game-day-date">Datum</Label>
         <Input
@@ -49,8 +62,8 @@ export function CreateGameDayForm() {
           required
         />
       </div>
-      <Button type="submit" loading={loading}>
-        Spieltag anlegen
+      <Button type="submit" loading={loading} data-testid="create-game-day-submit">
+        Anlegen
       </Button>
       {error && (
         <p className="w-full rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
