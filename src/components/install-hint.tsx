@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isNativeApp } from "@/lib/platform";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -37,7 +38,7 @@ export function InstallHint() {
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    if (isStandalone()) return;
+    if (isStandalone() || isNativeApp()) return;
     setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
     setShowIos(isIosSafari());
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { NativeSplashHide } from "@/components/native-splash-hide";
 
 export const metadata: Metadata = {
   title: "Padelmaestro",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className="antialiased">
+        <NativeSplashHide />
         <AppShell>{children}</AppShell>
       </body>
     </html>
