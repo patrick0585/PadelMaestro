@@ -123,4 +123,21 @@ describe("<JokerConfirmDialog>", () => {
     );
     expect(confirmButton).toBeDisabled();
   });
+
+  it("derives the wording and points from jokersTotal and gamesCredited", () => {
+    render(
+      <JokerConfirmDialog
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        jokersRemaining={2}
+        jokersTotal={3}
+        gamesCredited={10}
+        ppgSnapshot={1.5}
+      />,
+    );
+    expect(screen.getByText(/2\. von 3 Jokern/)).toBeInTheDocument();
+    expect(screen.getByText(/10 × 1,5/)).toBeInTheDocument();
+    expect(screen.getByText(/15 Punkte/)).toBeInTheDocument();
+  });
 });

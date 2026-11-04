@@ -94,4 +94,14 @@ describe("group joker rules", () => {
     if (result?.kind !== "planned") throw new Error("expected planned");
     expect(result.roster.find((r) => r.playerId === player.id)?.jokersRemaining).toBe(5);
   });
+
+  it("keeps existing JokerUse credits when the group rule changes later", async () => {
+    const { group, season, player } = await setup({ jokerGamesCredited: 15 });
+    const gd = await plannedDay(group.id, season.id, player.id, 1);
+    const use = await recordJokerUse({ playerId: player.id, gameDayId: gd.id });
+    await prisma.group.update({ where: { id: group.id }, data: { jokerGamesCredited: 5 } });
+    const after = await prisma.jokerUse.findUniqueOrThrow({ where: { id: use.id } });
+    expect(after.gamesCredited).toBe(15);
+    expect(after.pointsCredited.toString()).toBe(use.pointsCredited.toString());
+  });
 });
