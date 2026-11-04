@@ -13,7 +13,7 @@ const USER_TABS: Tab[] = [
   { href: "/archive", label: "Archiv", icon: Archive },
 ];
 
-const ADMIN_TAB: Tab = { href: "/admin", label: "Admin", icon: Settings };
+const ADMIN_TAB: Tab = { href: "/admin", label: "Verwaltung", icon: Settings };
 
 export function BottomTabs({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();

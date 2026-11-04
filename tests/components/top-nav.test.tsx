@@ -16,14 +16,14 @@ describe("<TopNav>", () => {
     expect(screen.getByText("Padelmaestro")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /rangliste/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /spieltag/i })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /verwaltung/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /benutzermenü/i })).toHaveTextContent("PK");
   });
 
-  it("shows the Admin link when isAdmin is true", () => {
+  it("shows the Verwaltung link when isAdmin is true", () => {
     currentPath = "/admin";
     render(<TopNav isAdmin name="A B" playerId="player-2" avatarVersion={0} groups={[]} activeGroupId={null} />);
-    const adminLink = screen.getByRole("link", { name: /admin/i });
+    const adminLink = screen.getByRole("link", { name: /verwaltung/i });
     expect(adminLink).toHaveAttribute("aria-current", "page");
   });
 

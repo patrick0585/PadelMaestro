@@ -14,7 +14,7 @@ const USER_ITEMS: Item[] = [
   { href: "/archive", label: "Archiv" },
 ];
 
-const ADMIN_ITEM: Item = { href: "/admin", label: "Admin" };
+const ADMIN_ITEM: Item = { href: "/admin", label: "Verwaltung" };
 
 export function TopNav({
   isAdmin,
