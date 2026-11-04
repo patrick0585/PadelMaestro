@@ -65,6 +65,28 @@ describe("InstallHint", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    delete window.Capacitor;
+  });
+
+  it("stays hidden inside the iOS app shell (user agent marker)", () => {
+    setUserAgent(IPHONE_SAFARI + " PadelmaestroApp/1.0 (iOS)");
+    render(<InstallHint />);
+    expect(
+      screen.queryByRole("region", { name: "App auf dem Home-Bildschirm hinzufügen" }),
+    ).toBeNull();
+  });
+
+  it("stays hidden inside the iOS app shell even after beforeinstallprompt", () => {
+    window.Capacitor = { isNativePlatform: () => true };
+    setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36");
+    render(<InstallHint />);
+    act(() => {
+      window.dispatchEvent(makeBeforeInstallPromptEvent().event);
+    });
+    expect(
+      screen.queryByRole("region", { name: "App auf dem Home-Bildschirm hinzufügen" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Installieren" })).toBeNull();
   });
 
   it("renders nothing on a non-iOS browser without an install prompt event", () => {
