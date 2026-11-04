@@ -14,6 +14,7 @@ describe("renameGroup", () => {
     const group = await createTestGroup("Alte Gruppe");
     const owner = await createMember(group.id, { name: "Olga", email: "o@example.com", role: "owner" });
     const admin = await createMember(group.id, { name: "Armin", email: "a@example.com", role: "admin" });
+    const member = await createMember(group.id, { name: "Mia", email: "m@example.com" });
 
     const res = await renameGroup({ groupId: group.id, actorId: owner.id, name: "  Neue Gruppe  " });
     expect(res).toEqual({ name: "Neue Gruppe" });
@@ -37,8 +38,12 @@ describe("renameGroup", () => {
     expect(await prisma.auditLog.count({ where: { action: "group.rename" } })).toBe(1);
 
     await expect(
-      renameGroup({ groupId: group.id, actorId: admin.id, name: "Admin-Name" }),
+      renameGroup({ groupId: group.id, actorId: member.id, name: "Mitglied-Name" }),
     ).rejects.toBeInstanceOf(ForbiddenError);
     expect((await prisma.group.findUniqueOrThrow({ where: { id: group.id } })).name).toBe("Neue Gruppe");
+
+    expect(await renameGroup({ groupId: group.id, actorId: admin.id, name: "Admin-Name" })).toEqual({
+      name: "Admin-Name",
+    });
   });
 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guardMember } from "@/lib/auth/route-guard";
 import { ForbiddenError } from "@/lib/auth/group-context";
+import { isAdminRole } from "@/lib/auth/roles";
 import { groupNameField } from "@/lib/invitations/schemas";
 import { rateLimit } from "@/lib/rate-limit";
 import { rateLimitedResponse } from "@/lib/rate-limit-response";
@@ -24,7 +25,7 @@ export async function PATCH(req: Request) {
   const parsed = RenameBody.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
   if (parsed.data.groupId !== g.ctx.groupId) return staleGroup();
-  if (g.ctx.role !== "owner") return forbidden();
+  if (!isAdminRole(g.ctx.role)) return forbidden();
   try {
     const result = await renameGroup({
       groupId: g.ctx.groupId,
