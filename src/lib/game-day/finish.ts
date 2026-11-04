@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { GameDayNotFoundError } from "./attendance";
 import { GameDayNotActiveError } from "./add-extra-match";
+import { publishGameDayUpdate } from "./live-broadcast";
 
 export class GameDayAlreadyFinishedError extends Error {
   constructor(gameDayId: string) {
@@ -10,7 +11,7 @@ export class GameDayAlreadyFinishedError extends Error {
 }
 
 export async function finishGameDay(gameDayId: string, actorId: string) {
-  return prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     const day = await tx.gameDay.findUnique({ where: { id: gameDayId } });
     if (!day) throw new GameDayNotFoundError(gameDayId);
     if (day.status === "finished") throw new GameDayAlreadyFinishedError(gameDayId);
@@ -31,4 +32,6 @@ export async function finishGameDay(gameDayId: string, actorId: string) {
       },
     });
   });
+  // Open /game-day tabs listen only while the day runs; tell them it is over.
+  publishGameDayUpdate(gameDayId);
 }
