@@ -127,3 +127,16 @@ Meine Festlegungen in diesem Dokument (Patrick kann sie kippen):
   versuchen" lädt die App.
 - Browser-Nutzer sehen keinen Unterschied (Install-Banner weiterhin in
   Safari sichtbar).
+- Splash verschwindet, sobald die Seite geladen ist, nicht erst nach dem
+  Timeout. Prüft, dass `window.Capacitor.Plugins.SplashScreen` im
+  Remote-URL-Modus erreichbar ist (vom Spike nicht abgedeckt).
+  `capacitor.config.json` setzt zusätzlich `launchAutoHide` mit
+  `launchShowDuration` ≈ 3000 als nativen Fallback.
+
+## Hinweise aus dem Review des Web-PRs
+
+- Die Web-App deklariert `Window.Capacitor` selbst (`src/lib/platform.ts`).
+  Wird je `@capacitor/core` in `src/` importiert, diese Deklaration
+  entfernen.
+- Der User-Agent-Marker `PadelmaestroApp/` ist frei fälschbar. Serverseitig
+  (Push-Registrierung, Statistik) nie als Beweis behandeln.
