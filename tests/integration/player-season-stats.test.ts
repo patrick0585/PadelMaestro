@@ -690,3 +690,63 @@ describe("computePlayerSeasonStats", () => {
     ]);
   });
 });
+
+describe("computePlayerSeasonStats ties", () => {
+  beforeEach(resetDb);
+
+  it("gives both tied leaders gold and placement 1", async () => {
+    const season = await makeSeason();
+    const [me, paul, c, d] = await Promise.all(["Me", "Paul", "C", "D"].map((n) => makePlayer(season, n)));
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-11-03"), playerCount: 4, status: "finished" },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id, matchNumber: 1,
+        team1PlayerAId: me.id, team1PlayerBId: paul.id,
+        team2PlayerAId: c.id, team2PlayerBId: d.id,
+        team1Score: 3, team2Score: 0,
+      },
+    });
+    const mine = await computePlayerSeasonStats(me.id, season.id);
+    const pauls = await computePlayerSeasonStats(paul.id, season.id);
+    expect(mine.medals).toEqual({ gold: 1, silver: 0, bronze: 0 });
+    expect(pauls.medals).toEqual({ gold: 1, silver: 0, bronze: 0 });
+    expect(mine.recentDays[0].placement).toBe(1);
+    expect(pauls.recentDays[0].placement).toBe(1);
+  });
+
+  it("gives both players tied at rank 2 silver and placement 2, and the last player placement 4", async () => {
+    const season = await makeSeason();
+    const [a, b, c, d] = await Promise.all(["A", "B", "C", "D"].map((n) => makePlayer(season, n)));
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-11-03"), playerCount: 4, status: "finished" },
+    });
+    // A 7, B 3, C 3, D 1 -- every player plays 3 matches.
+    const games: Array<[string, string, string, string, number, number]> = [
+      [a.id, b.id, c.id, d.id, 3, 0],
+      [a.id, c.id, b.id, d.id, 3, 0],
+      [a.id, d.id, b.id, c.id, 1, 0],
+    ];
+    for (const [i, [t1a, t1b, t2a, t2b, s1, s2]] of games.entries()) {
+      await prisma.match.create({
+        data: {
+          gameDayId: day.id, matchNumber: i + 1,
+          team1PlayerAId: t1a, team1PlayerBId: t1b,
+          team2PlayerAId: t2a, team2PlayerBId: t2b,
+          team1Score: s1, team2Score: s2,
+        },
+      });
+    }
+    const [sa, sb, sc, sd] = await Promise.all(
+      [a, b, c, d].map((p) => computePlayerSeasonStats(p.id, season.id)),
+    );
+    expect(sa.recentDays[0].placement).toBe(1);
+    expect(sb.recentDays[0].placement).toBe(2);
+    expect(sc.recentDays[0].placement).toBe(2);
+    expect(sd.recentDays[0].placement).toBe(4);
+    expect(sb.medals).toEqual({ gold: 0, silver: 1, bronze: 0 });
+    expect(sc.medals).toEqual({ gold: 0, silver: 1, bronze: 0 });
+    expect(sd.medals).toEqual({ gold: 0, silver: 0, bronze: 0 });
+  });
+});

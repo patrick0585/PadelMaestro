@@ -5,11 +5,11 @@ import { JokerBlock } from "./joker-block";
 import { mergeJokersIntoRows } from "./joker-summary-merge";
 import { PartnershipCounts } from "./partnership-counts";
 
-const PODIUM_STYLES = [
-  { medal: "🥇", rankLabel: "Platz 1", badge: "bg-warning/15" },
-  { medal: "🥈", rankLabel: "Platz 2", badge: "bg-foreground-muted/15" },
-  { medal: "🥉", rankLabel: "Platz 3", badge: "bg-primary/15" },
-] as const;
+const PODIUM_STYLES: Record<number, { medal: string; rankLabel: string; badge: string }> = {
+  1: { medal: "🥇", rankLabel: "Platz 1", badge: "bg-warning/15" },
+  2: { medal: "🥈", rankLabel: "Platz 2", badge: "bg-foreground-muted/15" },
+  3: { medal: "🥉", rankLabel: "Platz 3", badge: "bg-primary/15" },
+};
 
 const RANK_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
@@ -32,7 +32,11 @@ export async function FinishedSummary({
   ]);
 
   const displayRows = mergeJokersIntoRows(summary?.rows ?? [], jokers);
-  const displayPodium = displayRows.slice(0, 3);
+  const displayPodium = displayRows.filter((row) => row.rank <= 3);
+  const rankCount = new Map<number, number>();
+  for (const row of displayPodium) rankCount.set(row.rank, (rankCount.get(row.rank) ?? 0) + 1);
+  // Ties can push the podium to 4+ cards; two columns avoid an orphan card.
+  const podiumCols = displayPodium.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2";
 
   if (!summary || displayRows.length === 0) {
     return (
@@ -62,15 +66,20 @@ export async function FinishedSummary({
           </div>
         </div>
 
-        <ol aria-label="Podium" className="grid gap-2 sm:grid-cols-3">
-          {displayPodium.map((row, i) => {
-            const style = PODIUM_STYLES[i];
+        <ol aria-label="Podium" className={`grid gap-2 ${podiumCols}`}>
+          {displayPodium.map((row) => {
+            const style = PODIUM_STYLES[row.rank];
+            const tied = (rankCount.get(row.rank) ?? 0) > 1;
             return (
               <li
                 key={row.playerId}
                 className={`flex items-center gap-3 rounded-xl border border-border p-3 ${style.badge}`}
               >
-                <span className="text-2xl" role="img" aria-label={style.rankLabel}>
+                <span
+                  className="text-2xl"
+                  role="img"
+                  aria-label={tied ? `Geteilter ${style.rankLabel}` : style.rankLabel}
+                >
                   {style.medal}
                 </span>
                 <Avatar playerId={row.playerId} name={row.playerName} avatarVersion={row.avatarVersion} size={40} />
@@ -81,6 +90,7 @@ export async function FinishedSummary({
                   </div>
                   <div className="text-[0.7rem] text-foreground-muted">
                     {row.matches} {row.matches === 1 ? "Match" : "Matches"}
+                    {tied && " · geteilt"}
                   </div>
                 </div>
                 <div className="text-2xl font-extrabold tabular-nums text-primary">{row.points}</div>
@@ -99,8 +109,8 @@ export async function FinishedSummary({
             </tr>
           </thead>
           <tbody>
-            {displayRows.map((row, i) => {
-              const rank = i + 1;
+            {displayRows.map((row) => {
+              const { rank } = row;
               const medal = RANK_MEDALS[rank];
               return (
               <tr key={row.playerId} className="border-t border-border">

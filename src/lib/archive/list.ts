@@ -4,6 +4,7 @@ import { computeGameDaySummary } from "@/lib/game-day/summary";
 export interface ArchivePodiumEntry {
   playerName: string;
   points: number;
+  rank: number;
 }
 
 export interface ArchivedGameDayRow {
@@ -59,6 +60,7 @@ export async function listArchivedGameDays(
     const podium = (summary?.podium ?? []).map((r) => ({
       playerName: r.playerName,
       points: r.points,
+      rank: r.rank,
     }));
     const selfRow =
       currentPlayerId !== null

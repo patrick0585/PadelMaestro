@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSeasonGroupId } from "@/lib/group/season-group";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
+import { MEDAL_BY_RANK, type MedalKind } from "@/lib/game-day/competition-rank";
 
 export interface RankingRow {
   rank: number;
@@ -14,12 +15,11 @@ export interface RankingRow {
   medals: { gold: number; silver: number; bronze: number };
 }
 
-type MedalKind = "gold" | "silver" | "bronze";
 type MedalCounts = { gold: number; silver: number; bronze: number };
 
 // Reuses computeGameDaySummary so medal counts always match the per-player
-// season stats path — both share the same de-locale-aware tie-breaker on the
-// podium.
+// season stats path — both read the same competition ranks off the podium
+// (tied players share a medal).
 async function computeMedalsBySeason(
   seasonId: string,
 ): Promise<Map<string, MedalCounts>> {
@@ -38,9 +38,10 @@ async function computeMedalsBySeason(
   };
   for (const s of summaries) {
     if (!s) continue;
-    if (s.podium[0]) bump(s.podium[0].playerId, "gold");
-    if (s.podium[1]) bump(s.podium[1].playerId, "silver");
-    if (s.podium[2]) bump(s.podium[2].playerId, "bronze");
+    for (const r of s.podium) {
+      const kind = MEDAL_BY_RANK[r.rank];
+      if (kind) bump(r.playerId, kind);
+    }
   }
   return medalsByPlayer;
 }
