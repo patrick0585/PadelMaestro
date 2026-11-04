@@ -39,7 +39,7 @@ describe("capacitor.config.json", () => {
       backgroundColor: "#0b1220",
     });
     expect(cfg.plugins.PushNotifications).toEqual({
-      presentationOptions: ["banner", "sound"],
+      presentationOptions: ["banner", "list", "sound"],
     });
   });
 });
