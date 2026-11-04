@@ -3,6 +3,7 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { Avatar } from "@/components/ui/avatar";
+import { unregisterThisDevice } from "@/lib/push/client";
 
 export function UserMenu({
   playerId,
@@ -52,7 +53,10 @@ export function UserMenu({
           </Link>
           <button
             role="menuitem"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => {
+              await unregisterThisDevice();
+              await signOut({ callbackUrl: "/login" });
+            }}
             className="block w-full px-4 py-2 text-left text-sm text-foreground hover:bg-surface-muted"
           >
             Abmelden

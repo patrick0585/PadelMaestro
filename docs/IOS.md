@@ -40,10 +40,28 @@ Icon/Splash neu erzeugen: `node scripts/generate-pwa-icons.mjs` (schreibt PWA- u
 
 In Xcode unter Signing & Capabilities das eigene Team wählen („Automatically manage signing" bleibt an). `DEVELOPMENT_TEAM` nie committen.
 
+## Push-Benachrichtigungen
+
+Plugin `@capacitor/push-notifications`; `AppDelegate.swift` reicht das Geräte-Token an Capacitor weiter, `App/App.entitlements` setzt `aps-environment = development`. Nach dem Login fragt die App einmal nach der Erlaubnis und meldet das Token an `/api/push/devices`; beim Abmelden wird es wieder entfernt. Ein Tipp auf die Nachricht wechselt bei Bedarf die Gruppe und öffnet `/game-day`.
+
+Sobald das Apple-Team existiert: in Xcode unter Signing & Capabilities „Push Notifications" hinzufügen (die Entitlements-Datei ist schon eingetragen). Ohne Team baut der Simulator weiterhin, echte Tokens gibt es aber erst auf dem Gerät.
+
+Simulator-Test: Datei `test.apns` anlegen und auf das Simulator-Fenster ziehen (oder `xcrun simctl push booted de.padelmaestro.app test.apns`):
+
+```json
+{
+  "Simulator Target Bundle": "de.padelmaestro.app",
+  "aps": { "alert": { "title": "Neuer Spieltag", "body": "Donnerstagsrunde: Do, 12.11. – bist du dabei?" }, "sound": "default" },
+  "gameDayId": "<Spieltag-ID>",
+  "groupId": "<Gruppen-ID>"
+}
+```
+
+Tipp auf die Nachricht öffnet den Spieltag der Gruppe.
+
 ## Bekannte Grenzen
 
 - Links in Mails (Verifizierung, Passwort-Reset, Einladungen) öffnen in Safari, nicht in der App.
-- Kein Push.
 - Nur iPhone, nur Hochformat.
 - Ohne Netz erscheint die Offline-Seite mit „Erneut versuchen".
 

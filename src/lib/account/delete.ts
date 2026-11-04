@@ -71,6 +71,7 @@ async function anonymise(playerId: string, now: Date): Promise<void> {
       where: { playerId, gameDay: { status: "planned" } },
     });
     await tx.emailToken.deleteMany({ where: { playerId } });
+    await tx.pushDevice.deleteMany({ where: { playerId } });
     await tx.auditLog.updateMany({
       where: { entityType: "Player", entityId: playerId },
       data: { payload: { anonymised: true } },

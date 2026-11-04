@@ -9,6 +9,7 @@ import { LeaveGroupButton } from "./leave-group-button";
 import { ChangePasswordForm } from "./change-password-form";
 import { AvatarUploader } from "./avatar-uploader";
 import { EmailForm } from "./email-form";
+import { PushSettings } from "./push-settings";
 import { EmailNotice } from "@/components/email-notice";
 import { AccountSection } from "./account-section";
 import { LegalFooter } from "@/components/legal-footer";
@@ -32,6 +33,7 @@ export default async function ProfilePage() {
       emailVerifiedAt: true,
       pendingEmail: true,
       passwordHash: true,
+      pushRemindersEnabled: true,
     },
   });
   const avatarVersion = player?.avatarVersion ?? 0;
@@ -74,6 +76,8 @@ export default async function ProfilePage() {
           />
         </CardBody>
       </Card>
+
+      <PushSettings remindersEnabled={player?.pushRemindersEnabled ?? true} />
 
       {ctx && group && (
         <Card>
