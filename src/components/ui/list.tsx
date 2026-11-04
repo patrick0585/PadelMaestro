@@ -39,7 +39,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 
 export function SectionFooter({ children }: { children: ReactNode }) {
   return (
-    <p className="mx-3.5 mt-1.5 text-[11.5px] leading-[1.35] text-foreground-dim">{children}</p>
+    <p className="mx-3.5 mt-1.5 text-[11.5px] leading-[1.35] text-foreground-muted">{children}</p>
   );
 }
 
@@ -67,6 +67,9 @@ export interface ListRowProps {
   value?: ReactNode;
   trailing?: ReactNode;
   chevron?: boolean;
+  /** Platz des Chevrons freihalten, damit Werte mit Nachbarzeilen fluchten */
+  reserveChevron?: boolean;
+  truncateValue?: boolean;
   tone?: "default" | "primary" | "destructive";
   align?: "start" | "center";
   testId?: string;
@@ -88,20 +91,22 @@ export function ListRow({
   value,
   trailing,
   chevron = false,
+  reserveChevron = false,
+  truncateValue = false,
   tone = "default",
   align = "start",
   testId,
 }: ListRowProps) {
   // Trennlinie rückt bis zum Text ein; mit Icon/Leading weiter als ohne
-  const inset = icon || leading ? "before:left-[52px]" : "before:left-3.5";
+  const inset = icon || leading ? "not-first:before:left-[52px]" : "not-first:before:left-3.5";
   const interactive = href || onClick;
   const className = [
     interactive
       ? "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       : "",
     "relative flex min-h-11 w-full items-center gap-[11px] px-3 py-2.5 text-left text-[14.5px]",
-    "[&:not(:first-child)]:before:absolute [&:not(:first-child)]:before:inset-x-0 [&:not(:first-child)]:before:top-0",
-    "[&:not(:first-child)]:before:h-px [&:not(:first-child)]:before:bg-border [&:not(:first-child)]:before:content-['']",
+    "not-first:before:absolute not-first:before:right-0 not-first:before:top-0",
+    "not-first:before:h-px not-first:before:bg-border not-first:before:content-['']",
     inset,
     TONES[tone],
     align === "center" ? "justify-center" : "",
@@ -128,11 +133,18 @@ export function ListRow({
         )}
       </span>
       {value != null && (
-        <span className="shrink-0 text-[13.5px] text-foreground-muted">{value}</span>
+        <span
+          className={`${truncateValue ? "min-w-0 truncate" : "shrink-0"} text-[13.5px] text-foreground-muted`}
+        >
+          {value}
+        </span>
       )}
       {trailing}
-      {chevron && (
-        <span aria-hidden="true" className="ml-0.5 shrink-0 text-[17px] text-foreground-dim">
+      {(chevron || reserveChevron) && (
+        <span
+          aria-hidden="true"
+          className={`ml-0.5 shrink-0 text-[17px] text-foreground-dim ${chevron ? "" : "invisible"}`.trim()}
+        >
           ›
         </span>
       )}

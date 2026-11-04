@@ -48,6 +48,14 @@ describe("loadAdminOverview", () => {
     expect(o.plannedCount).toBe(2);
   });
 
+  it("counts planned days group-wide, even from an older season", async () => {
+    const old = await createTestSeason(groupId, { isActive: false });
+    await createTestGameDay(groupId, old.id, { date: day(5) });
+    await createTestGameDay(groupId, seasonId, { date: day(6) });
+    const o = await loadAdminOverview(groupId);
+    expect(o.plannedCount).toBe(2);
+  });
+
   it("prefers a running day over a planned one", async () => {
     await createTestGameDay(groupId, seasonId, { date: day(10) });
     const running = await createTestGameDay(groupId, seasonId, {

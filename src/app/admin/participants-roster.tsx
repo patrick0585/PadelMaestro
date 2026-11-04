@@ -65,7 +65,7 @@ function PlayerCard({
         isDragging ? "opacity-40" : ""
       } ${dimmed ? "opacity-60" : ""}`}
     >
-      <span className="flex-1 text-sm font-medium text-foreground">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
         {row.name}
         {row.attendance === "joker" && (
           <span className="ml-2 rounded-full border border-primary/50 bg-primary-soft px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-primary-strong">
@@ -81,7 +81,7 @@ function PlayerCard({
           onMove();
         }}
         aria-label={toRoster ? "Zu Dabei verschieben" : "In den Pool zurück"}
-        className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-base text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+        className="ml-2 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-base text-muted-foreground hover:bg-surface-muted hover:text-foreground"
       >
         {toRoster ? "→" : "←"}
       </button>
@@ -94,7 +94,8 @@ function PlayerCard({
             onCancelJoker();
           }}
           disabled={busy}
-          className={`ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted ${
+          aria-label={`Joker für ${row.name} entfernen`}
+          className={`ml-2 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-border-strong px-3 text-xs font-semibold text-foreground hover:bg-surface-muted ${
             busy ? "opacity-60" : ""
           }`}
         >
@@ -109,17 +110,19 @@ function PlayerCard({
             onSetJoker();
           }}
           disabled={busy}
-          className={`ml-2 inline-flex h-8 items-center rounded-lg border border-border-strong px-2 text-xs font-semibold text-foreground hover:bg-surface-muted ${
+          aria-label={`Joker für ${row.name} setzen`}
+          className={`ml-2 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-border-strong px-3 text-xs font-semibold text-foreground hover:bg-surface-muted ${
             busy ? "opacity-60" : ""
           }`}
         >
-          Joker für {row.name} setzen
+          Joker setzen
         </button>
       ) : (
         <button
           type="button"
           disabled
-          className="ml-2 inline-flex h-8 items-center rounded-lg border border-border px-2 text-xs font-semibold text-foreground-muted opacity-60"
+          aria-label={`Keine Joker übrig für ${row.name}`}
+          className="ml-2 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-border px-3 text-xs font-semibold text-foreground-muted opacity-60"
         >
           Keine Joker übrig
         </button>

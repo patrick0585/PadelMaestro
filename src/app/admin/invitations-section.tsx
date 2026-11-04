@@ -206,7 +206,10 @@ export function InvitationsSection({ initial }: { initial: SerializedOpenInvitat
       ) : (
         <GroupedList>
           {invitations.map((inv) => (
-            <div key={inv.id}>
+            <div
+              key={inv.id}
+              className="relative not-first:before:absolute not-first:before:left-3.5 not-first:before:right-0 not-first:before:top-0 not-first:before:h-px not-first:before:bg-border not-first:before:content-['']"
+            >
               <ListRow
                 title={<span className="line-clamp-2 whitespace-normal break-words">{inv.note ?? "Einladungslink"}</span>}
                 subtitle={usageText(inv)}

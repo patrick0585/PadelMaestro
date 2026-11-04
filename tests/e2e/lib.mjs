@@ -144,7 +144,10 @@ export async function adminCreateDay(adminPage) {
           .then(() => "exists"),
       ]).catch(() => "timeout");
       if (outcome === "created") createdDate = d;
-      else if (outcome === "timeout") throw new Error(`Creating game day for ${d} timed out`);
+      else if (outcome === "timeout") {
+        await shot(adminPage, "create-day-timeout");
+        throw new Error(`Creating game day for ${d} timed out`);
+      }
     }
     if (!createdDate) throw new Error("Could not create a game day in 14 attempts");
     log("Admin created game-day for", createdDate);

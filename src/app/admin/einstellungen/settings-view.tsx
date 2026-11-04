@@ -98,9 +98,13 @@ export function SettingsView({
             <button
               type="submit"
               disabled={unchanged || loading}
-              className="relative flex min-h-11 w-full items-center px-3.5 text-left text-[14.5px] text-primary before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border before:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary disabled:opacity-50"
+              className="relative flex min-h-11 w-full items-center px-3.5 text-left text-[14.5px] text-primary before:absolute before:left-3.5 before:right-0 before:top-0 before:h-px before:bg-border before:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
             >
-              Umbenennen
+              <span
+                className={`rounded-lg bg-primary-soft px-3 py-1.5 font-semibold text-primary ${unchanged || loading ? "opacity-50" : ""}`.trim()}
+              >
+                Umbenennen
+              </span>
             </button>
           </GroupedList>
           {message && (

@@ -2,18 +2,10 @@ import Link from "next/link";
 import { CalendarDays, Mail, Settings, Trophy, Users } from "lucide-react";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { GroupedList, LargeTitle, ListRow, SectionLabel } from "@/components/ui/list";
+import { formatGameDayDate } from "@/lib/admin/format";
 import type { AdminOverview } from "@/lib/admin/overview";
 
 const ICON_CLASS = "size-[17px]";
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("de-DE", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  });
-}
 
 function formatSeasonStart(date: Date): string {
   return date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
@@ -31,7 +23,7 @@ function Hero({ hero }: { hero: AdminOverview["hero"] }) {
         <p className="mb-0.5 mt-1 text-[19px] font-extrabold">Kein Spieltag geplant</p>
         <Link
           href="/admin/spieltage"
-          className="text-[12.5px] font-semibold text-[#cffafe] underline underline-offset-2"
+          className="inline-flex min-h-11 items-center text-[12.5px] font-semibold text-[#cffafe] underline underline-offset-2"
         >
           Spieltag anlegen
         </Link>
@@ -42,7 +34,7 @@ function Hero({ hero }: { hero: AdminOverview["hero"] }) {
     return (
       <Link href="/game-day" className={HERO_CLASS}>
         <p className={HERO_KICKER}>Läuft gerade</p>
-        <p className="mb-0.5 mt-1 text-[19px] font-extrabold">{formatDate(hero.date)}</p>
+        <p className="mb-0.5 mt-1 text-[19px] font-extrabold">{formatGameDayDate(hero.date)}</p>
         <p className="text-[12.5px] text-[#cffafe]">Zum laufenden Spieltag</p>
       </Link>
     );
@@ -50,7 +42,7 @@ function Hero({ hero }: { hero: AdminOverview["hero"] }) {
   return (
     <Link href={`/admin/spieltage/${hero.id}`} className={HERO_CLASS}>
       <p className={HERO_KICKER}>Nächster Spieltag</p>
-      <p className="mb-0.5 mt-1 text-[19px] font-extrabold">{formatDate(hero.date)}</p>
+      <p className="mb-0.5 mt-1 text-[19px] font-extrabold">{formatGameDayDate(hero.date)}</p>
       <p className="text-[12.5px] text-[#cffafe]">
         {hero.confirmed} von {hero.total} zugesagt · {hero.pending} offen
       </p>

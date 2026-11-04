@@ -50,7 +50,7 @@ export async function loadAdminOverview(groupId: string): Promise<AdminOverview>
         },
       }),
       prisma.gameDay.count({ where: { seasonId: season.id, status: "finished" } }),
-      prisma.gameDay.count({ where: { seasonId: season.id, status: "planned" } }),
+      prisma.gameDay.count({ where: { groupId, status: "planned" } }),
       prisma.invitation.findMany({
         where: { groupId, kind: "member", revokedAt: null, expiresAt: { gt: now } },
         select: { usedCount: true, maxUses: true },

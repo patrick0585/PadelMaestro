@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GroupedList, ListRow, SectionLabel } from "@/components/ui/list";
 import { Avatar } from "@/components/ui/avatar";
@@ -37,6 +37,10 @@ export function PlayerDetailView({
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
 
+  const { id, name, email, username } = player;
+  const editTarget = useMemo(() => ({ id, name, email, username }), [id, name, email, username]);
+  const transferTarget = useMemo(() => ({ id, name }), [id, name]);
+
   const isOwnerTarget = player.role === "owner";
   const canTransfer = viewerRole === "owner" && !isOwnerTarget && player.hasPassword;
   const since = player.joinedAt.toLocaleDateString("de-DE", {
@@ -64,13 +68,18 @@ export function PlayerDetailView({
         </button>
       </nav>
       <div className="mb-1.5 mt-1 flex flex-col items-center text-center">
-        <Avatar playerId={player.id} name={player.name} avatarVersion={player.avatarVersion} size={96} />
+        <Avatar playerId={player.id} name={player.name} avatarVersion={player.avatarVersion} size={72} />
         <h1 className="mt-2 text-xl font-extrabold">{player.name}</h1>
         <p className="text-xs text-foreground-muted">{`Mitglied seit ${since}`}</p>
       </div>
 
       <GroupedList className="mt-3">
-        <ListRow title="E-Mail" value={player.email} />
+        <ListRow title="E-Mail" value={player.email} truncateValue reserveChevron={!isOwnerTarget} />
+        <ListRow
+          title="Benutzername"
+          value={player.username ? `@${player.username}` : "—"}
+          reserveChevron={!isOwnerTarget}
+        />
         {isOwnerTarget ? (
           <ListRow title="Rolle" value={ROLE_LABEL.owner} />
         ) : (
@@ -81,7 +90,7 @@ export function PlayerDetailView({
             onClick={() => setDialog("role")}
           />
         )}
-        <ListRow title="Diese Saison" value={seasonValue(player)} />
+        <ListRow title="Diese Saison" value={seasonValue(player)} reserveChevron={!isOwnerTarget} />
       </GroupedList>
 
       <SectionLabel>Konto</SectionLabel>
@@ -111,12 +120,7 @@ export function PlayerDetailView({
       <EditPlayerDialog
         open={dialog === "edit"}
         onClose={close}
-        player={{
-          id: player.id,
-          name: player.name,
-          email: player.email,
-          username: player.username,
-        }}
+        player={editTarget}
       />
       {!isOwnerTarget && (
         <RolePicker
@@ -144,7 +148,7 @@ export function PlayerDetailView({
       <TransferOwnerDialog
         open={dialog === "transfer"}
         onClose={close}
-        player={{ id: player.id, name: player.name }}
+        player={transferTarget}
       />
       <DeletePlayerDialog
         open={dialog === "delete"}

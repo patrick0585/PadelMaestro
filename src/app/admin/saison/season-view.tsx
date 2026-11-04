@@ -38,7 +38,7 @@ export function SeasonView({
 
       <SectionLabel>Abschluss</SectionLabel>
       <GroupedList>
-        <ListRow onClick={() => setCloseOpen(true)} title="Saison abschließen…" tone="destructive" align="center" />
+        <ListRow onClick={() => setCloseOpen(true)} title="Saison abschließen…" tone="destructive" />
       </GroupedList>
       <SectionFooter>Beendet die Saison und startet eine neue. Die Ergebnisse bleiben im Archiv.</SectionFooter>
       <CloseSeasonDialog

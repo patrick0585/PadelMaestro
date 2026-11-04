@@ -3,16 +3,8 @@ import { useState } from "react";
 import { CloseSeasonDialog } from "../close-season-dialog";
 import { CreateGameDayForm } from "../create-game-day-form";
 import { GroupedList, LargeTitle, ListRow, SectionFooter, SectionLabel } from "@/components/ui/list";
+import { formatGameDayDate } from "@/lib/admin/format";
 import type { OpenGameDay, RecentGameDay } from "@/lib/admin/game-days";
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("de-DE", {
-    weekday: "short",
-    day: "2-digit",
-    month: "long",
-    timeZone: "UTC",
-  });
-}
 
 function Pill({ running }: { running: boolean }) {
   const tone = running
@@ -52,7 +44,7 @@ export function GameDaysView({
                 <ListRow
                   key={d.id}
                   href={running ? "/game-day" : `/admin/spieltage/${d.id}`}
-                  title={formatDate(d.date)}
+                  title={formatGameDayDate(d.date)}
                   subtitle={`${d.confirmed} / ${d.total} zugesagt`}
                   trailing={<Pill running={running} />}
                   chevron
@@ -75,7 +67,7 @@ export function GameDaysView({
             <ListRow
               key={d.id}
               href={`/archive/${d.id}`}
-              title={formatDate(d.date)}
+              title={formatGameDayDate(d.date)}
               subtitle={d.winners.length > 0 ? `🥇 ${d.winners.join(" · ")}` : undefined}
               chevron
             />

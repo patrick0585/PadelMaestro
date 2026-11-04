@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/guard";
 import { loadPlannedGameDay } from "@/lib/admin/game-days";
+import { formatGameDayDate } from "@/lib/admin/format";
 import { LargeTitle, SectionLabel } from "@/components/ui/list";
 import { ParticipantsRoster } from "../../participants-roster";
 import { StartGameDayButton } from "../../start-game-day-button";
@@ -15,12 +16,7 @@ export default async function AdminGameDayPage({ params }: { params: Promise<{ i
   if (!result) notFound();
   if (result.kind === "redirect") redirect(result.to);
 
-  const title = result.date.toLocaleDateString("de-DE", {
-    weekday: "short",
-    day: "2-digit",
-    month: "long",
-    timeZone: "UTC",
-  });
+  const title = formatGameDayDate(result.date);
   const dateLabel = result.date.toLocaleDateString("de-DE", { timeZone: "UTC" });
 
   return (

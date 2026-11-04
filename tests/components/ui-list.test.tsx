@@ -46,4 +46,18 @@ describe("list primitives", () => {
     expect(btn).toHaveAttribute("type", "submit");
     expect(btn).toBeDisabled();
   });
+
+  it("keeps every separator utility behind not-first", () => {
+    const { container } = render(
+      <GroupedList>
+        <ListRow title="A" />
+        <ListRow title="B" icon={{ node: "x", color: "#000" }} />
+      </GroupedList>,
+    );
+    for (const row of Array.from(container.firstElementChild?.children ?? [])) {
+      const classes = row.className.split(/\s+/).filter((c) => c.includes("before:"));
+      expect(classes.length).toBeGreaterThan(0);
+      for (const c of classes) expect(c.startsWith("not-first:before:")).toBe(true);
+    }
+  });
 });

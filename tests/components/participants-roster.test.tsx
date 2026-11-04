@@ -45,7 +45,7 @@ describe("<ParticipantsRoster>", () => {
         participants={[row({ attendance: "joker" })]}
       />,
     );
-    expect(screen.getByRole("button", { name: /Joker entfernen/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Joker für .* entfernen/ })).toBeInTheDocument();
   });
 });
 
@@ -82,7 +82,7 @@ describe("<ParticipantsRoster> admin joker actions", () => {
         participants={[row({ attendance: "joker" })]}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /Joker entfernen/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Joker für .* entfernen/ }));
     await userEvent.click(screen.getByRole("button", { name: /Ja, entfernen/ }));
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     const [url, init] = fetchSpy.mock.calls[0];
