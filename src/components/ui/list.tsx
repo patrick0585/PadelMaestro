@@ -13,8 +13,12 @@ export function LargeTitle({
   return (
     <header className="mb-3">
       {back && (
-        <Link href={back.href} className="mb-1 inline-block text-[15px] text-primary">
-          ‹ {back.label}
+        <Link
+          href={back.href}
+          className="mb-1 inline-flex min-h-11 items-center gap-1 rounded text-[15px] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <span aria-hidden="true">‹</span>
+          {back.label}
         </Link>
       )}
       <div className="flex items-center justify-between gap-3">
@@ -90,7 +94,11 @@ export function ListRow({
 }: ListRowProps) {
   // Trennlinie rückt bis zum Text ein; mit Icon/Leading weiter als ohne
   const inset = icon || leading ? "before:left-[52px]" : "before:left-3.5";
+  const interactive = href || onClick;
   const className = [
+    interactive
+      ? "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      : "",
     "relative flex min-h-11 w-full items-center gap-[11px] px-3 py-2.5 text-left text-[14.5px]",
     "[&:not(:first-child)]:before:absolute [&:not(:first-child)]:before:inset-x-0 [&:not(:first-child)]:before:top-0",
     "[&:not(:first-child)]:before:h-px [&:not(:first-child)]:before:bg-border [&:not(:first-child)]:before:content-['']",
@@ -157,14 +165,18 @@ export function PrimaryAction({
   onClick,
   children,
   testId,
+  type = "button",
+  disabled,
 }: {
   href?: string;
   onClick?: () => void;
   children: ReactNode;
   testId?: string;
+  type?: "button" | "submit";
+  disabled?: boolean;
 }) {
   const className =
-    "block w-full rounded-xl bg-primary p-[11px] text-center text-[14.5px] font-bold text-background";
+    "block min-h-11 w-full rounded-xl bg-primary p-[11px] text-center text-[14.5px] font-bold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
   if (href) {
     return (
       <Link href={href} className={className} data-testid={testId}>
@@ -173,7 +185,13 @@ export function PrimaryAction({
     );
   }
   return (
-    <button type="button" onClick={onClick} className={className} data-testid={testId}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      data-testid={testId}
+    >
       {children}
     </button>
   );

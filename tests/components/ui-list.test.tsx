@@ -1,11 +1,11 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import { LargeTitle, ListRow, GroupedList } from "@/components/ui/list";
+import { LargeTitle, PrimaryAction, ListRow, GroupedList } from "@/components/ui/list";
 
 describe("list primitives", () => {
   it("renders a back link to the parent route", () => {
     render(<LargeTitle title="Spieler" back={{ href: "/admin", label: "Verwaltung" }} />);
-    const link = screen.getByRole("link", { name: "‹ Verwaltung" });
+    const link = screen.getByRole("link", { name: "Verwaltung" });
     expect(link).toHaveAttribute("href", "/admin");
   });
 
@@ -34,5 +34,16 @@ describe("list primitives", () => {
     render(<ListRow title="Ein sehr langer Titel" value="12" />);
     expect(screen.getByText("Ein sehr langer Titel").className).toContain("truncate");
     expect(screen.getByText("12").className).toContain("shrink-0");
+  });
+
+  it("renders PrimaryAction as submit and disabled button", () => {
+    render(
+      <PrimaryAction type="submit" disabled>
+        Speichern
+      </PrimaryAction>,
+    );
+    const btn = screen.getByRole("button", { name: "Speichern" });
+    expect(btn).toHaveAttribute("type", "submit");
+    expect(btn).toBeDisabled();
   });
 });
