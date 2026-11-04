@@ -23,7 +23,7 @@
       "backgroundColor": "#0b1220"
     },
     "PushNotifications": {
-      "presentationOptions": ["banner", "sound"]
+      "presentationOptions": ["banner", "list", "sound"]
     }
   }
 }
