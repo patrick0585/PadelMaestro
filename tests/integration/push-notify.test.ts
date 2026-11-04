@@ -8,6 +8,12 @@ import type { ApnsTransport } from "@/lib/push/apns";
 import type { ApnsConfig } from "@/lib/push/config";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/push/send", async (importActual) => {
+  const actual = await importActual<typeof import("@/lib/push/send")>();
+  return { ...actual, sendToPlayers: vi.fn(actual.sendToPlayers) };
+});
+import { sendToPlayers } from "@/lib/push/send";
+const sendMock = sendToPlayers as unknown as ReturnType<typeof vi.fn>;
 import { auth } from "@/auth";
 import { POST } from "@/app/api/game-days/route";
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
@@ -39,6 +45,8 @@ beforeEach(async () => {
   await resetDb();
   authMock.mockReset();
   vi.restoreAllMocks();
+  sendMock.mockReset();
+  sendMock.mockImplementation((await vi.importActual<typeof import("@/lib/push/send")>("@/lib/push/send")).sendToPlayers);
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -66,10 +74,10 @@ describe("notifyNewGameDay", () => {
 });
 
 describe("POST /api/game-days", () => {
-  it("returns 201 even when sending fails", async () => {
+  async function post() {
     const group = await createTestGroup("G");
     const admin = await createMember(group.id, { name: "Admin", email: "a@example.com", role: "admin" });
-    await registerDevice({ playerId: admin.id, token: "tok-admin" });
+    await createMember(group.id, { name: "Bea", email: "b@example.com" });
     authMock.mockResolvedValue(sessionFor(admin, group.id, "admin"));
     const res = await POST(
       new Request("http://test/api/game-days", {
@@ -78,6 +86,21 @@ describe("POST /api/game-days", () => {
         body: JSON.stringify({ date: "2030-05-02" }),
       }),
     );
+    return { res, group };
+  }
+
+  it("returns 201 and keeps the game day when sending rejects", async () => {
+    sendMock.mockRejectedValue(new Error("boom"));
+    const { res, group } = await post();
     expect(res.status).toBe(201);
+    await vi.waitFor(() => expect(sendMock).toHaveBeenCalled());
+    expect(await prisma.gameDay.count({ where: { groupId: group.id } })).toBe(1);
+  });
+
+  it("does not wait for a send that never resolves", async () => {
+    sendMock.mockImplementation(() => new Promise(() => {}));
+    const { res, group } = await post();
+    expect(res.status).toBe(201);
+    expect(await prisma.gameDay.count({ where: { groupId: group.id } })).toBe(1);
   });
 });
