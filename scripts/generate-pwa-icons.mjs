@@ -24,6 +24,42 @@ const targets = [
   { out: "src/app/apple-icon.png", size: 180 },
 ];
 
+const BG = { r: 0x0b, g: 0x12, b: 0x20, alpha: 1 };
+const IOS_ASSETS = "ios/App/App/Assets.xcassets";
+const SPLASH_SIZE = 2732;
+const SPLASH_LOGO = 512;
+
+// App Store rejects icons with an alpha channel: flatten onto the brand colour.
+async function writeIosIcon(svg) {
+  const out = `${IOS_ASSETS}/AppIcon.appiconset/AppIcon-512@2x.png`;
+  await sharp(svg, { density: 1536 })
+    .resize(1024, 1024)
+    .flatten({ background: BG })
+    .removeAlpha()
+    .png()
+    .toFile(resolve(repoRoot, out));
+  console.log(`wrote ${out}  1024×1024`);
+}
+
+async function writeIosSplash(svg) {
+  const logo = await sharp(svg, { density: 384 })
+    .resize(SPLASH_LOGO, SPLASH_LOGO)
+    .png()
+    .toBuffer();
+  const base = await sharp({
+    create: { width: SPLASH_SIZE, height: SPLASH_SIZE, channels: 4, background: BG },
+  })
+    .composite([{ input: logo, gravity: "center" }])
+    .removeAlpha()
+    .png()
+    .toBuffer();
+  for (const name of ["splash-2732x2732.png", "splash-2732x2732-1.png", "splash-2732x2732-2.png"]) {
+    const out = `${IOS_ASSETS}/Splash.imageset/${name}`;
+    await sharp(base).toFile(resolve(repoRoot, out));
+    console.log(`wrote ${out}  ${SPLASH_SIZE}×${SPLASH_SIZE}`);
+  }
+}
+
 async function main() {
   const svg = await readFile(svgPath);
 
@@ -55,6 +91,9 @@ async function main() {
     const bytes = (await readFile(absOut)).byteLength;
     console.log(`wrote ${out}  ${size}×${size}  (${bytes} bytes)`);
   }
+
+  await writeIosIcon(svg);
+  await writeIosSplash(svg);
 }
 
 main().catch((err) => {
