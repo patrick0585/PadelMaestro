@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
+import { rankingModeFor } from "@/lib/game-day/competition-rank";
 import { listJokersForGameDay } from "@/lib/joker/list";
 import { JokerBlock } from "./joker-block";
 import { mergeJokersIntoRows } from "./joker-summary-merge";
@@ -31,7 +32,7 @@ export async function FinishedSummary({
     listJokersForGameDay(gameDayId),
   ]);
 
-  const displayRows = mergeJokersIntoRows(summary?.rows ?? [], jokers);
+  const displayRows = summary ? mergeJokersIntoRows(summary.rows, jokers, rankingModeFor(summary.date)) : [];
   const displayPodium = displayRows.filter((row) => row.rank <= 3);
   const rankCount = new Map<number, number>();
   for (const row of displayPodium) rankCount.set(row.rank, (rankCount.get(row.rank) ?? 0) + 1);

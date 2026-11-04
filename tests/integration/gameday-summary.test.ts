@@ -174,13 +174,13 @@ describe("computeGameDaySummary", () => {
 describe("computeGameDaySummary ranks", () => {
   beforeEach(resetDb);
 
-  it("gives tied players the same rank and keeps every rank<=3 player on the podium", async () => {
+  async function tiedDay(date: string) {
     const season = await makeSeason();
     const [patrick, paul, werner, thomas] = await Promise.all(["Patrick", "Paul", "Werner", "Thomas"].map(makeUser));
     const day = await prisma.gameDay.create({
-      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-11-03"), playerCount: 4, status: "finished" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date(date), playerCount: 4, status: "finished" },
     });
-    // Patrick + Paul 3, Werner + Thomas 0 → ranks 1, 1, 3, 3
+    // Patrick + Paul 3, Werner + Thomas 0
     await prisma.match.create({
       data: {
         gameDayId: day.id,
@@ -193,21 +193,33 @@ describe("computeGameDaySummary ranks", () => {
         team2Score: 0,
       },
     });
+    return day;
+  }
+
+  it("from 2026-11-03 uses dense ranks: tied leaders share gold, the next pair is second", async () => {
+    const day = await tiedDay("2026-11-03");
     const summary = await computeGameDaySummary(day.id);
     expect(summary!.rows.map((r) => [r.playerName, r.rank])).toEqual([
       ["Patrick", 1],
       ["Paul", 1],
-      ["Thomas", 3],
-      ["Werner", 3],
+      ["Thomas", 2],
+      ["Werner", 2],
     ]);
     expect(summary!.podium.map((r) => r.playerName)).toEqual(["Patrick", "Paul", "Thomas", "Werner"]);
   });
 
-  it("drops rank-4 players from the podium when two share second place", async () => {
+  it("before 2026-11-03 keeps competition ranks (1, 1, 3, 3)", async () => {
+    const day = await tiedDay("2026-11-02");
+    const summary = await computeGameDaySummary(day.id);
+    expect(summary!.rows.map((r) => r.rank)).toEqual([1, 1, 3, 3]);
+    expect(summary!.podium).toHaveLength(4);
+  });
+
+  it("drops rank-4 players from the podium when two share second place (competition era)", async () => {
     const season = await makeSeason();
     const [a, b, c, d] = await Promise.all(["Anna", "Bert", "Cara", "Dirk"].map(makeUser));
     const day = await prisma.gameDay.create({
-      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-11-03"), playerCount: 4, status: "finished" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4, status: "finished" },
     });
     // Anna 20, Bert 10, Cara 10, Dirk 0 → ranks 1, 2, 2, 4
     await prisma.match.createMany({

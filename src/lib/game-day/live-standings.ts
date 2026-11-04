@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { assignCompetitionRanks } from "./competition-rank";
+import { assignRanks } from "./competition-rank";
 
 export interface DayLiveStandingsRow {
   playerId: string;
@@ -72,8 +72,9 @@ function sortStandings(rows: SortableRow[]): SortableRow[] {
   });
 }
 
-function assignRanks(sorted: SortableRow[]): Map<string, number> {
-  const ranks = assignCompetitionRanks(sorted);
+// A live day is always a current one, i.e. after the dense-ranking cutoff.
+function ranksById(sorted: SortableRow[]): Map<string, number> {
+  const ranks = assignRanks(sorted, "dense");
   return new Map(sorted.map((r, i) => [r.playerId, ranks[i]]));
 }
 
@@ -117,9 +118,9 @@ export function deriveLiveStandings(
     }));
 
   const currentSorted = sortStandings(buildRows(tally(matches)));
-  const currentRanks = assignRanks(currentSorted);
+  const currentRanks = ranksById(currentSorted);
   const previousRanks = hasPreviousState
-    ? assignRanks(sortStandings(buildRows(tally(previousMatches))))
+    ? ranksById(sortStandings(buildRows(tally(previousMatches))))
     : null;
 
   const rows: DayLiveStandingsRow[] = currentSorted.map((r) => ({

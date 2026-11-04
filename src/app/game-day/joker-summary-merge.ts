@@ -1,6 +1,6 @@
 import type { GameDaySummaryRow } from "@/lib/game-day/summary";
 import type { JokerUseRow } from "@/lib/joker/list";
-import { assignCompetitionRanks } from "@/lib/game-day/competition-rank";
+import { assignRanks, type RankingMode } from "@/lib/game-day/competition-rank";
 
 export interface DisplayRow {
   playerId: string;
@@ -17,6 +17,7 @@ export interface DisplayRow {
 export function mergeJokersIntoRows(
   summaryRows: ReadonlyArray<GameDaySummaryRow>,
   jokers: ReadonlyArray<JokerUseRow>,
+  mode: RankingMode,
 ): DisplayRow[] {
   // Defensive: domain rules forbid a player from both playing and taking a joker
   // on the same day, but if it ever happens, prefer the played row and drop the
@@ -48,6 +49,6 @@ export function mergeJokersIntoRows(
     if (b.matches !== a.matches) return b.matches - a.matches;
     return a.playerName.localeCompare(b.playerName, "de");
   });
-  const ranks = assignCompetitionRanks(rows);
+  const ranks = assignRanks(rows, mode);
   return rows.map((r, i) => ({ ...r, rank: ranks[i] }));
 }
