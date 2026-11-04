@@ -1,6 +1,6 @@
 # iOS-App (Capacitor-Hülle)
 
-Die App `de.padelmaestro.app` ist eine dünne Capacitor-Hülle, die https://padelmaestro.de im WebView lädt (Remote-URL-Modus). Es gibt keinen lokal gebündelten Web-Code außer der Offline-Seite (`capacitor-web/offline.html`).
+Die App `de.padelmaestro.app` ist eine dünne Capacitor-Hülle, die https://padelmaestro.de im WebView lädt (Remote-URL-Modus). Die App bündelt nur die Offline-Seite (`capacitor-web/offline.html`) und eine Platzhalter-`index.html`.
 
 ## Voraussetzungen
 
@@ -30,7 +30,11 @@ xcrun simctl launch booted de.padelmaestro.app
 xcrun simctl io booted screenshot /pfad/zum/shot.png
 ```
 
+„iPhone 17“ oder ein anderes Gerät aus `xcrun simctl list devices available`.
+
 Alternativ `pnpm cap:open` und in Xcode starten.
+
+Icon/Splash neu erzeugen: `node scripts/generate-pwa-icons.mjs` (schreibt PWA- und iOS-Assets)
 
 ## Echtes Gerät
 
@@ -50,3 +54,5 @@ In Xcode unter Signing & Capabilities das eigene Team wählen („Automatically 
 - [ ] Gruppe wechseln
 - [ ] Flugmodus an: Offline-Seite erscheint
 - [ ] Flugmodus aus, „Erneut versuchen": App lädt wieder
+
+**Flugmodus → Offline-Seite → Erneut versuchen** ist die einzige Prüfung, die die Simulator-Abnahme nicht abdeckt.
