@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { POST } from "@/app/api/game-days/[id]/finish/route";
+import { __resetLiveBroadcastForTests, subscribeToGameDay } from "@/lib/game-day/live-broadcast";
 import { resetDb } from "../helpers/reset-db";
 import {
   createMember,
@@ -45,6 +46,19 @@ describe("POST /api/game-days/[id]/finish", () => {
     expect(res.status).toBe(204);
     const after = await prisma.gameDay.findUniqueOrThrow({ where: { id: day.id } });
     expect(after.status).toBe("finished");
+  });
+
+  it("publishes a live update so open game-day tabs refresh to the finished state", async () => {
+    __resetLiveBroadcastForTests();
+    const { day } = await setup("in_progress");
+    let calls = 0;
+    const off = subscribeToGameDay(day.id, () => {
+      calls++;
+    });
+    const res = await call(day.id);
+    expect(res.status).toBe(204);
+    expect(calls).toBe(1);
+    off();
   });
 
   it("returns 409 when already finished", async () => {
