@@ -1,8 +1,5 @@
 import { prisma } from "@/lib/db";
-import { JOKER_GAMES_CREDITED } from "./constants";
-
-export { JOKER_GAMES_CREDITED };
-export const MAX_JOKERS_PER_SEASON = 2;
+import { getGroupRules } from "@/lib/group/rules";
 
 export class JokerLockedError extends Error {
   constructor(message = "Game day is locked; Joker can no longer be used") {
@@ -12,7 +9,7 @@ export class JokerLockedError extends Error {
 }
 
 export class JokerCapExceededError extends Error {
-  constructor(message = `Max ${MAX_JOKERS_PER_SEASON} Jokers per season already used`) {
+  constructor(message = "Max Jokers per season already used") {
     super(message);
     this.name = "JokerCapExceededError";
   }
@@ -63,17 +60,19 @@ async function recordJokerUseInternal(args: {
   if (gameDay.status !== "planned") throw new JokerLockedError();
 
   const ppg = await snapshotPpg(args.playerId, gameDay.seasonId);
-  const points = ppg * JOKER_GAMES_CREDITED;
 
   return prisma.$transaction(async (tx) => {
     // Serialise concurrent joker creates for the same (player, season) so the
     // cap check below sees all committed joker uses. Released when the tx ends.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${args.playerId}), hashtext(${gameDay.seasonId}))`;
 
+    const rules = await getGroupRules(gameDay.groupId, tx);
+    const points = ppg * rules.jokerGamesCredited;
+
     const existing = await tx.jokerUse.count({
       where: { playerId: args.playerId, seasonId: gameDay.seasonId },
     });
-    if (existing >= MAX_JOKERS_PER_SEASON) throw new JokerCapExceededError();
+    if (existing >= rules.jokersPerSeason) throw new JokerCapExceededError();
 
     const use = await tx.jokerUse.create({
       data: {
@@ -81,7 +80,7 @@ async function recordJokerUseInternal(args: {
         seasonId: gameDay.seasonId,
         gameDayId: args.gameDayId,
         ppgAtUse: ppg.toFixed(3),
-        gamesCredited: JOKER_GAMES_CREDITED,
+        gamesCredited: rules.jokerGamesCredited,
         pointsCredited: points.toFixed(2),
       },
     });

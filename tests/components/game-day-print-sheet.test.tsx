@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { PrintSheet } from "@/app/game-day/print/print-sheet";
-import { JOKER_GAMES_CREDITED } from "@/lib/joker/constants";
+import { DEFAULT_JOKER_GAMES_CREDITED as JOKER_GAMES_CREDITED } from "@/lib/joker/constants";
 
 const baseMatches = [
   { id: "m1", matchNumber: 1, team1A: "Anna", team1B: "Ben", team2A: "Carl", team2B: "Dora" },
@@ -18,6 +18,7 @@ describe("<PrintSheet>", () => {
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
+        jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
     expect(screen.getByText("Dienstag, 28. April 2026")).toBeInTheDocument();
@@ -34,6 +35,7 @@ describe("<PrintSheet>", () => {
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
+        jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
     const rows = screen.getAllByRole("row");
@@ -58,6 +60,7 @@ describe("<PrintSheet>", () => {
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
+        jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
     expect(screen.queryByText(/^Joker \(/)).not.toBeInTheDocument();
@@ -70,6 +73,7 @@ describe("<PrintSheet>", () => {
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={["Werner"]}
         matches={baseMatches}
+        jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
     expect(screen.getByText("Joker (1)")).toBeInTheDocument();
@@ -85,6 +89,7 @@ describe("<PrintSheet>", () => {
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
+        jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
     expect(
@@ -101,6 +106,7 @@ describe("<PrintSheet>", () => {
         playing={["Anna"]}
         joker={[]}
         matches={[]}
+        jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
     expect(

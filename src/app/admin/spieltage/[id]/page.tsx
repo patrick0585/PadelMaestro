@@ -23,7 +23,12 @@ export default async function AdminGameDayPage({ params }: { params: Promise<{ i
     <div className="mx-auto max-w-2xl">
       <LargeTitle title={title} back={{ href: "/admin/spieltage", label: "Spieltage" }} />
       <SectionLabel>Zusagen</SectionLabel>
-      <ParticipantsRoster gameDayId={result.id} participants={result.roster} />
+      <ParticipantsRoster
+        gameDayId={result.id}
+        participants={result.roster}
+        jokersTotal={result.rules.jokersPerSeason}
+        jokerGamesCredited={result.rules.jokerGamesCredited}
+      />
       <div className="mt-4">
         <StartGameDayButton gameDayId={result.id} />
       </div>

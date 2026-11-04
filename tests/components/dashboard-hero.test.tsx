@@ -14,6 +14,8 @@ function member(overrides: Partial<Extract<HeroState, { kind: "member" }>> = {})
     total: 6,
     attendance: "pending",
     jokersRemaining: 2,
+    jokersTotal: 2,
+    jokerGamesCredited: 15,
     ppgSnapshot: 1.64,
     ...overrides,
   };

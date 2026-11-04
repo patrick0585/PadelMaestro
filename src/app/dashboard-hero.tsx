@@ -27,6 +27,8 @@ export type HeroState =
       total: number;
       attendance: "pending" | "confirmed" | "declined" | "joker";
       jokersRemaining: number;
+      jokersTotal: number;
+      jokerGamesCredited: number;
       ppgSnapshot: number | null;
     };
 
@@ -217,6 +219,8 @@ export function DashboardHero({ state }: { state: HeroState }) {
             onClose={() => setDialogOpen(false)}
             onConfirm={handleConfirmJoker}
             jokersRemaining={state.jokersRemaining}
+            jokersTotal={state.jokersTotal}
+            gamesCredited={state.jokerGamesCredited}
             ppgSnapshot={state.ppgSnapshot}
             loading={busy}
           />

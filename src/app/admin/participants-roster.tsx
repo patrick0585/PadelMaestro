@@ -167,9 +167,13 @@ function DropColumn({
 export function ParticipantsRoster({
   gameDayId,
   participants,
+  jokersTotal,
+  jokerGamesCredited,
 }: {
   gameDayId: string;
   participants: RosterRow[];
+  jokersTotal: number;
+  jokerGamesCredited: number;
 }) {
   const router = useRouter();
   const [local, setLocal] = useState(participants);
@@ -341,6 +345,8 @@ export function ParticipantsRoster({
         onClose={() => setJokerTarget(null)}
         onConfirm={() => jokerTarget && adminSetJoker(jokerTarget)}
         jokersRemaining={jokerTarget?.jokersRemaining ?? 0}
+        jokersTotal={jokersTotal}
+        gamesCredited={jokerGamesCredited}
         ppgSnapshot={null}
         loading={jokerBusy}
         targetName={jokerTarget?.name}

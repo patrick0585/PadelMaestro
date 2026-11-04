@@ -11,6 +11,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.63}
       />,
     );
@@ -28,6 +30,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.7}
       />,
     );
@@ -42,6 +46,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={1}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.64}
       />,
     );
@@ -55,6 +61,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={null}
       />,
     );
@@ -68,6 +76,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.5}
         targetName="Werner"
       />,
@@ -83,6 +93,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={onConfirm}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.5}
       />,
     );
@@ -97,6 +109,8 @@ describe("<JokerConfirmDialog>", () => {
         onClose={() => {}}
         onConfirm={() => {}}
         jokersRemaining={2}
+        jokersTotal={2}
+        gamesCredited={15}
         ppgSnapshot={1.5}
         loading
       />,

@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import { getSeasonGroupId } from "@/lib/group/season-group";
 import { activeMemberPlayers, type MemberPlayer } from "@/lib/group/members";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
-import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
 import { MEDAL_BY_RANK } from "@/lib/game-day/competition-rank";
 
 export type MatchOutcome = "W" | "L" | "D";
@@ -87,7 +86,7 @@ export async function computePlayerSeasonStats(
   playerId: string,
   seasonId: string,
 ): Promise<PlayerSeasonStats> {
-  const [myMatches, jokerCount, finishedDayCount] = await Promise.all([
+  const [myMatches, jokerCount, finishedDayCount, seasonGroup] = await Promise.all([
     prisma.match.findMany({
       where: {
         team1Score: { not: null },
@@ -116,7 +115,12 @@ export async function computePlayerSeasonStats(
     }),
     prisma.jokerUse.count({ where: { playerId, seasonId } }),
     prisma.gameDay.count({ where: { seasonId, status: "finished" } }),
+    prisma.season.findUniqueOrThrow({
+      where: { id: seasonId },
+      select: { group: { select: { jokersPerSeason: true } } },
+    }),
   ]);
+  const jokersTotal = seasonGroup.group.jokersPerSeason;
 
   const rows: MatchRow[] = myMatches.map((m) => ({
     matchNumber: m.matchNumber,
@@ -264,8 +268,8 @@ export async function computePlayerSeasonStats(
     partners: bestSorted.map(stripId),
     jokers: {
       used: jokerCount,
-      remaining: Math.max(0, MAX_JOKERS_PER_SEASON - jokerCount),
-      total: MAX_JOKERS_PER_SEASON,
+      remaining: Math.max(0, jokersTotal - jokerCount),
+      total: jokersTotal,
     },
   };
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { recordJokerUse, recordJokerUseAsAdmin, cancelJokerUse, cancelJokerUseAsAdmin, JokerNotFoundError, JOKER_GAMES_CREDITED, MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { recordJokerUse, recordJokerUseAsAdmin, cancelJokerUse, cancelJokerUseAsAdmin, JokerNotFoundError } from "@/lib/joker/use";
+import { DEFAULT_JOKERS_PER_SEASON as MAX_JOKERS_PER_SEASON, DEFAULT_JOKER_GAMES_CREDITED as JOKER_GAMES_CREDITED } from "@/lib/group/rules";
 import { resetDb } from "../helpers/reset-db";
 import { createTestGroup } from "../helpers/group";
 

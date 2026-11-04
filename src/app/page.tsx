@@ -13,6 +13,7 @@ import { DayPpgStrip } from "@/components/day-ppg-strip";
 import { EmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
 import { canFoundGroup } from "@/lib/group/create";
+import { getGroupRules } from "@/lib/group/rules";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function DashboardPage() {
   const meAvatarVersion = me?.avatarVersion ?? 0;
 
   const season = await getOrCreateActiveSeason(ctx.groupId);
-  const [ranking, plannedDay, stats] = await Promise.all([
+  const [ranking, plannedDay, stats, rules] = await Promise.all([
     computeRanking(season.id),
     prisma.gameDay.findFirst({
       where: { status: "planned", seasonId: season.id, groupId: ctx.groupId },
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
       include: { participants: { select: { playerId: true, attendance: true } } },
     }),
     computePlayerSeasonStats(session.user.id, season.id),
+    getGroupRules(ctx.groupId),
   ]);
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
@@ -77,6 +79,8 @@ export default async function DashboardPage() {
         total,
         attendance,
         jokersRemaining: stats.jokers.remaining,
+        jokersTotal: stats.jokers.total,
+        jokerGamesCredited: rules.jokerGamesCredited,
         ppgSnapshot: ppgFromStats(stats, myRow),
       };
     }
