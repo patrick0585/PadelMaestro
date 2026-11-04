@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { assignCompetitionRanks } from "./competition-rank";
 
 export interface DayLiveStandingsRow {
   playerId: string;
@@ -71,23 +72,9 @@ function sortStandings(rows: SortableRow[]): SortableRow[] {
   });
 }
 
-// Competition ranking: equal points + matches share the same rank, the
-// next distinct row jumps by the size of the cluster (1, 2, 2, 4).
 function assignRanks(sorted: SortableRow[]): Map<string, number> {
-  const ranks = new Map<string, number>();
-  let lastRank = 0;
-  let lastPoints = Number.NaN;
-  let lastMatches = Number.NaN;
-  for (let i = 0; i < sorted.length; i++) {
-    const r = sorted[i];
-    if (r.points !== lastPoints || r.matches !== lastMatches) {
-      lastRank = i + 1;
-      lastPoints = r.points;
-      lastMatches = r.matches;
-    }
-    ranks.set(r.playerId, lastRank);
-  }
-  return ranks;
+  const ranks = assignCompetitionRanks(sorted);
+  return new Map(sorted.map((r, i) => [r.playerId, ranks[i]]));
 }
 
 function pickLatest(matches: ScoredMatch[]): ScoredMatch | null {

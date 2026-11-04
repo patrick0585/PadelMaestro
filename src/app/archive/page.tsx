@@ -120,9 +120,9 @@ export default async function ArchivePage() {
                   </div>
                   {row.podium.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-foreground">
-                      {row.podium.map((p, i) => (
+                      {row.podium.map((p) => (
                         <span key={p.playerName} className="inline-flex items-center gap-1">
-                          <span aria-hidden="true">{MEDALS[i]}</span>
+                          <span aria-hidden="true">{MEDALS[p.rank - 1]}</span>
                           <span className="font-medium">{p.playerName}</span>
                           <span className="tabular-nums text-foreground-muted">{p.points}</span>
                         </span>

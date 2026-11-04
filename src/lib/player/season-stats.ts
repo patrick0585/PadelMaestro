@@ -3,6 +3,7 @@ import { getSeasonGroupId } from "@/lib/group/season-group";
 import { activeMemberPlayers, type MemberPlayer } from "@/lib/group/members";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { MAX_JOKERS_PER_SEASON } from "@/lib/joker/use";
+import { MEDAL_BY_RANK } from "@/lib/game-day/competition-rank";
 
 export type MatchOutcome = "W" | "L" | "D";
 
@@ -140,10 +141,9 @@ export async function computePlayerSeasonStats(
   );
   const medals = { gold: 0, silver: 0, bronze: 0 };
   for (const s of summaryById.values()) {
-    const podium = s.podium;
-    if (podium[0]?.playerId === playerId) medals.gold += 1;
-    if (podium[1]?.playerId === playerId) medals.silver += 1;
-    if (podium[2]?.playerId === playerId) medals.bronze += 1;
+    const mine = s.podium.find((r) => r.playerId === playerId);
+    const kind = mine ? MEDAL_BY_RANK[mine.rank] : undefined;
+    if (kind) medals[kind] += 1;
   }
 
   const winRate = { wins: 0, losses: 0, draws: 0, matches: rows.length };
@@ -191,8 +191,8 @@ export async function computePlayerSeasonStats(
               : "flat";
       const summary = summaryById.get(d.gameDayId);
       if (!summary) return null;
-      const idx = summary.rows.findIndex((r) => r.playerId === playerId);
-      if (idx < 0) return null;
+      const mine = summary.rows.find((r) => r.playerId === playerId);
+      if (!mine) return null;
       return {
         gameDayId: d.gameDayId,
         date: summary.date,
@@ -200,7 +200,7 @@ export async function computePlayerSeasonStats(
         delta,
         points: d.points,
         matches: d.matches,
-        placement: idx + 1,
+        placement: mine.rank,
         totalPlayers: summary.rows.length,
       };
     })

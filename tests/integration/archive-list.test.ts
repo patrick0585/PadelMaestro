@@ -105,7 +105,7 @@ describe("listArchivedGameDays", () => {
     expect(result[0].seasonIsActive).toBe(true);
     expect(result[0].matchCount).toBe(2);
     expect(result[0].playerCount).toBe(4);
-    expect(result[0].podium.map((p) => p.playerName)).toEqual(["Paul", "Michi", "Patrick"]);
+    expect(result[0].podium.map((p) => [p.playerName, p.rank])).toEqual([["Paul", 1], ["Michi", 2], ["Patrick", 3]]);
     expect(result[0].podium[0].points).toBe(5);
     expect(result[0].self).toBeNull();
   });

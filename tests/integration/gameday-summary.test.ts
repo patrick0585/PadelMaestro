@@ -125,25 +125,27 @@ describe("computeGameDaySummary", () => {
 
   it("truncates the podium when fewer than 3 players played", async () => {
     const season = await makeSeason();
-    const [p1, p2, p3, p4] = await Promise.all(["A", "B", "C", "D"].map(makeUser));
+    const [p1, p2] = await Promise.all(["A", "B"].map(makeUser));
     const day = await prisma.gameDay.create({
-      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4, status: "finished" },
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 2, status: "finished" },
     });
+    // Degenerate fixture (each "team" is the same player twice): only two
+    // distinct players, so the podium must have two entries, not three.
     await prisma.match.create({
       data: {
         gameDayId: day.id,
         matchNumber: 1,
         team1PlayerAId: p1.id,
-        team1PlayerBId: p2.id,
-        team2PlayerAId: p3.id,
-        team2PlayerBId: p4.id,
+        team1PlayerBId: p1.id,
+        team2PlayerAId: p2.id,
+        team2PlayerBId: p2.id,
         team1Score: 3,
         team2Score: 0,
       },
     });
     const summary = await computeGameDaySummary(day.id);
-    expect(summary!.podium).toHaveLength(3);
-    expect(summary!.podium).toEqual(summary!.rows.slice(0, 3));
+    expect(summary!.podium).toHaveLength(2);
+    expect(summary!.podium).toEqual(summary!.rows);
   });
 
   it("keeps a removed member in rows and podium", async () => {
@@ -166,5 +168,56 @@ describe("computeGameDaySummary", () => {
     const summary = await computeGameDaySummary(day.id);
     expect(summary!.rows.map((r) => r.playerName)).toContain("Anna");
     expect(summary!.podium.map((r) => r.playerName)).toContain("Anna");
+  });
+});
+
+describe("computeGameDaySummary ranks", () => {
+  beforeEach(resetDb);
+
+  it("gives tied players the same rank and keeps every rank<=3 player on the podium", async () => {
+    const season = await makeSeason();
+    const [patrick, paul, werner, thomas] = await Promise.all(["Patrick", "Paul", "Werner", "Thomas"].map(makeUser));
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-11-03"), playerCount: 4, status: "finished" },
+    });
+    // Patrick + Paul 3, Werner + Thomas 0 → ranks 1, 1, 3, 3
+    await prisma.match.create({
+      data: {
+        gameDayId: day.id,
+        matchNumber: 1,
+        team1PlayerAId: patrick.id,
+        team1PlayerBId: paul.id,
+        team2PlayerAId: werner.id,
+        team2PlayerBId: thomas.id,
+        team1Score: 3,
+        team2Score: 0,
+      },
+    });
+    const summary = await computeGameDaySummary(day.id);
+    expect(summary!.rows.map((r) => [r.playerName, r.rank])).toEqual([
+      ["Patrick", 1],
+      ["Paul", 1],
+      ["Thomas", 3],
+      ["Werner", 3],
+    ]);
+    expect(summary!.podium.map((r) => r.playerName)).toEqual(["Patrick", "Paul", "Thomas", "Werner"]);
+  });
+
+  it("drops rank-4 players from the podium when two share second place", async () => {
+    const season = await makeSeason();
+    const [a, b, c, d] = await Promise.all(["Anna", "Bert", "Cara", "Dirk"].map(makeUser));
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-11-03"), playerCount: 4, status: "finished" },
+    });
+    // Anna 20, Bert 10, Cara 10, Dirk 0 → ranks 1, 2, 2, 4
+    await prisma.match.createMany({
+      data: [
+        { gameDayId: day.id, matchNumber: 1, team1PlayerAId: a.id, team1PlayerBId: b.id, team2PlayerAId: c.id, team2PlayerBId: d.id, team1Score: 10, team2Score: 0 },
+        { gameDayId: day.id, matchNumber: 2, team1PlayerAId: a.id, team1PlayerBId: c.id, team2PlayerAId: b.id, team2PlayerBId: d.id, team1Score: 10, team2Score: 0 },
+      ],
+    });
+    const summary = await computeGameDaySummary(day.id);
+    expect(summary!.rows.map((r) => r.rank)).toEqual([1, 2, 2, 4]);
+    expect(summary!.podium.map((r) => r.playerName)).toEqual(["Anna", "Bert", "Cara"]);
   });
 });

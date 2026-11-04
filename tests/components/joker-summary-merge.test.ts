@@ -10,6 +10,7 @@ function summaryRow(overrides: Partial<GameDaySummaryRow> = {}): GameDaySummaryR
     avatarVersion: 0,
     points: 30,
     matches: 3,
+    rank: 1,
     ...overrides,
   };
 }
@@ -115,5 +116,24 @@ describe("mergeJokersIntoRows", () => {
       points: 52,
       jokerUsed: true,
     });
+  });
+});
+
+describe("mergeJokersIntoRows ranks", () => {
+  it("assigns competition ranks across played and joker rows", () => {
+    const result = mergeJokersIntoRows(
+      [
+        summaryRow({ playerId: "a", playerName: "Anna", points: 30, matches: 3 }),
+        summaryRow({ playerId: "b", playerName: "Bert", points: 30, matches: 3 }),
+        summaryRow({ playerId: "c", playerName: "Cara", points: 10, matches: 3 }),
+      ],
+      [jokerRow({ playerId: "j", playerName: "Joker", pointsCredited: 30, gamesCredited: 3 })],
+    );
+    expect(result.map((r) => [r.playerId, r.rank])).toEqual([
+      ["a", 1],
+      ["b", 1],
+      ["j", 1],
+      ["c", 4],
+    ]);
   });
 });
