@@ -45,9 +45,7 @@ describe("<InvitationsSection>", () => {
     );
 
     render(<InvitationsSection initial={[]} />);
-    expect(
-      screen.getByText("Noch keine offenen Links. Erstelle oben einen und teile ihn."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Keine offenen Links")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Notiz (optional)"), {
       target: { value: "Dienstagsrunde" },
@@ -68,7 +66,7 @@ describe("<InvitationsSection>", () => {
     await waitFor(() => expect(fn).toHaveBeenCalledTimes(2));
     expect(fn.mock.calls[1][0]).toBe("/api/invitations");
     expect(await screen.findByText("Dienstagsrunde")).toBeInTheDocument();
-    expect(screen.queryByText(/Noch keine offenen Links/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Keine offenen Links")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Kopieren" }));
     expect(writeText).toHaveBeenCalledWith(url);
@@ -80,14 +78,14 @@ describe("<InvitationsSection>", () => {
     const fn = stubFetchSequence({ status: 204 }, { status: 200, body: [] });
     render(<InvitationsSection initial={[invitation]} />);
     expect(screen.getByText("Dienstagsrunde")).toBeInTheDocument();
-    expect(screen.getByText(/2 von 25 verwendet/)).toBeInTheDocument();
+    expect(screen.getByText("2× benutzt · bis 17.11.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Link Dienstagsrunde widerrufen" }));
     expect(screen.getByText("Wirklich widerrufen?")).toBeInTheDocument();
     expect(fn).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Ja, widerrufen" }));
 
-    expect(await screen.findByText(/Noch keine offenen Links/)).toBeInTheDocument();
+    expect(await screen.findByText("Keine offenen Links")).toBeInTheDocument();
     expect(screen.queryByText("Dienstagsrunde")).not.toBeInTheDocument();
     expect(fn.mock.calls[0][0]).toBe("/api/invitations/inv1");
     expect(fn.mock.calls[0][1].method).toBe("DELETE");
@@ -124,5 +122,41 @@ describe("<InvitationsSection>", () => {
     expect(details.open).toBe(true);
     expect(details).toHaveTextContent("Anna · 04.11.2026");
     expect(details).toHaveTextContent("Ben · 05.11.2026");
+  });
+
+  it("offers Teilen with the url when navigator.share exists", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn() }, configurable: true });
+    const url = "https://padelmaestro.de/einladung/tok123";
+    stubFetchSequence(
+      { status: 201, body: { id: "inv1", url, expiresAt: invitation.expiresAt } },
+      { status: 200, body: [] },
+    );
+    render(<InvitationsSection initial={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Einladungslink erstellen" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Teilen/ }));
+    expect(share).toHaveBeenCalledWith({ url });
+    delete (navigator as { share?: unknown }).share;
+  });
+
+  it("hides Teilen without navigator.share but keeps Kopieren", async () => {
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn() }, configurable: true });
+    stubFetchSequence(
+      { status: 201, body: { id: "inv1", url: "https://x/einladung/t", expiresAt: invitation.expiresAt } },
+      { status: 200, body: [] },
+    );
+    render(<InvitationsSection initial={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Einladungslink erstellen" }));
+    await screen.findByRole("button", { name: "Kopieren" });
+    expect(screen.queryByRole("button", { name: /Teilen/ })).not.toBeInTheDocument();
+  });
+
+  it("lists open links with note, usage and a Widerrufen action", () => {
+    render(<InvitationsSection initial={[invitation, { ...invitation, id: "inv2", note: null, usedCount: 0, uses: [] }]} />);
+    expect(screen.getByText("Offene Links")).toBeInTheDocument();
+    expect(screen.getByText("2× benutzt · bis 17.11.")).toBeInTheDocument();
+    expect(screen.getByText("unbenutzt · bis 17.11.")).toBeInTheDocument();
+    expect(screen.getAllByText("Widerrufen")).toHaveLength(2);
   });
 });
