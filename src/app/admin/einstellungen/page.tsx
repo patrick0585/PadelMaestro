@@ -24,7 +24,7 @@ export default async function AdminSettingsPage() {
       groupId={ctx.groupId}
       name={group.name}
       slug={group.slug}
-      maxJokers={rules.jokersPerSeason}
+      rules={rules}
       transferCandidates={transferCandidates}
     />
   );
