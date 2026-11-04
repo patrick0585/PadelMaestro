@@ -58,6 +58,8 @@ describe("isNativeApp", () => {
   });
 
   it("returns false without window (SSR)", () => {
+    setUserAgent(SHELL_UA);
+    setCapacitor({ isNativePlatform: () => true });
     vi.stubGlobal("window", undefined);
     expect(isNativeApp()).toBe(false);
   });
