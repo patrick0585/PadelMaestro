@@ -10,12 +10,15 @@ export function DeletePlayerDialog({
   playerId,
   playerName,
   playerEmail,
+  onDeleted,
 }: {
   open: boolean;
   onClose: () => void;
   playerId: string | null;
   playerName: string | null;
   playerEmail: string | null;
+  // ersetzt das Neuladen, z. B. um die Detailseite zu verlassen
+  onDeleted?: () => void;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -53,7 +56,8 @@ export function DeletePlayerDialog({
     setLoading(false);
     if (res.status === 204) {
       onClose();
-      router.refresh();
+      if (onDeleted) onDeleted();
+      else router.refresh();
       return;
     }
     if (res.status === 409 || res.status === 404) {

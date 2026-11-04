@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import type { GroupRole } from "@/lib/auth/roles";
 import { isValidUsername, normaliseUsername } from "@/lib/auth/username";
 
 export interface EditablePlayer {
@@ -13,8 +11,6 @@ export interface EditablePlayer {
   name: string;
   email: string;
   username: string | null;
-  isAdmin: boolean;
-  role: GroupRole;
 }
 
 export function EditPlayerDialog({
@@ -30,17 +26,14 @@ export function EditPlayerDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
-  const [role, setRole] = useState<"member" | "admin">("member");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isOwner = player?.role === "owner";
 
   useEffect(() => {
     if (open && player) {
       setName(player.name);
       setEmail(player.email);
       setUsername(player.username ?? "");
-      setRole(player.role === "admin" ? "admin" : "member");
       setError(null);
     }
   }, [open, player]);
@@ -71,7 +64,6 @@ export function EditPlayerDialog({
     if (normalisedUsername && normalisedUsername !== (player.username ?? "")) {
       diff.username = normalisedUsername;
     }
-    if (!isOwner && role !== player.role) diff.role = role;
 
     if (Object.keys(diff).length === 0) {
       onClose();
@@ -149,24 +141,6 @@ export function EditPlayerDialog({
             placeholder="z. B. alice_42"
             autoComplete="off"
           />
-        </div>
-        <div>
-          <Label htmlFor="edit-player-role">Rolle</Label>
-          {isOwner ? (
-            <div className="mt-1">
-              <Badge variant="primary">Besitzer</Badge>
-            </div>
-          ) : (
-            <select
-              id="edit-player-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "member" | "admin")}
-              className="w-full rounded-xl border border-border-strong bg-surface-muted px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-            >
-              <option value="member">Mitglied</option>
-              <option value="admin">Admin</option>
-            </select>
-          )}
         </div>
         {error && (
           <p className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
