@@ -1,0 +1,26 @@
+{
+  "appId": "de.padelmaestro.app",
+  "appName": "Padelmaestro",
+  "webDir": "capacitor-web",
+  "server": {
+    "url": "https://padelmaestro.de",
+    "allowNavigation": ["padelmaestro.de", "www.padelmaestro.de"],
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "appendUserAgent": "PadelmaestroApp/1.0 (iOS)",
+    "contentInset": "never",
+    "backgroundColor": "#0b1220"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 3000,
+      "backgroundColor": "#0b1220"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0b1220"
+    }
+  }
+}
