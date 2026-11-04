@@ -41,13 +41,15 @@ export function createApnsJwt(config: ApnsConfig): string {
 
 const sessions = new Map<string, ClientHttp2Session>();
 
+function evictSession(host: string, session: ClientHttp2Session): void {
+  if (sessions.get(host) === session) sessions.delete(host);
+}
+
 function getSession(host: string): ClientHttp2Session {
   const existing = sessions.get(host);
   if (existing && !existing.closed && !existing.destroyed) return existing;
   const session = connect(`https://${host}`);
-  const drop = () => {
-    if (sessions.get(host) === session) sessions.delete(host);
-  };
+  const drop = () => evictSession(host, session);
   session.on("error", drop);
   session.on("close", drop);
   session.on("goaway", drop);
@@ -63,7 +65,8 @@ export function closeApnsSessions(): void {
 
 export const http2Transport: ApnsTransport = ({ environment, token, payload, config }) =>
   new Promise<ApnsResult>((resolve, reject) => {
-    const session = getSession(HOSTS[environment]);
+    const host = HOSTS[environment];
+    const session = getSession(host);
     const req = session.request({
       ":method": "POST",
       ":path": `/3/device/${token}`,
@@ -76,7 +79,9 @@ export const http2Transport: ApnsTransport = ({ environment, token, payload, con
     let status = 0;
     const chunks: Buffer[] = [];
     req.setTimeout(REQUEST_TIMEOUT_MS, () => {
-      req.close();
+      // Halboffene Verbindung: Session verwerfen, damit der nächste Versand neu verbindet.
+      evictSession(host, session);
+      session.destroy();
       reject(new Error("APNs request timeout"));
     });
     req.on("response", (headers) => {
