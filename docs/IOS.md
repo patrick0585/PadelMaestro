@@ -38,7 +38,13 @@ Icon/Splash neu erzeugen: `node scripts/generate-pwa-icons.mjs` (schreibt PWA- u
 
 ## Echtes Gerät
 
-In Xcode unter Signing & Capabilities das eigene Team wählen („Automatically manage signing" bleibt an). `DEVELOPMENT_TEAM` nie committen.
+Das Apple-Team steht in `ios/team.local.xcconfig`. Die Datei ist von Git ausgenommen und wird über `debug.xcconfig` und `release.xcconfig` eingebunden:
+
+```
+echo 'DEVELOPMENT_TEAM = <Team-ID>' > ios/team.local.xcconfig
+```
+
+„Automatically manage signing" bleibt an. Das Team bitte nicht in Xcode unter Signing & Capabilities umstellen, sonst schreibt Xcode `DEVELOPMENT_TEAM` wieder in `project.pbxproj`, und das darf nie committet werden.
 
 ## Push-Benachrichtigungen
 

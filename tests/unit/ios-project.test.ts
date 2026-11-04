@@ -26,4 +26,13 @@ describe("iOS-Projekt für TestFlight", () => {
     }
     expect(pbxproj).toMatch(/PrivacyInfo\.xcprivacy in Resources/);
   });
+
+  it("liest das Entwicklerteam nur aus der lokalen, ignorierten Datei", () => {
+    expect(pbxproj).not.toMatch(/DEVELOPMENT_TEAM/);
+    for (const cfg of ["../debug.xcconfig", "../release.xcconfig"]) {
+      expect(read(cfg)).toContain('#include? "team.local.xcconfig"');
+    }
+    expect(pbxproj.match(/baseConfigurationReference = 95C3A2B02FF2C00100D4E8A1 \/\* release.xcconfig \*\//g)).toHaveLength(2);
+    expect(readFileSync(resolve(__dirname, "../../.gitignore"), "utf8")).toContain("ios/team.local.xcconfig");
+  });
 });

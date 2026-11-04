@@ -63,3 +63,6 @@ ios/App/App/capacitor.config.json
 ios/App/App/config.xml
 ios/**/xcuserdata
 ios/DerivedData
+
+# Lokales Apple-Entwicklerteam (siehe docs/IOS.md)
+ios/team.local.xcconfig
