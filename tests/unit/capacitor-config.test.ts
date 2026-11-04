@@ -38,6 +38,9 @@ describe("capacitor.config.json", () => {
       style: "DARK",
       backgroundColor: "#0b1220",
     });
+    expect(cfg.plugins.PushNotifications).toEqual({
+      presentationOptions: ["banner", "sound"],
+    });
   });
 });
 
@@ -50,6 +53,7 @@ describe("package.json Capacitor-Versionen", () => {
     "@capacitor/ios": "8.6.0",
     "@capacitor/status-bar": "8.0.4",
     "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/push-notifications": "8.1.3",
   };
   it.each(Object.entries(expected))("%s exakt %s", (name, v) => {
     expect(all[name]).toBe(v);

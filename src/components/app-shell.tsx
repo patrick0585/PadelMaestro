@@ -5,6 +5,7 @@ import { TopNav } from "./top-nav";
 import { MobileTopBar } from "./mobile-top-bar";
 import { BottomTabs } from "./bottom-tabs";
 import { InstallHint } from "./install-hint";
+import { NativePush } from "./native-push";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -26,6 +27,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <NativePush activeGroupId={activeGroupId} />
       <TopNav
         isAdmin={isAdmin}
         name={name}

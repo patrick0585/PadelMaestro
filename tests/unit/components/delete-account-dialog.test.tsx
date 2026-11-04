@@ -3,12 +3,17 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
 import { signOut } from "next-auth/react";
+vi.mock("@/lib/push/client", () => ({ unregisterThisDevice: vi.fn() }));
+import { unregisterThisDevice } from "@/lib/push/client";
 import { DeleteAccountDialog } from "@/app/profil/delete-account-dialog";
 
 const signOutMock = signOut as unknown as ReturnType<typeof vi.fn>;
+const unregisterMock = unregisterThisDevice as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   signOutMock.mockReset();
+  unregisterMock.mockReset();
+  unregisterMock.mockResolvedValue(undefined);
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -130,5 +135,27 @@ describe("DeleteAccountDialog", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Abbrechen" })).toBeDisabled());
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("meldet das Gerät nach erfolgreichem Löschen vor signOut ab", async () => {
+    const order: string[] = [];
+    unregisterMock.mockImplementation(async () => void order.push("unregister"));
+    signOutMock.mockImplementation(async () => void order.push("signOut"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 204, json: async () => ({}) }));
+    render(<DeleteAccountDialog open onClose={vi.fn()} />);
+    submit();
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled());
+    expect(order).toEqual(["unregister", "signOut"]);
+  });
+
+  it("meldet das Gerät bei falschem Passwort nicht ab", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 403, json: async () => ({ error: "wrong_password" }) }),
+    );
+    render(<DeleteAccountDialog open onClose={vi.fn()} />);
+    submit();
+    await screen.findByText("Passwort falsch.");
+    expect(unregisterMock).not.toHaveBeenCalled();
   });
 });

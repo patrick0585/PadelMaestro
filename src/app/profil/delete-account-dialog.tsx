@@ -5,6 +5,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { unregisterThisDevice } from "@/lib/push/client";
 
 const FALLBACK = "Löschen fehlgeschlagen.";
 
@@ -58,6 +59,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
       return;
     }
     if (res.status === 204) {
+      await unregisterThisDevice();
       try {
         await signOut({ callbackUrl: "/login" });
       } catch {
