@@ -22,28 +22,37 @@ async function errorMessage(res: Response): Promise<string> {
   }
 }
 
-export function StartGameDayButton({ gameDayId }: { gameDayId: string }) {
+export function useStartGameDay(gameDayId: string) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onClick() {
+  async function start() {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/game-days/${gameDayId}/start`, { method: "POST" });
-      if (res.ok) router.refresh();
-      else setError(await errorMessage(res));
+      if (res.ok) {
+        // Stay busy: the refreshed page replaces this button with the running state.
+        router.refresh();
+        return;
+      }
+      setError(await errorMessage(res));
     } catch {
       setError(FALLBACK_ERROR);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }
+
+  return { start, loading, error };
+}
+
+export function StartGameDayButton({ gameDayId }: { gameDayId: string }) {
+  const { start, loading, error } = useStartGameDay(gameDayId);
 
   return (
     <>
-      <PrimaryAction onClick={onClick} disabled={loading} testId="start-game-day">
+      <PrimaryAction onClick={start} disabled={loading} testId="start-game-day">
         {loading ? "Startet…" : "Spieltag starten"}
       </PrimaryAction>
       {error && (

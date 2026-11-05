@@ -9,6 +9,8 @@ export type AdminOverviewHero =
       date: Date;
       startTime: string | null;
       confirmed: number;
+      declined: number;
+      joker: number;
       total: number;
       pending: number;
     }
@@ -68,6 +70,8 @@ export async function loadAdminOverview(groupId: string): Promise<AdminOverview>
   } else if (nextPlanned) {
     const responded = nextPlanned.participants.filter((p) => memberIds.has(p.playerId));
     const confirmed = responded.filter((p) => p.attendance === "confirmed").length;
+    const declined = responded.filter((p) => p.attendance === "declined").length;
+    const joker = responded.filter((p) => p.attendance === "joker").length;
     const answered = responded.filter((p) => p.attendance !== "pending").length;
     hero = {
       kind: "planned",
@@ -75,6 +79,8 @@ export async function loadAdminOverview(groupId: string): Promise<AdminOverview>
       date: nextPlanned.date,
       startTime: nextPlanned.startTime,
       confirmed,
+      declined,
+      joker,
       total,
       pending: total - answered,
     };

@@ -22,7 +22,7 @@ export function LargeTitle({
         </Link>
       )}
       <div className="flex items-center justify-between gap-3">
-        <h1 className="mx-0.5 mt-1.5 text-[30px] font-extrabold tracking-[-0.02em]">{title}</h1>
+        <h1 className="mx-0.5 mt-1.5 font-display text-[34px] font-extrabold leading-tight">{title}</h1>
         {action}
       </div>
     </header>

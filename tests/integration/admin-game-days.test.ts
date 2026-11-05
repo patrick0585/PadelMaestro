@@ -79,6 +79,7 @@ describe("listAdminGameDays", () => {
     expect(recent[0].winners.sort()).toEqual(["Anna", "Ben", "Cem", "Dora"]);
     expect(recent[1].winners.sort()).toEqual(["Cem", "Dora"]);
     expect(recent[2].winners.sort()).toEqual(["Anna", "Ben"]);
+    expect(recent[1]).toMatchObject({ winnerPoints: 6, playerCount: 4 });
   });
 
   it("ignores other groups", async () => {
