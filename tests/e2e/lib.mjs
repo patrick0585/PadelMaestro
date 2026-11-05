@@ -215,72 +215,67 @@ export async function adminCreateAndStartDay(
 
 export async function getMatches(page) {
   // Returns array of { matchNumber, teamA, teamB, scoreA, scoreB, hasScore }
-  await page.waitForSelector('text=Match 1', { timeout: 10000 }).catch(() => null);
-  const cards = page.locator('div.rounded-xl').filter({ hasText: /Match \d+/ });
-  const n = await cards.count();
+  // from the compact match rows (li[data-match-number]); collapsed rows are read too.
+  await page.waitForSelector("li[data-match-number]", { timeout: 10000, state: "attached" }).catch(() => null);
+  const rows = page.locator("li[data-match-number]");
+  const n = await rows.count();
   const out = [];
   for (let i = 0; i < n; i++) {
-    const c = cards.nth(i);
-    const header = await c.locator('text=/Match \\d+/').first().textContent();
-    const m = header && header.match(/Match (\d+)/);
-    if (!m) continue;
-    const matchNumber = parseInt(m[1], 10);
-    const teamLabels = await c.locator('div.truncate').allTextContents();
-    const scores = await c.locator("span.tabular-nums").allTextContents();
+    const r = rows.nth(i);
+    const matchNumber = parseInt((await r.getAttribute("data-match-number")) ?? "0", 10);
+    const teams = await r.locator("span.truncate").allTextContents();
+    const score = ((await r.locator('[data-testid="score"]').first().textContent()) ?? "").trim();
+    const m = score.match(/(\d+):(\d+)/);
     out.push({
       matchNumber,
-      teamA: teamLabels[0] || "",
-      teamB: teamLabels[1] || "",
-      scoreA: (scores[0] || "").trim(),
-      scoreB: (scores[1] || "").trim(),
-      hasScore: !((scores[0] || "").trim() === "–" || (scores[1] || "").trim() === "–"),
+      teamA: teams[0] || "",
+      teamB: teams[1] || "",
+      scoreA: m ? m[1] : "–",
+      scoreB: m ? m[2] : "–",
+      hasScore: !!m,
     });
   }
   return out;
 }
 
+async function scoreEditorFor(page, matchNumber) {
+  // The current match sits in the ticket with its editor already open.
+  const hero = page.locator(`[data-testid="current-match"][data-match-number="${matchNumber}"]`);
+  if (await hero.count()) return hero.first();
+  const row = page.locator(`li[data-match-number="${matchNumber}"]`).first();
+  // Rows may live in a collapsed <details>; open it before tapping.
+  await row.evaluate((el) => {
+    const d = el.closest("details");
+    if (d) d.open = true;
+  });
+  const toggle = row.locator("button[aria-expanded]").first();
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  return row;
+}
+
 export async function enterScore(page, matchNumber, scoreA, scoreB) {
-  const card = page.locator('div.rounded-xl').filter({ hasText: new RegExp(`Match ${matchNumber}( |·|$)`) }).first();
-  // Click "Tap zum Eintragen" or "✎ bearbeiten" — both inside the card
-  const editBtn = card.locator('button:has-text("Tap zum Eintragen"), button:has-text("bearbeiten")').first();
-  await editBtn.click();
-  await page.waitForTimeout(150);
+  const box = await scoreEditorFor(page, matchNumber);
+  const set = async (team, target) => {
+    // Counters are labelled with player names; team A is the first pair, team B the second.
+    const idx = team === "A" ? 0 : 1;
+    const dec = box.locator('[aria-label^="Punkt für"][aria-label$="entfernen"]').nth(idx);
+    const inc = box.locator('[aria-label^="Punkt für"][aria-label$="hinzufügen"]').nth(idx);
+    // Editors start at the stored score when correcting; reset to 0 first.
+    while (await dec.isEnabled()) {
+      await dec.click();
+      await page.waitForTimeout(20);
+    }
+    for (let i = 0; i < target; i++) {
+      await inc.click();
+      await page.waitForTimeout(20);
+    }
+  };
+  await set("A", scoreA);
+  await set("B", scoreB);
 
-  // Two steppers in the card — first Team A, second Team B. We try
-  // explicit aria targeting first, with a positional fallback below.
-  const t1Inc = card.locator('[aria-label*="Team A"][aria-label*="erhöhen"], [aria-label*="Team A"][aria-label*="ncrease"]');
-  const t1Dec = card.locator('[aria-label*="Team A"][aria-label*="verringern"], [aria-label*="Team A"][aria-label*="decrease"]');
-  const t2Inc = card.locator('[aria-label*="Team B"][aria-label*="erhöhen"], [aria-label*="Team B"][aria-label*="ncrease"]');
-  const t2Dec = card.locator('[aria-label*="Team B"][aria-label*="verringern"], [aria-label*="Team B"][aria-label*="decrease"]');
-
-  // If aria labels don't match, fall back to the two pairs of "+" / "−" buttons.
-  let t1IncBtn = (await t1Inc.count()) ? t1Inc.first() : null;
-  let t1DecBtn = (await t1Dec.count()) ? t1Dec.first() : null;
-  let t2IncBtn = (await t2Inc.count()) ? t2Inc.first() : null;
-  let t2DecBtn = (await t2Dec.count()) ? t2Dec.first() : null;
-  if (!t1IncBtn) {
-    const pluses = card.locator('button:has-text("+")');
-    const minuses = card.locator('button:has-text("−"), button:has-text("-")');
-    t1DecBtn = minuses.nth(0);
-    t1IncBtn = pluses.nth(0);
-    t2DecBtn = minuses.nth(1);
-    t2IncBtn = pluses.nth(1);
-  }
-
-  // Stepper starts at 0 — click + scoreA times, then for B + scoreB times.
-  for (let i = 0; i < scoreA; i++) {
-    await t1IncBtn.click();
-    await page.waitForTimeout(30);
-  }
-  for (let i = 0; i < scoreB; i++) {
-    await t2IncBtn.click();
-    await page.waitForTimeout(30);
-  }
-
-  // Save
   const [resp] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/matches/") && r.request().method() === "PUT", { timeout: 10000 }).catch(() => null),
-    card.locator('button:has-text("Speichern")').click(),
+    box.locator('button:has-text("Speichern")').first().click(),
   ]);
   await page.waitForLoadState("domcontentloaded");
   if (resp && !resp.ok()) {
@@ -290,7 +285,8 @@ export async function enterScore(page, matchNumber, scoreA, scoreB) {
 }
 
 export async function readScore(page, matchNumber) {
-  const card = page.locator('div.rounded-xl').filter({ hasText: new RegExp(`Match ${matchNumber}( |·|$)`) }).first();
-  const scores = await card.locator("span.tabular-nums").allTextContents();
-  return { a: (scores[0] || "").trim(), b: (scores[1] || "").trim() };
+  const row = page.locator(`li[data-match-number="${matchNumber}"]`).first();
+  const score = ((await row.locator('[data-testid="score"]').first().textContent().catch(() => "")) ?? "").trim();
+  const m = score.match(/(\d+):(\d+)/);
+  return { a: m ? m[1] : "–", b: m ? m[2] : "–" };
 }

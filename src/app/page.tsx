@@ -7,7 +7,7 @@ import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { Avatar } from "@/components/ui/avatar";
-import { DashboardHero, type HeroState } from "./dashboard-hero";
+import { DashboardHero } from "./dashboard-hero";
 import { EmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
 import { LiveTicket } from "@/components/home/live-ticket";
@@ -18,16 +18,12 @@ import { TrophyShelf } from "@/components/home/trophy-shelf";
 import { DuoCards } from "@/components/home/duo-cards";
 import { canFoundGroup } from "@/lib/group/create";
 import { getGroupRules } from "@/lib/group/rules";
-import { countdownLabel, daysUntil } from "@/lib/home/countdown";
+import { buildHeroState, dateShortOf } from "@/lib/home/hero-state";
 import { deriveLiveTicket } from "@/lib/home/live-ticket";
 import { recentFormByPlayer } from "@/lib/home/recent-form";
 import { pickTableRows } from "@/lib/home/table-rows";
 
 export const dynamic = "force-dynamic";
-
-const weekdayOf = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "long", timeZone: "UTC" });
-const dateShortOf = (d: Date) =>
-  d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -113,37 +109,13 @@ export default async function DashboardPage() {
     liveTicket = <LiveTicket data={data} />;
   }
   if (plannedDay) {
-    const confirmedParts = plannedDay.participants.filter((p) => p.attendance === "confirmed");
-    const base = {
-      gameDayId: plannedDay.id,
-      weekday: weekdayOf(plannedDay.date),
-      dateShort: dateShortOf(plannedDay.date),
-      startTime: plannedDay.startTime,
-      countdown: countdownLabel(daysUntil(plannedDay.date, new Date())),
-      confirmed: confirmedParts.length,
-      pending: plannedDay.participants.filter((p) => p.attendance === "pending").length,
-      total: plannedDay.participants.length,
-      pips: confirmedParts.map((p) => ({
-        playerId: p.playerId,
-        name: p.player.name,
-        avatarVersion: p.player.avatarVersion,
-      })),
-    };
-    const mine = plannedDay.participants.find((p) => p.playerId === meId);
-    const heroState: HeroState = !mine
-      ? { kind: "not-member", ...base }
-      : {
-          kind: "member",
-          ...base,
-          attendance:
-            mine.attendance === "confirmed" || mine.attendance === "declined" || mine.attendance === "joker"
-              ? mine.attendance
-              : "pending",
-          jokersRemaining: stats.jokers.remaining,
-          jokersTotal: stats.jokers.total,
-          jokerGamesCredited: rules.jokerGamesCredited,
-          ppgSnapshot: hasPlayed ? myRow.pointsPerGame : null,
-        };
+    const heroState = buildHeroState(plannedDay, meId, {
+      jokersRemaining: stats.jokers.remaining,
+      jokersTotal: stats.jokers.total,
+      jokerGamesCredited: rules.jokerGamesCredited,
+      ppgSnapshot: hasPlayed ? myRow.pointsPerGame : null,
+      now: new Date(),
+    });
     plannedTicket = <DashboardHero state={heroState} />;
   }
   if (!liveDay && !plannedDay) {
