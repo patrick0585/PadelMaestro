@@ -62,9 +62,10 @@ export default async function DashboardPage() {
     const confirmed = plannedDay.participants.filter((p) => p.attendance === "confirmed").length;
     const total = plannedDay.participants.length;
     const date = plannedDay.date.toISOString();
+    const startTime = plannedDay.startTime;
     const meParticipant = plannedDay.participants.find((p) => p.playerId === session.user.id);
     if (!meParticipant) {
-      heroState = { kind: "not-member", gameDayId: plannedDay.id, date, confirmed, total };
+      heroState = { kind: "not-member", gameDayId: plannedDay.id, date, startTime, confirmed, total };
     } else {
       const attendance =
         meParticipant.attendance === "confirmed" ||
@@ -76,6 +77,7 @@ export default async function DashboardPage() {
         kind: "member",
         gameDayId: plannedDay.id,
         date,
+        startTime,
         confirmed,
         total,
         attendance,

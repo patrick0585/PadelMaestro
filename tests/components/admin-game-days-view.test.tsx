@@ -8,13 +8,18 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 const date = (n: number) => new Date(Date.UTC(2026, 10, n));
 
 const base = {
-  open: [{ id: "p1", date: date(11), status: "planned" as const, confirmed: 5, total: 6 }],
+  open: [{ id: "p1", date: date(11), status: "planned" as const, startTime: null, confirmed: 5, total: 6 }],
   recent: [{ id: "f1", date: date(4), winners: ["Jonas", "Mara"] }],
   seasonName: "Saison 2026",
   maxJokers: 2,
 };
 
 describe("<GameDaysView>", () => {
+  it("zeigt den Anpfiff hinter dem Datum", () => {
+    render(<GameDaysView {...base} open={[{ ...base.open[0], startTime: "18:00" }]} />);
+    expect(screen.getByText(/· 18:00 Uhr/)).toBeInTheDocument();
+  });
+
   it("renders create button, open day and recent winners", () => {
     render(<GameDaysView {...base} />);
     expect(screen.getByTestId("create-game-day")).toHaveTextContent("＋ Spieltag anlegen");
@@ -34,7 +39,7 @@ describe("<GameDaysView>", () => {
     render(
       <GameDaysView
         {...base}
-        open={[{ id: "r1", date: date(12), status: "in_progress", confirmed: 6, total: 6 }]}
+        open={[{ id: "r1", date: date(12), status: "in_progress", startTime: null, confirmed: 6, total: 6 }]}
       />,
     );
     expect(screen.getByText("Läuft")).toBeInTheDocument();

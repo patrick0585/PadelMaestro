@@ -6,6 +6,7 @@ import { LargeTitle, SectionLabel } from "@/components/ui/list";
 import { ParticipantsRoster } from "../../participants-roster";
 import { StartGameDayButton } from "../../start-game-day-button";
 import { DeleteGameDayButton } from "../../delete-game-day-button";
+import { StartTimeEditor } from "../../start-time-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,9 @@ export default async function AdminGameDayPage({ params }: { params: Promise<{ i
         jokersTotal={result.rules.jokersPerSeason}
         jokerGamesCredited={result.rules.jokerGamesCredited}
       />
+      <div className="mt-4">
+        <StartTimeEditor gameDayId={result.id} startTime={result.startTime} />
+      </div>
       <div className="mt-4">
         <StartGameDayButton gameDayId={result.id} />
       </div>

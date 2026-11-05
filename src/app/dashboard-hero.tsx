@@ -10,12 +10,14 @@ import {
   genericJokerError,
   type AttendanceErrorCode,
 } from "@/lib/game-day/attendance-errors";
+import { withStartTime } from "@/lib/game-day/start-time";
 
 export type HeroState =
   | {
       kind: "not-member";
       gameDayId: string;
       date: string;
+      startTime: string | null;
       confirmed: number;
       total: number;
     }
@@ -23,6 +25,7 @@ export type HeroState =
       kind: "member";
       gameDayId: string;
       date: string;
+      startTime: string | null;
       confirmed: number;
       total: number;
       attendance: "pending" | "confirmed" | "declined" | "joker";
@@ -165,7 +168,9 @@ export function DashboardHero({ state }: { state: HeroState }) {
       <div className="flex items-center">
         <Badge variant="primary">Nächster Spieltag</Badge>
       </div>
-      <div className="mt-2 text-xl font-extrabold text-foreground">{formatDate(state.date)}</div>
+      <div className="mt-2 text-xl font-extrabold text-foreground">
+        {withStartTime(formatDate(state.date), state.startTime)}
+      </div>
       <div className="mt-1">
         <span className="text-[0.7rem] font-semibold text-primary-strong">
           {state.confirmed} / {state.total} bestätigt

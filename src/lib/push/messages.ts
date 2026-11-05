@@ -1,4 +1,5 @@
 import type { PushMessage } from "./send";
+import { startTimeMinutes } from "@/lib/game-day/start-time";
 
 export type ReminderKind = "day_before" | "same_day";
 
@@ -16,14 +17,24 @@ const BERLIN = new Intl.DateTimeFormat("en-US", {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-export function newGameDayMessage(groupName: string, date: Date): Pick<PushMessage, "title" | "body"> {
+const atTime = (startTime?: string | null) => (startTime ? ` um ${startTime} Uhr` : "");
+
+export function newGameDayMessage(
+  groupName: string,
+  date: Date,
+  startTime?: string | null,
+): Pick<PushMessage, "title" | "body"> {
   const weekday = WEEKDAYS[date.getUTCDay()];
   const day = `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)}.`;
-  return { title: "Neuer Spieltag", body: `${groupName}: ${weekday}, ${day} – bist du dabei?` };
+  return { title: "Neuer Spieltag", body: `${groupName}: ${weekday}, ${day}${atTime(startTime)} – bist du dabei?` };
 }
 
-export function reminderMessage(kind: ReminderKind, groupName: string): Pick<PushMessage, "title" | "body"> {
-  const when = kind === "day_before" ? "morgen ist Spieltag" : "heute um 18 Uhr ist Spieltag";
+export function reminderMessage(
+  kind: ReminderKind,
+  groupName: string,
+  startTime?: string | null,
+): Pick<PushMessage, "title" | "body"> {
+  const when = `${kind === "day_before" ? "morgen" : "heute"}${atTime(startTime)} ist Spieltag`;
   return { title: "Noch nicht abgestimmt", body: `${groupName}: ${when} – bist du dabei?` };
 }
 
@@ -36,16 +47,34 @@ function berlinOffsetMs(instant: number): number {
   return asUtc - Math.floor(instant / 1000) * 1000;
 }
 
-function berlinWallTime(year: number, month: number, day: number, hour: number): Date {
-  const guess = Date.UTC(year, month, day, hour);
+function berlinWallTime(year: number, month: number, day: number, hour: number, minute = 0): Date {
+  const guess = Date.UTC(year, month, day, hour, minute);
   const first = guess - berlinOffsetMs(guess);
   return new Date(guess - berlinOffsetMs(first));
 }
 
-/** gameDayDate is a @db.Date (UTC midnight of the calendar day). */
-export function reminderTime(kind: ReminderKind, gameDayDate: Date): Date {
+const SAME_DAY_DEFAULT = 14 * 60;
+const SAME_DAY_EARLIEST = 7 * 60;
+const SAME_DAY_LEAD = 3 * 60;
+const SAME_DAY_MIN_LEAD = 60;
+
+/**
+ * gameDayDate is a @db.Date (UTC midnight of the calendar day).
+ * Same-day reminder: 14:00, or 3 h before an earlier kickoff (not before 07:00);
+ * null when that would be less than 1 h before kickoff.
+ */
+export function reminderTime(
+  kind: ReminderKind,
+  gameDayDate: Date,
+  startTime?: string | null,
+): Date | null {
   const y = gameDayDate.getUTCFullYear();
   const m = gameDayDate.getUTCMonth();
   const d = gameDayDate.getUTCDate();
-  return kind === "day_before" ? berlinWallTime(y, m, d - 1, 18) : berlinWallTime(y, m, d, 14);
+  if (kind === "day_before") return berlinWallTime(y, m, d - 1, 18);
+  const kickoff = startTime ? startTimeMinutes(startTime) : null;
+  const latest = kickoff === null ? SAME_DAY_DEFAULT : kickoff - SAME_DAY_LEAD;
+  const minutes = Math.max(SAME_DAY_EARLIEST, Math.min(SAME_DAY_DEFAULT, latest));
+  if (kickoff !== null && minutes > kickoff - SAME_DAY_MIN_LEAD) return null;
+  return berlinWallTime(y, m, d, Math.floor(minutes / 60), minutes % 60);
 }

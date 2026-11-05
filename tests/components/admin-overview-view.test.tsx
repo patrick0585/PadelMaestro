@@ -8,6 +8,7 @@ const base: AdminOverview = {
     kind: "planned",
     id: "d1",
     date: new Date(Date.UTC(2026, 10, 11)),
+    startTime: null,
     confirmed: 5,
     total: 6,
     pending: 1,

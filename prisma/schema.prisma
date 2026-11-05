@@ -99,6 +99,8 @@ model GameDay {
   groupId     String
   seasonId    String
   date        DateTime      @db.Date
+  // Anpfiff als Ortszeit "HH:MM", optional
+  startTime   String?
   playerCount Int?
   status      GameDayStatus @default(planned)
   seed        String?
