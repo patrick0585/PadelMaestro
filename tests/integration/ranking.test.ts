@@ -117,6 +117,44 @@ describe("computeRanking", () => {
     expect(ranking[1].rank).toBe(2);
   });
 
+  it("exakter Gleichstand: feste Reihenfolge nach Spieler-ID", async () => {
+    const year = new Date().getFullYear();
+    const season = await prisma.season.create({
+      data: {
+        groupId: (await createTestGroup()).id,
+        name: `Saison ${year}`,
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        isActive: true,
+      },
+    });
+    const players = await Promise.all(
+      [1, 2, 3, 4].map((i) =>
+        createMember(season.groupId, { name: `P${i}`, email: `p${i}@x`, passwordHash: "x" }),
+      ),
+    );
+    const gd = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-21"), playerCount: 4 },
+    });
+    await prisma.match.create({
+      data: {
+        gameDayId: gd.id,
+        matchNumber: 1,
+        team1PlayerAId: players[0].id,
+        team1PlayerBId: players[1].id,
+        team2PlayerAId: players[2].id,
+        team2PlayerBId: players[3].id,
+        team1Score: 2,
+        team2Score: 2,
+      },
+    });
+
+    const ranking = await computeRanking(season.id);
+    const byId = [...players.map((p) => p.id)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    expect(ranking.map((r) => r.playerId)).toEqual(byId);
+  });
+
   it("aggregates medals across finished game days", async () => {
     const year = new Date().getFullYear();
     const season = await prisma.season.create({

@@ -30,20 +30,22 @@ interface PlayerTotals {
 }
 
 // Mirrors the ORDER BY in computeRanking's raw SQL exactly:
-//   points DESC, points/games DESC NULLS LAST
-// Players who are fully tied keep their relative input order, same as
-// PostgreSQL's behaviour for unspecified ORDER BY ties.
+//   points DESC, points/games DESC NULLS LAST, player id ASC (byte order)
+// The id tiebreak keeps fully tied players in a stable order across days,
+// so the movement arrows don't flip between them.
 function compareRanking(
-  a: { points: number; games: number },
-  b: { points: number; games: number },
+  a: { playerId: string; points: number; games: number },
+  b: { playerId: string; points: number; games: number },
 ): number {
   if (b.points !== a.points) return b.points - a.points;
   const aPpg = a.games > 0 ? a.points / a.games : null;
   const bPpg = b.games > 0 ? b.points / b.games : null;
-  if (aPpg === null && bPpg === null) return 0;
-  if (aPpg === null) return 1;
-  if (bPpg === null) return -1;
-  return bPpg - aPpg;
+  if (aPpg !== bPpg) {
+    if (aPpg === null) return 1;
+    if (bPpg === null) return -1;
+    return bPpg - aPpg;
+  }
+  return a.playerId < b.playerId ? -1 : a.playerId > b.playerId ? 1 : 0;
 }
 
 /**
