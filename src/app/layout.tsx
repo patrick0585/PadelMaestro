@@ -1,7 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { NativeSplashHide } from "@/components/native-splash-hide";
+
+const display = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-barlow-condensed",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Padelmaestro",
@@ -24,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de">
+    <html lang="de" className={display.variable}>
       <body className="antialiased">
         <NativeSplashHide />
         <AppShell>{children}</AppShell>
