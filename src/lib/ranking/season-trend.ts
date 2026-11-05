@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSeasonGroupId } from "@/lib/group/season-group";
 import { activeMemberPlayers } from "@/lib/group/members";
+import { sharedRanks } from "./standing";
 
 export interface SeasonTrendDay {
   gameDayId: string;
@@ -179,7 +180,8 @@ export async function buildSeasonTrend(seasonId: string): Promise<SeasonTrend> {
       .map(([playerId, t]) => ({ playerId, ...t }))
       .sort(compareRanking);
     const rankByPlayer = new Map<string, number>();
-    ranked.forEach((r, idx) => rankByPlayer.set(r.playerId, idx + 1));
+    const ranks = sharedRanks(ranked);
+    ranked.forEach((r, idx) => rankByPlayer.set(r.playerId, ranks[idx]));
 
     for (const id of validIds) {
       const r = rankByPlayer.get(id);

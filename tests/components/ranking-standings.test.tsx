@@ -58,6 +58,23 @@ describe("Standings", () => {
     expect(screen.getByText("Du: −6 auf Platz 1")).toBeInTheDocument();
   });
 
+  it("geteilte Plätze stehen gemeinsam auf einer Stufe", () => {
+    render(
+      <Standings
+        rows={[row(1, "Anna", { points: 50 }), row(1, "Patrick", { points: 50, isMe: true }), row(2, "Ben"), row(3, "Clara"), row(4, "Dirk")]}
+        myGap={{ kind: "tied", rank: 1 }}
+      />,
+    );
+    const podium = within(screen.getByRole("list", { name: "Podium" })).getAllByRole("listitem");
+    expect(podium).toHaveLength(3);
+    expect(podium[0]).toHaveTextContent("AnnaPatrick");
+    expect(podium[0]).toHaveTextContent("geteilt");
+    expect(within(podium[0]).getByRole("img", { name: "Geteilter Platz 1" })).toBeInTheDocument();
+    expect(podium[0]).toHaveAttribute("aria-current", "true");
+    expect(screen.getByText("Du: geteilter Platz 1")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Weitere Plätze" })).getAllByRole("listitem")).toHaveLength(1);
+  });
+
   it("Spitzenreiter sieht den Vorsprung auf dem Treppchen", () => {
     render(<Standings rows={[row(1, "Patrick", { isMe: true }), row(2, "B")]} myGap={{ kind: "lead", over: 8 }} />);
     expect(screen.getByText("Du: +8 Vorsprung")).toBeInTheDocument();

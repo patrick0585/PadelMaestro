@@ -153,6 +153,8 @@ describe("computeRanking", () => {
     const ranking = await computeRanking(season.id);
     const byId = [...players.map((p) => p.id)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     expect(ranking.map((r) => r.playerId)).toEqual(byId);
+    // Alle vier gleichauf (2 Punkte, 1 Spiel): ein geteilter Platz 1.
+    expect(ranking.map((r) => r.rank)).toEqual([1, 1, 1, 1]);
   });
 
   it("aggregates medals across finished game days", async () => {
