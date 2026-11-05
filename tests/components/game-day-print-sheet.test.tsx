@@ -14,7 +14,7 @@ describe("<PrintSheet>", () => {
       <PrintSheet
         dateText="Dienstag, 28. April 2026"
         status="in_progress"
-        maxScore={12}
+        scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
@@ -22,7 +22,8 @@ describe("<PrintSheet>", () => {
       />,
     );
     expect(screen.getByText("Dienstag, 28. April 2026")).toBeInTheDocument();
-    expect(screen.getByText(/4 Spieler · 2 Matches · max 12 Punkte/)).toBeInTheDocument();
+    expect(screen.getByText(/4 Spieler · 2 Matches · Satz bis 6, höchstens 7/)).toBeInTheDocument();
+    expect(screen.getByText(/Wertung: Satz bis 6, höchstens 7\. Jedes Team bekommt seine Spiele als Punkte/)).toBeInTheDocument();
     expect(screen.getByText("Dabei (4)")).toBeInTheDocument();
   });
 
@@ -31,7 +32,7 @@ describe("<PrintSheet>", () => {
       <PrintSheet
         dateText="Dienstag"
         status="in_progress"
-        maxScore={12}
+        scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
@@ -56,7 +57,7 @@ describe("<PrintSheet>", () => {
       <PrintSheet
         dateText="Dienstag"
         status="in_progress"
-        maxScore={12}
+        scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
@@ -69,7 +70,7 @@ describe("<PrintSheet>", () => {
       <PrintSheet
         dateText="Dienstag"
         status="in_progress"
-        maxScore={12}
+        scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={["Werner"]}
         matches={baseMatches}
@@ -85,7 +86,7 @@ describe("<PrintSheet>", () => {
       <PrintSheet
         dateText="Dienstag"
         status="in_progress"
-        maxScore={12}
+        scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
         matches={baseMatches}
@@ -102,7 +103,7 @@ describe("<PrintSheet>", () => {
       <PrintSheet
         dateText="Dienstag"
         status="planned"
-        maxScore={12}
+        scoring="Satz bis 6, höchstens 7"
         playing={["Anna"]}
         joker={[]}
         matches={[]}

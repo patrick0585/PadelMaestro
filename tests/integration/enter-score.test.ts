@@ -103,7 +103,7 @@ describe("enterScore", () => {
         expectedVersion: 0,
         isAdmin: true,
       }),
-    ).rejects.toThrow(/sum to 3/i);
+    ).rejects.toThrow("Summe muss 3 sein (jetzt 4)");
   });
 
   it("rejects a concurrent write with stale version", async () => {

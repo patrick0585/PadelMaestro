@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { SettingsView } from "@/app/admin/einstellungen/settings-view";
+import { DEFAULT_SCORING } from "@/lib/scoring/rule";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
@@ -11,6 +12,7 @@ const base = {
   name: "Padelfreunde",
   slug: "padelfreunde-1a2b3c",
   rules: { jokersPerSeason: 2, jokerGamesCredited: 15 },
+  scoring: DEFAULT_SCORING,
   transferCandidates: [
     { id: "p2", name: "Anna" },
     { id: "p3", name: "Ben" },
@@ -19,6 +21,18 @@ const base = {
 
 describe("<SettingsView>", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("zeigt die Wertung pro Spielerzahl mit Link zur Detailseite", () => {
+    render(<SettingsView {...base} isOwner />);
+    expect(screen.getByRole("link", { name: /4 Spieler.*Satz bis 6, höchstens 7/ })).toHaveAttribute(
+      "href",
+      "/admin/einstellungen/wertung/4",
+    );
+    expect(screen.getByRole("link", { name: /5 Spieler.*3 Spiele pro Partie/ })).toHaveAttribute(
+      "href",
+      "/admin/einstellungen/wertung/5",
+    );
+  });
 
   it("shows rule steppers, the fixed player range and the footnote", () => {
     render(<SettingsView {...base} isOwner />);

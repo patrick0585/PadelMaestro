@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
-import { validateScore } from "./validate";
-import type { MatchFormat } from "@/lib/pairings/types";
+import { invalidReason, ruleForGameDay } from "@/lib/scoring/rule";
 import { publishGameDayUpdate } from "@/lib/game-day/live-broadcast";
 
 export class ScoreConflictError extends Error {
@@ -72,9 +71,8 @@ export async function enterScore(input: EnterScoreInput) {
     }
   }
 
-  const format: MatchFormat = match.gameDay.playerCount === 4 ? "tennis-set" : "sum-to-3";
-  const v = validateScore(input.team1Score, input.team2Score, format);
-  if (!v.ok) throw new InvalidScoreError(v.reason);
+  const reason = invalidReason(ruleForGameDay(match.gameDay), input.team1Score, input.team2Score);
+  if (reason) throw new InvalidScoreError(reason);
 
   const result = await prisma.match.updateMany({
     where: { id: input.matchId, version: input.expectedVersion },

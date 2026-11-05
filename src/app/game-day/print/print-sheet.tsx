@@ -12,7 +12,7 @@ export interface PrintMatch {
 export interface PrintSheetProps {
   dateText: string;
   status: string;
-  maxScore: number;
+  scoring: string;
   playing: string[];
   joker: string[];
   matches: PrintMatch[];
@@ -22,7 +22,7 @@ export interface PrintSheetProps {
 export function PrintSheet({
   dateText,
   status,
-  maxScore,
+  scoring,
   playing,
   joker,
   matches,
@@ -43,7 +43,7 @@ export function PrintSheet({
         </div>
         <h1 className="mt-0.5 text-2xl font-bold">{dateText}</h1>
         <div className="mt-1 text-xs">
-          {playing.length} Spieler · {matches.length} Matches · max {maxScore} Punkte
+          {playing.length} Spieler · {matches.length} Matches · {scoring}
         </div>
       </header>
 
@@ -119,8 +119,8 @@ export function PrintSheet({
       )}
 
       <footer className="mt-6 text-[0.7rem] text-gray-700">
-        Punkte pro Match (max {maxScore}): Sieger bekommt seine erspielten
-        Punkte, Verlierer den Rest. Joker zählt {jokerGamesCredited} × Saisonschnitt.
+        Wertung: {scoring}. Jedes Team bekommt seine Spiele als Punkte. Joker zählt{" "}
+        {jokerGamesCredited} × Saisonschnitt.
       </footer>
     </div>
   );

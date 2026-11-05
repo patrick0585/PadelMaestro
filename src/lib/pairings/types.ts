@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-export const MatchFormatSchema = z.enum(["sum-to-3", "tennis-set"]);
-export type MatchFormat = z.infer<typeof MatchFormatSchema>;
-
 export const MatchSlotSchema = z.object({
   matchNumber: z.number().int().positive(),
   team1: z.tuple([z.number().int().positive(), z.number().int().positive()]),
@@ -14,7 +11,6 @@ export type MatchSlot = z.infer<typeof MatchSlotSchema>;
 export const TemplateSchema = z
   .object({
     playerCount: z.number().int().min(4).max(6),
-    format: MatchFormatSchema,
     totalMatches: z.number().int().positive(),
     matches: z.array(MatchSlotSchema).min(1),
   })

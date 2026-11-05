@@ -1,6 +1,5 @@
 {
   "playerCount": 4,
-  "format": "tennis-set",
   "totalMatches": 3,
   "matches": [
     { "matchNumber": 1, "team1": [1, 2], "team2": [3, 4], "sitting": [] },

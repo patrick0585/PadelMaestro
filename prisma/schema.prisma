@@ -101,6 +101,8 @@ model GameDay {
   date        DateTime      @db.Date
   // Anpfiff als Ortszeit "HH:MM", optional
   startTime   String?
+  // Wertung, die beim Start galt (ScoringRule); null bei älteren Spieltagen
+  scoring     Json?
   playerCount Int?
   status      GameDayStatus @default(planned)
   seed        String?
@@ -208,6 +210,8 @@ model Group {
   slug               String   @unique
   jokersPerSeason    Int      @default(2)
   jokerGamesCredited Int      @default(15)
+  // Wertung pro Spielerzahl, siehe src/lib/scoring/rule.ts
+  scoring            Json     @default("{\"4\":{\"mode\":\"set\",\"target\":6,\"max\":7},\"5\":{\"mode\":\"fixed\",\"games\":3},\"6\":{\"mode\":\"fixed\",\"games\":3}}")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

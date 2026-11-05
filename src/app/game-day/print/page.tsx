@@ -4,6 +4,7 @@ import { contextFromSession } from "@/lib/auth/group-context";
 import { NoGroupNotice } from "@/components/no-group-notice";
 import { prisma } from "@/lib/db";
 import { getGroupRules } from "@/lib/group/rules";
+import { describeRule, ruleForGameDay } from "@/lib/scoring/rule";
 import { PrintSheet } from "./print-sheet";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export default async function GameDayPrintPage() {
     .filter((p) => p.attendance === "joker")
     .map((p) => p.player.name)
     .sort((a, b) => a.localeCompare(b, "de"));
-  const maxScore = day.playerCount === 4 ? 12 : 3;
+  const scoring = describeRule(ruleForGameDay(day));
   const matches = day.matches.map((m) => ({
     id: m.id,
     matchNumber: m.matchNumber,
@@ -73,7 +74,7 @@ export default async function GameDayPrintPage() {
     <PrintSheet
       dateText={dateText}
       status={day.status}
-      maxScore={maxScore}
+      scoring={scoring}
       playing={playing}
       joker={joker}
       matches={matches}
