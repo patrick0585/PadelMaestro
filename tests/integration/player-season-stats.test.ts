@@ -295,8 +295,8 @@ describe("computePlayerSeasonStats", () => {
       },
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
-    expect(stats.bestPartner).toEqual({ playerId: paul.id, name: "Paul", avatarVersion: 0, pointsTogether: 5, matches: 2 });
-    expect(stats.worstPartner).toEqual({ playerId: michi.id, name: "Michi", avatarVersion: 0, pointsTogether: 1, matches: 1 });
+    expect(stats.bestPartner).toEqual({ playerId: paul.id, name: "Paul", avatarVersion: 0, pointsTogether: 5, matches: 2, wins: 2 });
+    expect(stats.worstPartner).toEqual({ playerId: michi.id, name: "Michi", avatarVersion: 0, pointsTogether: 1, matches: 1, wins: 0 });
   });
 
   it("returns worstPartner as null when the player has only one distinct partner", async () => {
@@ -314,7 +314,7 @@ describe("computePlayerSeasonStats", () => {
       },
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
-    expect(stats.bestPartner).toEqual({ playerId: paul.id, name: "Paul", avatarVersion: 0, pointsTogether: 3, matches: 1 });
+    expect(stats.bestPartner).toEqual({ playerId: paul.id, name: "Paul", avatarVersion: 0, pointsTogether: 3, matches: 1, wins: 1 });
     expect(stats.worstPartner).toBeNull();
   });
 
@@ -370,9 +370,31 @@ describe("computePlayerSeasonStats", () => {
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
     // Bob hat den höheren Schnitt (2.5), aber nur Alex hat 3 gemeinsame Matches.
-    expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 5, matches: 3 });
+    expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 5, matches: 3, wins: 3 });
     expect(stats.worstPartner).toBeNull();
     expect(stats.partners.map((x) => x.name)).toEqual(["Alex", "Bob"]);
+  });
+
+  it("zählt Siege mit jedem Partner", async () => {
+    const season = await makeSeason();
+    const [me, paul, x, y] = await Promise.all(["Me", "Paul", "X", "Y"].map((n) => makePlayer(season, n)));
+    const day = await prisma.gameDay.create({
+      data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 6, status: "finished" },
+    });
+    const scores: [number, number][] = [[3, 0], [1, 2], [2, 1], [0, 3]];
+    for (const [i, [a, b]] of scores.entries()) {
+      await prisma.match.create({
+        data: {
+          gameDayId: day.id, matchNumber: i + 1,
+          team1PlayerAId: me.id, team1PlayerBId: paul.id,
+          team2PlayerAId: x.id, team2PlayerBId: y.id,
+          team1Score: a, team2Score: b,
+        },
+      });
+    }
+    const stats = await computePlayerSeasonStats(me.id, season.id);
+    expect(stats.partners).toHaveLength(1);
+    expect(stats.partners[0]).toMatchObject({ name: "Paul", matches: 4, wins: 2, pointsTogether: 6 });
   });
 
   it("computes joker balance from JokerUse rows for the season", async () => {
@@ -443,7 +465,7 @@ describe("computePlayerSeasonStats", () => {
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
     expect(stats.winRate).toEqual({ wins: 0, losses: 0, draws: 2, matches: 2 });
-    expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 3, matches: 2 });
+    expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 3, matches: 2, wins: 0 });
   });
 
   it("does not expose soft-deleted partners by name", async () => {
@@ -655,8 +677,8 @@ describe("computePlayerSeasonStats", () => {
 
     const stats = await computePlayerSeasonStats(me.id, season.id);
     expect(stats.partners).toEqual([
-      { playerId: gone.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1 },
-      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1 },
+      { playerId: gone.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1, wins: 1 },
+      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1, wins: 1 },
     ]);
   });
 
@@ -687,8 +709,8 @@ describe("computePlayerSeasonStats", () => {
 
     const stats = await computePlayerSeasonStats(me.id, season.id);
     expect(stats.partners).toEqual([
-      { playerId: outsider.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1 },
-      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1 },
+      { playerId: outsider.id, name: "Unbekannt", avatarVersion: 0, pointsTogether: 3, matches: 1, wins: 1 },
+      { playerId: anna.id, name: "Anna", avatarVersion: 0, pointsTogether: 2, matches: 1, wins: 1 },
     ]);
   });
 });

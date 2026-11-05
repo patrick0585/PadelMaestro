@@ -31,6 +31,12 @@ describe("<BottomTabs>", () => {
     expect(rangliste).not.toHaveAttribute("aria-current");
   });
 
+  it("keeps Home active on the duo overview", () => {
+    currentPath = "/duos";
+    render(<BottomTabs isAdmin={false} />);
+    expect(screen.getByRole("link", { name: /home/i })).toHaveAttribute("aria-current", "page");
+  });
+
   it("keeps the Verwaltung tab active on sub-pages", () => {
     currentPath = "/admin/spieler/x";
     render(<BottomTabs isAdmin />);

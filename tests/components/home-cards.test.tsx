@@ -153,8 +153,8 @@ describe("TrophyShelf und DuoCards", () => {
   it("zeigt beide Duos als Zeilen einer Karte mit vollem Namen", () => {
     render(
       <DuoCards
-        best={{ playerId: "f", name: "Christian Hoffmann", avatarVersion: 0, pointsTogether: 31, matches: 12 }}
-        worst={{ playerId: "m", name: "Maximilian Schulte", avatarVersion: 0, pointsTogether: 9, matches: 1 }}
+        best={{ playerId: "f", name: "Christian Hoffmann", avatarVersion: 0, pointsTogether: 31, matches: 12, wins: 0 }}
+        worst={{ playerId: "m", name: "Maximilian Schulte", avatarVersion: 0, pointsTogether: 9, matches: 1, wins: 0 }}
       />,
     );
     const card = screen.getByRole("region", { name: "Deine Duos" });
@@ -168,9 +168,16 @@ describe("TrophyShelf und DuoCards", () => {
     expect(rows[1]).toHaveTextContent("1 Match");
   });
 
+  it("verlinkt auf die Übersicht aller Duos", () => {
+    render(
+      <DuoCards best={{ playerId: "f", name: "Finn", avatarVersion: 0, pointsTogether: 6, matches: 3, wins: 2 }} worst={null} />,
+    );
+    expect(screen.getByRole("link", { name: /Alle Duos/ })).toHaveAttribute("href", "/duos");
+  });
+
   it("Platzhalter ohne schlechtestes Duo", () => {
     render(
-      <DuoCards best={{ playerId: "f", name: "Finn Overbeck", avatarVersion: 0, pointsTogether: 31, matches: 5 }} worst={null} />,
+      <DuoCards best={{ playerId: "f", name: "Finn Overbeck", avatarVersion: 0, pointsTogether: 31, matches: 5, wins: 0 }} worst={null} />,
     );
     expect(screen.getByText("Finn Overbeck")).toBeInTheDocument();
     expect(screen.getByText(/zu wenig Partner-Daten/)).toBeInTheDocument();
