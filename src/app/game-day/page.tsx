@@ -8,6 +8,7 @@ import { NoGroupNotice } from "@/components/no-group-notice";
 import { Avatar } from "@/components/ui/avatar";
 import { LABEL, MEDAL } from "@/components/home/styles";
 import { prisma } from "@/lib/db";
+import { findCurrentGameDayId } from "@/lib/game-day/current";
 import { shouldSubscribeToLiveUpdates, type GameDayStatus } from "./phase";
 import { AddExtraMatchButton } from "./add-extra-match-button";
 import { FinishBanner } from "./finish-banner";
@@ -76,11 +77,10 @@ export default async function GameDayPage() {
     },
   };
 
-  const activeDay = await prisma.gameDay.findFirst({
-    where: { groupId: ctx.groupId, status: { in: ["planned", "in_progress"] } },
-    orderBy: { date: "desc" },
-    include: dayInclude,
-  });
+  const currentId = await findCurrentGameDayId(ctx.groupId);
+  const activeDay = currentId
+    ? await prisma.gameDay.findUnique({ where: { id: currentId }, include: dayInclude })
+    : null;
   const day =
     activeDay ??
     (await prisma.gameDay.findFirst({
