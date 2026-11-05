@@ -4,6 +4,7 @@ import { InlineMessage } from "@/components/ui/inline-message";
 import { GroupedList, LargeTitle, ListRow, SectionLabel } from "@/components/ui/list";
 import { formatGameDayDate } from "@/lib/admin/format";
 import type { AdminOverview } from "@/lib/admin/overview";
+import { withStartTime } from "@/lib/game-day/start-time";
 
 const ICON_CLASS = "size-[17px]";
 
@@ -42,7 +43,9 @@ function Hero({ hero }: { hero: AdminOverview["hero"] }) {
   return (
     <Link href={`/admin/spieltage/${hero.id}`} className={HERO_CLASS}>
       <p className={HERO_KICKER}>Nächster Spieltag</p>
-      <p className="mb-0.5 mt-1 text-[19px] font-extrabold">{formatGameDayDate(hero.date)}</p>
+      <p className="mb-0.5 mt-1 text-[19px] font-extrabold">
+        {withStartTime(formatGameDayDate(hero.date), hero.startTime)}
+      </p>
       <p className="text-[12.5px] text-[#cffafe]">
         {hero.confirmed} von {hero.total} zugesagt · {hero.pending} offen
       </p>

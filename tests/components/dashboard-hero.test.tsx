@@ -11,6 +11,7 @@ function member(overrides: Partial<Extract<HeroState, { kind: "member" }>> = {})
     kind: "member",
     gameDayId: "gd-1",
     date: "2026-04-30T18:00:00.000Z",
+    startTime: null,
     confirmed: 3,
     total: 6,
     attendance: "pending",

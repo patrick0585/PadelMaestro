@@ -9,6 +9,7 @@ export function CreateGameDayForm() {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +20,7 @@ export function CreateGameDayForm() {
     const res = await fetch("/api/game-days", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ date }),
+      body: JSON.stringify({ date, startTime: startTime || null }),
     });
     setLoading(false);
     if (res.status === 409) {
@@ -37,6 +38,7 @@ export function CreateGameDayForm() {
     }
     const body = (await res.json().catch(() => null)) as { gameDay?: { id?: string } } | null;
     setDate("");
+    setStartTime("");
     const id = body?.gameDay?.id;
     if (id) router.push(`/admin/spieltage/${id}`);
     else router.refresh();
@@ -60,13 +62,24 @@ export function CreateGameDayForm() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           required
+          className="h-11"
+        />
+      </div>
+      <div className="min-w-[8rem]">
+        <Label htmlFor="game-day-start-time">Anpfiff</Label>
+        <Input
+          id="game-day-start-time"
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className="h-11"
         />
       </div>
       <Button type="submit" loading={loading} data-testid="create-game-day-submit">
         Anlegen
       </Button>
       {error && (
-        <p className="w-full rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
+        <p role="alert" className="w-full rounded-xl bg-surface-muted px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}

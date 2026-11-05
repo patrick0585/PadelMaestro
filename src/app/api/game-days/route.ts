@@ -4,8 +4,9 @@ import { guardGroupAdmin, guardMember } from "@/lib/auth/route-guard";
 import { prisma } from "@/lib/db";
 import { notifyNewGameDay } from "@/lib/push/notify-game-day";
 import { createGameDay, GameDayDateExistsError } from "@/lib/game-day/create";
+import { startTimeSchema } from "@/lib/game-day/start-time";
 
-const CreateSchema = z.object({ date: z.string() });
+const CreateSchema = z.object({ date: z.string(), startTime: startTimeSchema.nullish() });
 
 export async function GET() {
   const g = await guardMember();
@@ -29,7 +30,12 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
   try {
-    const day = await createGameDay(g.ctx.groupId, new Date(parsed.data.date), g.ctx.userId);
+    const day = await createGameDay(
+      g.ctx.groupId,
+      new Date(parsed.data.date),
+      g.ctx.userId,
+      parsed.data.startTime ?? null,
+    );
     void notifyNewGameDay(day.id, g.ctx.userId);
     return NextResponse.json({ gameDay: day }, { status: 201 });
   } catch (e) {

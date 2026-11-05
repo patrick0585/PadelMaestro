@@ -5,6 +5,7 @@ import { CreateGameDayForm } from "../create-game-day-form";
 import { GroupedList, LargeTitle, ListRow, SectionFooter, SectionLabel } from "@/components/ui/list";
 import { formatGameDayDate } from "@/lib/admin/format";
 import type { OpenGameDay, RecentGameDay } from "@/lib/admin/game-days";
+import { withStartTime } from "@/lib/game-day/start-time";
 
 function Pill({ running }: { running: boolean }) {
   const tone = running
@@ -44,7 +45,7 @@ export function GameDaysView({
                 <ListRow
                   key={d.id}
                   href={running ? "/game-day" : `/admin/spieltage/${d.id}`}
-                  title={formatGameDayDate(d.date)}
+                  title={withStartTime(formatGameDayDate(d.date), d.startTime)}
                   subtitle={`${d.confirmed} / ${d.total} zugesagt`}
                   trailing={<Pill running={running} />}
                   chevron

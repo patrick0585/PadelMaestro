@@ -7,6 +7,7 @@ export type AdminOverviewHero =
       kind: "planned";
       id: string;
       date: Date;
+      startTime: string | null;
       confirmed: number;
       total: number;
       pending: number;
@@ -46,6 +47,7 @@ export async function loadAdminOverview(groupId: string): Promise<AdminOverview>
         select: {
           id: true,
           date: true,
+          startTime: true,
           participants: { select: { playerId: true, attendance: true } },
         },
       }),
@@ -71,6 +73,7 @@ export async function loadAdminOverview(groupId: string): Promise<AdminOverview>
       kind: "planned",
       id: nextPlanned.id,
       date: nextPlanned.date,
+      startTime: nextPlanned.startTime,
       confirmed,
       total,
       pending: total - answered,

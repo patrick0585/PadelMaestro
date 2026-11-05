@@ -6,7 +6,7 @@ vi.mock("@/lib/platform", () => ({ isNativeApp: () => isNativeApp() }));
 import { PushSettings } from "@/app/profil/push-settings";
 
 const FOOTNOTE =
-  "Erinnerung am Vortag um 18 Uhr und am Spieltag um 14 Uhr, wenn du noch nicht abgestimmt hast.";
+  "Erinnerung am Vortag um 18 Uhr und am Spieltag um 14 Uhr (bei frühem Anpfiff 3 Stunden vorher), wenn du noch nicht abgestimmt hast.";
 
 describe("<PushSettings>", () => {
   const fetchMock = vi.fn();

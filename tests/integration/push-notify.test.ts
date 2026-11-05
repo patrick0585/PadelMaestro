@@ -65,6 +65,16 @@ describe("notifyNewGameDay", () => {
     });
   });
 
+  it("nennt den Anpfiff im Text, wenn gesetzt", async () => {
+    const { day, creator } = await setup();
+    await prisma.gameDay.update({ where: { id: day.id }, data: { startTime: "18:30" } });
+    const transport = vi.fn<ApnsTransport>().mockResolvedValue({ ok: true });
+    await notifyNewGameDay(day.id, creator.id, { transport, config });
+    expect(transport.mock.calls[0][0].payload).toMatchObject({
+      aps: { alert: { body: "Donnerstagsrunde: Do, 12.11. um 18:30 Uhr – bist du dabei?" } },
+    });
+  });
+
   it("never throws", async () => {
     const { day, creator } = await setup();
     const transport = vi.fn<ApnsTransport>().mockRejectedValue(new Error("boom"));

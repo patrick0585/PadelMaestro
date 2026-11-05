@@ -69,8 +69,8 @@ export function PushSettings({ remindersEnabled }: { remindersEnabled: boolean }
         />
       </GroupedList>
       <SectionFooter>
-        Erinnerung am Vortag um 18 Uhr und am Spieltag um 14 Uhr, wenn du noch nicht abgestimmt
-        hast.
+        Erinnerung am Vortag um 18 Uhr und am Spieltag um 14 Uhr (bei frühem Anpfiff 3 Stunden
+        vorher), wenn du noch nicht abgestimmt hast.
       </SectionFooter>
       <p role="status" aria-live="polite" className="mx-3.5 mt-1.5 text-xs text-destructive">
         {failed ? "Konnte nicht gespeichert werden." : ""}

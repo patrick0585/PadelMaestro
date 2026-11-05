@@ -21,6 +21,7 @@ import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { GameDayLiveUpdates } from "./live-updates";
 import { RefreshButton } from "./refresh-button";
 import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
+import { withStartTime } from "@/lib/game-day/start-time";
 import { loadTemplate } from "@/lib/pairings/load";
 
 export const dynamic = "force-dynamic";
@@ -101,11 +102,14 @@ export default async function GameDayPage() {
 
   const me = day.participants.find((p) => p.playerId === session.user.id);
   const steps = timelineForStatus(day.status as GameDayStatus);
-  const dateText = new Date(day.date).toLocaleDateString("de-DE", {
-    weekday: "short",
-    day: "2-digit",
-    month: "long",
-  });
+  const dateText = withStartTime(
+    new Date(day.date).toLocaleDateString("de-DE", {
+      weekday: "short",
+      day: "2-digit",
+      month: "long",
+    }),
+    day.startTime,
+  );
   const showFinishBanner =
     session.user.isAdmin &&
     day.status === "in_progress" &&

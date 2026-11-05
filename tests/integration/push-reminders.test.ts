@@ -128,6 +128,42 @@ describe("sendDueReminders", () => {
     expect(await prisma.pushReminderSent.count()).toBe(1);
   });
 
+  it("same_day folgt einem frühen Anpfiff und nennt die Uhrzeit", async () => {
+    const { day, mk } = await setup();
+    await mk("a");
+    await prisma.gameDay.update({ where: { id: day.id }, data: { startTime: "12:00" } });
+    const early = new Date("2026-12-10T08:00:00Z"); // 09:00 Berlin
+    const transport = transportOk();
+    expect(await sendDueReminders(at(early, -min(5)), { transport, config })).toEqual([]);
+    const r = await sendDueReminders(at(early, min(5)), { transport, config });
+    expect(r).toEqual([{ kind: "same_day", gameDayId: day.id, sent: 1 }]);
+    expect(transport.mock.calls[0][0].payload).toMatchObject({
+      aps: { alert: { body: "Runde: heute um 12:00 Uhr ist Spieltag – bist du dabei?" } },
+    });
+  });
+
+  it("später Anpfiff behält 14 Uhr", async () => {
+    const { day, mk } = await setup();
+    await mk("a");
+    await prisma.gameDay.update({ where: { id: day.id }, data: { startTime: "20:00" } });
+    const transport = transportOk();
+    expect(await sendDueReminders(at(SAME_DAY, -min(5)), { transport, config })).toEqual([]);
+    expect(await sendDueReminders(at(SAME_DAY, min(5)), { transport, config })).toEqual([
+      { kind: "same_day", gameDayId: day.id, sent: 1 },
+    ]);
+  });
+
+  it("sehr früher Anpfiff: keine same_day-Erinnerung", async () => {
+    const { day, mk } = await setup();
+    await mk("a");
+    await prisma.gameDay.update({ where: { id: day.id }, data: { startTime: "07:00" } });
+    const transport = transportOk();
+    for (const h of [5, 6, 7, 13, 14]) {
+      expect(await sendDueReminders(new Date(Date.UTC(2026, 11, 10, h, 5)), { transport, config })).toEqual([]);
+    }
+    expect(transport).not.toHaveBeenCalled();
+  });
+
   it("deleting the game day cascades the log rows", async () => {
     const { day } = await setup();
     await sendDueReminders(at(DAY_BEFORE, min(1)), { transport: transportOk(), config });

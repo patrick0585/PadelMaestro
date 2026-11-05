@@ -39,6 +39,7 @@ export function buildRosterRows(
 export interface OpenGameDay {
   id: string;
   date: Date;
+  startTime: string | null;
   status: "planned" | "in_progress";
   confirmed: number;
   total: number;
@@ -63,6 +64,7 @@ export async function listAdminGameDays(
       select: {
         id: true,
         date: true,
+        startTime: true,
         status: true,
         participants: { select: { playerId: true, attendance: true } },
       },
@@ -80,6 +82,7 @@ export async function listAdminGameDays(
     .map((d) => ({
       id: d.id,
       date: d.date,
+      startTime: d.startTime,
       status: d.status === "in_progress" ? ("in_progress" as const) : ("planned" as const),
       confirmed: d.participants.filter(
         (p) => memberIds.has(p.playerId) && p.attendance === "confirmed",
@@ -100,7 +103,14 @@ export async function listAdminGameDays(
 }
 
 export type PlannedGameDayResult =
-  | { kind: "planned"; id: string; date: Date; roster: RosterRow[]; rules: GroupRules }
+  | {
+      kind: "planned";
+      id: string;
+      date: Date;
+      startTime: string | null;
+      roster: RosterRow[];
+      rules: GroupRules;
+    }
   | { kind: "redirect"; to: string }
   | null;
 
@@ -139,6 +149,7 @@ export async function loadPlannedGameDay(
     kind: "planned",
     id: day.id,
     date: day.date,
+    startTime: day.startTime,
     roster: buildRosterRows(day.participants, players, remaining),
     rules,
   };

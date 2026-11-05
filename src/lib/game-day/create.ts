@@ -9,7 +9,12 @@ export class GameDayDateExistsError extends Error {
   }
 }
 
-export async function createGameDay(groupId: string, date: Date, actorId: string) {
+export async function createGameDay(
+  groupId: string,
+  date: Date,
+  actorId: string,
+  startTime: string | null = null,
+) {
   const season = await getOrCreateActiveSeason(groupId);
   const members = await prisma.membership.findMany({
     where: { groupId, removedAt: null },
@@ -23,6 +28,7 @@ export async function createGameDay(groupId: string, date: Date, actorId: string
           seasonId: season.id,
           groupId,
           date,
+          startTime,
           status: "planned",
           participants: {
             create: members.map((m) => ({ playerId: m.playerId })),
@@ -38,7 +44,7 @@ export async function createGameDay(groupId: string, date: Date, actorId: string
           action: "game_day.create",
           entityType: "GameDay",
           entityId: day.id,
-          payload: { date: date.toISOString() },
+          payload: { date: date.toISOString(), startTime },
         },
       });
 

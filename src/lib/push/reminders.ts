@@ -20,13 +20,15 @@ export async function sendDueReminders(
       status: "planned",
       date: { gte: new Date(today - DAY_MS), lte: new Date(today + 2 * DAY_MS) },
     },
-    select: { id: true, groupId: true, date: true, createdAt: true, group: { select: { name: true } } },
+    select: { id: true, groupId: true, date: true, startTime: true, createdAt: true, group: { select: { name: true } } },
   });
 
   const results: { kind: ReminderKind; gameDayId: string; sent: number }[] = [];
   for (const day of days) {
     for (const kind of KINDS) {
-      const at = reminderTime(kind, day.date).getTime();
+      const time = reminderTime(kind, day.date, day.startTime);
+      if (!time) continue;
+      const at = time.getTime();
       const due = at >= day.createdAt.getTime() && at <= now.getTime() && now.getTime() < at + CATCH_UP_MS;
       if (!due) continue;
       try {
@@ -36,7 +38,7 @@ export async function sendDueReminders(
         throw err;
       }
       const recipients = await reminderRecipients(day.id);
-      const text = reminderMessage(kind, day.group.name);
+      const text = reminderMessage(kind, day.group.name, day.startTime);
       const summary = await sendToPlayers(recipients, { ...text, gameDayId: day.id, groupId: day.groupId }, deps);
       results.push({ kind, gameDayId: day.id, sent: summary.sent });
     }
