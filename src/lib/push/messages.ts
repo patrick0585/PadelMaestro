@@ -29,6 +29,47 @@ export function newGameDayMessage(
   return { title: "Neuer Spieltag", body: `${groupName}: ${weekday}, ${day}${atTime(startTime)} – bist du dabei?` };
 }
 
+const firstName = (name: string) => name.split(" ")[0];
+const punkte = (n: number) => `${n} ${n === 1 ? "Punkt" : "Punkten"}`;
+const punkteNom = (n: number) => `${n} ${n === 1 ? "Punkt" : "Punkte"}`;
+
+function joinNames(names: string[]): string {
+  return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} und ${names.at(-1)}`;
+}
+
+export interface FinishedRecipient {
+  playerId: string;
+  rank: number;
+  points: number;
+  joker: boolean;
+}
+
+/** Personal end-of-day text; `me` is null for members who neither played nor used a joker. */
+export function gameDayFinishedMessage(
+  groupName: string,
+  winners: { playerId: string; name: string }[],
+  winnerPoints: number,
+  me: FinishedRecipient | null,
+): Pick<PushMessage, "title" | "body"> {
+  const title = "Spieltag beendet";
+  const names = winners.map((w) => firstName(w.name));
+  const verb = winners.length > 1 ? "gewinnen" : "gewinnt";
+  const result = `${joinNames(names)} ${verb} mit ${punkte(winnerPoints)}.`;
+  if (me && !me.joker && winners.some((w) => w.playerId === me.playerId)) {
+    const others = winners.filter((w) => w.playerId !== me.playerId).map((w) => firstName(w.name));
+    const body =
+      others.length === 0
+        ? `Du gewinnst den Spieltag mit ${punkte(winnerPoints)}!`
+        : `Du gewinnst gemeinsam mit ${joinNames(others)} – ${punkteNom(winnerPoints)}!`;
+    return { title, body: `${groupName}: ${body}` };
+  }
+  if (me?.joker) {
+    return { title, body: `${groupName}: Ohne dich: ${result} Dein Joker bringt ${punkteNom(me.points)}.` };
+  }
+  if (me) return { title, body: `${groupName}: ${result} Du wirst ${me.rank}. mit ${me.points}.` };
+  return { title, body: `${groupName}: ${result}` };
+}
+
 export function reminderMessage(
   kind: ReminderKind,
   groupName: string,

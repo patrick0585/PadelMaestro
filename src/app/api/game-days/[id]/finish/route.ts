@@ -7,6 +7,7 @@ import {
 } from "@/lib/game-day/finish";
 import { GameDayNotActiveError } from "@/lib/game-day/add-extra-match";
 import { GameDayNotFoundError } from "@/lib/game-day/attendance";
+import { notifyGameDayFinished } from "@/lib/push/notify-finished";
 
 export async function POST(
   _req: Request,
@@ -21,6 +22,7 @@ export async function POST(
   }
   try {
     await finishGameDay(id, g.ctx.userId);
+    void notifyGameDayFinished(id, g.ctx.userId);
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     if (e instanceof GameDayNotFoundError) {

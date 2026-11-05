@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { newGameDayMessage, reminderMessage, reminderTime } from "@/lib/push/messages";
+import { gameDayFinishedMessage, newGameDayMessage, reminderMessage, reminderTime } from "@/lib/push/messages";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 
@@ -66,5 +66,38 @@ describe("push messages", () => {
     expect(iso("day_before", "2026-12-10")).toBe("2026-12-09T17:00:00.000Z");
     expect(iso("same_day", "2026-12-10")).toBe("2026-12-10T13:00:00.000Z");
     expect(iso("same_day", "2026-07-02")).toBe("2026-07-02T12:00:00.000Z");
+  });
+
+  describe("Spieltag beendet", () => {
+    const winners = [{ playerId: "a", name: "Anna Vogel" }];
+    it("Mitspieler: Sieger und eigener Platz", () => {
+      expect(gameDayFinishedMessage("G", winners, 28, { playerId: "p", rank: 4, points: 11, joker: false })).toEqual({
+        title: "Spieltag beendet",
+        body: "G: Anna gewinnt mit 28 Punkten. Du wirst 4. mit 11.",
+      });
+    });
+    it("Sieger allein und geteilt", () => {
+      expect(gameDayFinishedMessage("G", winners, 28, { playerId: "a", rank: 1, points: 28, joker: false }).body).toBe(
+        "G: Du gewinnst den Spieltag mit 28 Punkten!",
+      );
+      const two = [...winners, { playerId: "b", name: "Ben" }];
+      expect(gameDayFinishedMessage("G", two, 12, { playerId: "b", rank: 1, points: 12, joker: false }).body).toBe(
+        "G: Du gewinnst gemeinsam mit Anna – 12 Punkte!",
+      );
+      expect(gameDayFinishedMessage("G", two, 12, null).body).toBe("G: Anna und Ben gewinnen mit 12 Punkten.");
+      const three = [...two, { playerId: "e", name: "Eva" }];
+      expect(gameDayFinishedMessage("G", three, 12, null).body).toBe("G: Anna, Ben und Eva gewinnen mit 12 Punkten.");
+    });
+    it("Einzahl bei einem Punkt", () => {
+      expect(gameDayFinishedMessage("G", winners, 1, { playerId: "j", rank: 2, points: 1, joker: true }).body).toBe(
+        "G: Ohne dich: Anna gewinnt mit 1 Punkt. Dein Joker bringt 1 Punkt.",
+      );
+    });
+    it("Joker und nicht dabei", () => {
+      expect(gameDayFinishedMessage("G", winners, 28, { playerId: "j", rank: 3, points: 17, joker: true }).body).toBe(
+        "G: Ohne dich: Anna gewinnt mit 28 Punkten. Dein Joker bringt 17 Punkte.",
+      );
+      expect(gameDayFinishedMessage("G", winners, 28, null).body).toBe("G: Anna gewinnt mit 28 Punkten.");
+    });
   });
 });
