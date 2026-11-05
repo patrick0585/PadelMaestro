@@ -17,7 +17,7 @@ export interface ArchivedGameDayRow {
   playerCount: number;
   jokerCount: number;
   podium: ArchivePodiumEntry[];
-  self: { points: number; matches: number } | null;
+  self: { points: number; matches: number; rank: number } | null;
 }
 
 export async function listArchivedGameDays(
@@ -66,7 +66,7 @@ export async function listArchivedGameDays(
       currentPlayerId !== null
         ? rowsFromSummary.find((r) => r.playerId === currentPlayerId)
         : undefined;
-    const self = selfRow ? { points: selfRow.points, matches: selfRow.matches } : null;
+    const self = selfRow ? { points: selfRow.points, matches: selfRow.matches, rank: selfRow.rank } : null;
     rows.push({
       id: day.id,
       date: day.date,

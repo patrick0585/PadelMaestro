@@ -173,7 +173,10 @@ describe("listArchivedGameDays", () => {
     });
 
     const resultForPatrick = await listArchivedGameDays(groupId, patrick.id);
-    expect(resultForPatrick[0].self).toEqual({ points: 2, matches: 1 });
+    expect(resultForPatrick[0].self).toEqual({ points: 2, matches: 1, rank: 1 });
+    const resultForMichi = await listArchivedGameDays(groupId, michi.id);
+    // Days before the dense-rank switch use competition ranks (1,1,3).
+    expect(resultForMichi[0].self).toEqual({ points: 1, matches: 1, rank: 3 });
   });
 
   it("returns null self block for non-participating player", async () => {

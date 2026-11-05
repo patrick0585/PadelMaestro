@@ -6,8 +6,10 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { FinishedSummary } from "@/app/game-day/finished-summary";
-import { formatGameDayDate } from "@/lib/archive/format";
-import { ReadOnlyMatchCard } from "../read-only-match-card";
+import { LABEL, TICKET_HEAD, TICKET_PILL } from "@/components/home/styles";
+import { MatchRows, type RowMatch } from "@/app/game-day/match-rows";
+import { describeRule, ruleForGameDay } from "@/lib/scoring/rule";
+import { formatGameDayHeading } from "@/lib/archive/format";
 
 export const dynamic = "force-dynamic";
 
@@ -39,64 +41,82 @@ export default async function ArchiveDetailPage({
           scoredBy: { select: { name: true } },
         },
       },
+      season: { select: { name: true } },
     },
   });
 
   if (!day || day.status !== "finished" || day.groupId !== ctx.groupId) notFound();
 
-  const scoredMatchCount = day.matches.filter(
-    (m) => m.team1Score !== null && m.team2Score !== null,
-  ).length;
+  const rows: RowMatch[] = day.matches.map((m) => ({
+    id: m.id,
+    matchNumber: m.matchNumber,
+    team1: [m.team1PlayerA.name, m.team1PlayerB.name],
+    team2: [m.team2PlayerA.name, m.team2PlayerB.name],
+    team1Score: m.team1Score,
+    team2Score: m.team2Score,
+    version: m.version,
+    scoredByName: m.scoredBy?.name ?? null,
+    scoredAt: m.scoredAt?.toISOString() ?? null,
+    removable: false,
+  }));
+  const scoredMatchCount = rows.filter((m) => m.team1Score !== null && m.team2Score !== null).length;
+  const playerIds = new Set(
+    day.matches.flatMap((m) => [m.team1PlayerAId, m.team1PlayerBId, m.team2PlayerAId, m.team2PlayerBId]),
+  );
+  const rule = ruleForGameDay(day);
+  const me = await prisma.player.findUnique({ where: { id: session.user.id }, select: { name: true } });
 
   return (
     <div className="space-y-4">
       <Link
         href="/archive"
-        className="inline-flex items-center gap-1 rounded text-xs font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="inline-flex min-h-11 items-center gap-1 rounded text-sm font-semibold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <ChevronLeft className="h-3 w-3" aria-hidden="true" />
-        Zurück zum Archiv
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        Archiv
       </Link>
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-          Spieltag beendet
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">{formatGameDayDate(day.date)}</h1>
-      </header>
+
+      <section className="ticket">
+        <div className={TICKET_HEAD}>
+          <span className="truncate">Spieltag · {day.season.name}</span>
+          <span className={TICKET_PILL}>Abpfiff</span>
+        </div>
+        <h1 className="mt-1.5 font-display text-[34px] font-extrabold leading-none text-white">{formatGameDayHeading(day.date)}</h1>
+        <div className="ticket-perf" />
+        <dl className="grid grid-cols-3 text-center text-[#e2f8ff]">
+          <Stat label="Spieler" value={String(playerIds.size)} />
+          <Stat label="gewertet" value={`${scoredMatchCount}/${rows.length}`} />
+          <Stat label="Wertung" value={describeRule(rule)} small />
+        </dl>
+      </section>
 
       {/* FinishedSummary internally calls computeGameDaySummary(day.id) */}
       <FinishedSummary
         gameDayId={day.id}
         scoredMatchCount={scoredMatchCount}
-        totalMatchCount={day.matches.length}
+        totalMatchCount={rows.length}
         meId={session.user.id}
       />
 
-      {day.matches.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Paarungen
+      {rows.length > 0 && (
+        <section aria-labelledby="pairings" className="space-y-2">
+          <h2 id="pairings" className={`px-1 ${LABEL}`}>
+            Alle Matches · {rows.length}
           </h2>
-          <div className="space-y-2">
-            {day.matches.map((m) => (
-              <ReadOnlyMatchCard
-                key={m.id}
-                match={{
-                  matchNumber: m.matchNumber,
-                  team1A: m.team1PlayerA.name,
-                  team1B: m.team1PlayerB.name,
-                  team2A: m.team2PlayerA.name,
-                  team2B: m.team2PlayerB.name,
-                  team1Score: m.team1Score,
-                  team2Score: m.team2Score,
-                  scoredByName: m.scoredBy?.name ?? null,
-                  scoredAt: m.scoredAt?.toISOString() ?? null,
-                }}
-              />
-            ))}
+          <div className="overflow-hidden rounded-[18px] border border-border bg-surface">
+            <MatchRows matches={rows} rule={rule} canEdit={false} gameDayId={day.id} myName={me?.name ?? null} />
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+function Stat({ label, value, small = false }: { label: string; value: string; small?: boolean }) {
+  return (
+    <div className="grid min-w-0 grid-rows-[32px_auto] items-center justify-items-center">
+      <dt className="row-start-2 text-xs text-[#d9f6fb]">{label}</dt>
+      <dd className={`row-start-1 font-display font-extrabold leading-none tabular-nums ${small ? "text-[15px]" : "text-2xl"}`}>{value}</dd>
     </div>
   );
 }
