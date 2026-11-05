@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { computePartnershipCounts } from "@/lib/game-day/partnerships";
+import { pairingFairness } from "@/lib/game-day/day-podium";
 
 // Server component: derives the roster from the players who actually
 // appeared in scored matches (not from declared attendance), so a
@@ -39,20 +40,23 @@ export async function PartnershipCounts({ gameDayId }: { gameDayId: string }) {
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
   if (max === 0) return null;
 
+  const fairness = pairingFairness(rows.map((r) => r.count));
+
   return (
-    <section
-      aria-label="Häufigkeit der Team-Paarungen"
-      className="space-y-2 rounded-2xl border border-border bg-surface p-4"
-    >
-      <div className="space-y-1">
-        <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-          Paarungen an diesem Tag
-        </div>
-        <p className="text-xs leading-snug text-foreground-muted">
-          Zeigt alle Team-Paarungen dieses Spieltags – so siehst du auf einen
-          Blick, ob die Verteilung fair war.
-        </p>
-      </div>
+    <details aria-label="Häufigkeit der Team-Paarungen" className="group overflow-hidden rounded-[18px] border border-border bg-surface">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+        <span>
+          <b className="block text-[14.5px]">Paarungen an diesem Tag</b>
+          <span className="text-xs text-foreground-muted">
+            {fairness.text}
+            {fairness.fair && <span className="text-lime"> · ✓ fair verteilt</span>}
+          </span>
+        </span>
+        <span aria-hidden="true" className="text-primary transition group-open:rotate-90">
+          ›
+        </span>
+      </summary>
+      <div className="space-y-1.5 border-t border-border px-3 py-3">
       <ul className="space-y-1.5">
         {rows.map((r) => {
           const widthPct = max === 0 ? 0 : Math.round((r.count / max) * 100);
@@ -82,6 +86,7 @@ export async function PartnershipCounts({ gameDayId }: { gameDayId: string }) {
           );
         })}
       </ul>
-    </section>
+      </div>
+    </details>
   );
 }

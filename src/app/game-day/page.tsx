@@ -156,15 +156,25 @@ export default async function GameDayPage() {
             gameDayId={day.id}
             scoredMatchCount={rows.filter(isScored).length}
             totalMatchCount={rows.length}
+            meId={meId}
           />
           {rows.length > 0 && (
-            <section aria-labelledby="gd-matches" className={CARD}>
-              <div className={CARD_HEAD}>
-                <h2 id="gd-matches">Matches</h2>
-                <span>{rows.length}</span>
+            <details className={`${CARD} group`}>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+                <span>
+                  <b className="block text-[14.5px]">Matches</b>
+                  <span className="text-xs text-foreground-muted">
+                    {rows.filter(isScored).length} von {rows.length} gewertet
+                  </span>
+                </span>
+                <span aria-hidden="true" className="text-primary transition group-open:rotate-90">
+                  ›
+                </span>
+              </summary>
+              <div className="border-t border-border">
+                <MatchRows matches={rows} rule={rule} canEdit={false} gameDayId={day.id} myName={myName} />
               </div>
-              <MatchRows matches={rows} rule={rule} canEdit={false} gameDayId={day.id} myName={myName} />
-            </section>
+            </details>
           )}
         </>
       )}

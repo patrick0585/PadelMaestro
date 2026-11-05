@@ -69,6 +69,7 @@ export default async function ArchiveDetailPage({
         gameDayId={day.id}
         scoredMatchCount={scoredMatchCount}
         totalMatchCount={day.matches.length}
+        meId={session.user.id}
       />
 
       {day.matches.length > 0 && (
