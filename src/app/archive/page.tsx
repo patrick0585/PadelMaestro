@@ -2,29 +2,18 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { contextFromSession } from "@/lib/auth/group-context";
 import { NoGroupNotice } from "@/components/no-group-notice";
-import Link from "next/link";
 import { Archive } from "lucide-react";
 import { listArchivedGameDays, type ArchivedGameDayRow } from "@/lib/archive/list";
-import { formatGameDayDate } from "@/lib/archive/format";
 import { computeRanking, type RankingRow } from "@/lib/ranking/compute";
-import { RankingTable } from "@/components/ranking-table";
-import { Badge } from "@/components/ui/badge";
+import { LABEL } from "@/components/home/styles";
+import { SeasonSection, type SeasonSectionData } from "./season-section";
 
 export const dynamic = "force-dynamic";
 
-const MEDALS = ["🥇", "🥈", "🥉"] as const;
-
-interface SeasonSection {
-  seasonId: string;
-  seasonName: string;
-  seasonIsActive: boolean;
-  rows: ArchivedGameDayRow[];
-}
-
 // rows kommen nach Datum absteigend sortiert — die Insertion-Order der
 // Sections entspricht damit „neueste Saison zuerst".
-function groupBySeason(rows: ArchivedGameDayRow[]): SeasonSection[] {
-  const sections = new Map<string, SeasonSection>();
+function groupBySeason(rows: ArchivedGameDayRow[]): SeasonSectionData[] {
+  const sections = new Map<string, SeasonSectionData>();
   for (const row of rows) {
     const section = sections.get(row.seasonId);
     if (section) section.rows.push(row);
@@ -50,12 +39,7 @@ export default async function ArchivePage() {
   if (rows.length === 0) {
     return (
       <div className="space-y-5">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-            Vergangene Spieltage
-          </p>
-          <h1 className="text-2xl font-bold text-foreground">Archiv</h1>
-        </header>
+        <Header />
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface p-10 text-center">
           <Archive className="h-10 w-10 text-foreground-muted" aria-hidden="true" />
           <div className="text-sm font-semibold text-foreground">
@@ -78,73 +62,21 @@ export default async function ArchivePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-          Vergangene Spieltage
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">Archiv</h1>
-      </header>
+    <div className="space-y-5">
+      <Header />
 
       {sections.map((section) => (
-        <section key={section.seasonId} className="space-y-2">
-          <h2 className="text-sm font-semibold text-foreground">
-            {section.seasonName}
-            {section.seasonIsActive && (
-              <Badge variant="neutral" className="ml-2 align-middle">
-                laufend
-              </Badge>
-            )}
-          </h2>
-          {!section.seasonIsActive && (
-            <RankingTable ranking={finalTables.get(section.seasonId) ?? []} />
-          )}
-          <ul className="space-y-2">
-            {section.rows.map((row) => (
-              <li key={row.id}>
-                <Link
-                  href={`/archive/${row.id}`}
-                  className="block rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <div className="text-sm font-semibold text-foreground">
-                    {formatGameDayDate(row.date)}
-                    {row.jokerCount > 0 && (
-                      <span
-                        data-testid="joker-badge"
-                        aria-label={`${row.jokerCount} Joker eingesetzt`}
-                        className="ml-2 inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-warning"
-                      >
-                        Joker {row.jokerCount}
-                      </span>
-                    )}
-                  </div>
-                  {row.podium.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-foreground">
-                      {row.podium.map((p) => (
-                        <span key={p.playerName} className="inline-flex items-center gap-1">
-                          <span aria-hidden="true">{MEDALS[p.rank - 1]}</span>
-                          <span className="font-medium">{p.playerName}</span>
-                          <span className="tabular-nums text-foreground-muted">{p.points}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-1 text-xs text-foreground-muted">
-                    {row.matchCount} {row.matchCount === 1 ? "Match" : "Matches"} ·{" "}
-                    {row.playerCount} Spieler
-                    {row.self && (
-                      <>
-                        {" · "}Du: {row.self.points} Pt /{" "}
-                        {row.self.matches} {row.self.matches === 1 ? "Match" : "Matches"}
-                      </>
-                    )}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <SeasonSection key={section.seasonId} section={section} ranking={finalTables.get(section.seasonId) ?? null} />
       ))}
     </div>
+  );
+}
+
+function Header() {
+  return (
+    <header>
+      <p className={LABEL}>Vergangene Spieltage</p>
+      <h1 className="font-display text-3xl font-extrabold">Archiv</h1>
+    </header>
   );
 }
