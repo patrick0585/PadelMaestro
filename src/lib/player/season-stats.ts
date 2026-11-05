@@ -28,6 +28,7 @@ export interface PartnerStat {
   avatarVersion: number;
   pointsTogether: number;
   matches: number;
+  wins: number;
 }
 
 export interface PlayerSeasonStats {
@@ -211,13 +212,14 @@ export async function computePlayerSeasonStats(
     })
     .filter((d): d is DayTrend => d !== null);
 
-  const partnerTotals = new Map<string, { pointsTogether: number; matches: number }>();
+  const partnerTotals = new Map<string, { pointsTogether: number; matches: number; wins: number }>();
   for (const r of rows) {
     const pid = partnerOf(r, playerId);
     if (!pid) continue;
-    const cur = partnerTotals.get(pid) ?? { pointsTogether: 0, matches: 0 };
+    const cur = partnerTotals.get(pid) ?? { pointsTogether: 0, matches: 0, wins: 0 };
     cur.pointsTogether += myPoints(r, playerId);
     cur.matches += 1;
+    if (outcomeFor(r, playerId) === "W") cur.wins += 1;
     partnerTotals.set(pid, cur);
   }
   const partnerIds = [...partnerTotals.keys()];

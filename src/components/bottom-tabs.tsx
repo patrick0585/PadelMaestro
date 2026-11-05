@@ -25,7 +25,8 @@ export function BottomTabs({ isAdmin }: { isAdmin: boolean }) {
       className="flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
     >
       {tabs.map((t) => {
-        const active = t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
+        const active =
+          t.href === "/" ? pathname === "/" || pathname === "/duos" : pathname.startsWith(t.href);
         const Icon = t.icon;
         return (
           <Link

@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import type { PartnerStat } from "@/lib/player/season-stats";
 import { LABEL } from "./styles";
@@ -52,6 +54,12 @@ export function DuoCards({ best, worst }: { best: PartnerStat; worst: PartnerSta
           <li className="px-3.5 py-3 text-xs text-foreground-muted">Noch zu wenig Partner-Daten für einen Vergleich.</li>
         )}
       </ul>
+      <Link
+        href="/duos"
+        className="flex min-h-11 items-center justify-between border-t border-border px-3.5 text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      >
+        Alle Duos <ChevronRight aria-hidden="true" className="size-4" />
+      </Link>
     </section>
   );
 }
