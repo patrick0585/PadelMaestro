@@ -29,7 +29,7 @@ describe("DayStandings", () => {
     expect(podium).toHaveLength(3);
     expect(podium[0]).toHaveTextContent("Patrick");
     expect(podium[0].className).toContain("col-start-2");
-    expect(podium[2]).toHaveTextContent("Anna · Eva");
+    expect(podium[2]).toHaveTextContent("AnnaEva");
     expect(podium[2]).toHaveTextContent("geteilt");
     expect(within(podium[2]).getByRole("img", { name: "Geteilter Platz 3" })).toBeInTheDocument();
 

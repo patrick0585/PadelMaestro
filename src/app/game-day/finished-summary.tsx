@@ -9,9 +9,9 @@ import { mergeJokersIntoRows, type DisplayRow } from "./joker-summary-merge";
 import { PartnershipCounts } from "./partnership-counts";
 
 const STEP = {
-  1: { col: "col-start-2 row-start-1", height: "min-h-[200px]", pts: "text-[38px] text-amber-300", avatar: 48 as const },
-  2: { col: "col-start-1 row-start-1", height: "min-h-[176px]", pts: "text-[30px]", avatar: 40 as const },
-  3: { col: "col-start-3 row-start-1", height: "min-h-[160px]", pts: "text-[30px]", avatar: 40 as const },
+  1: { col: "col-start-2 row-start-1", height: "min-h-[236px]", pts: "text-[38px] text-amber-300", avatar: 48 as const },
+  2: { col: "col-start-1 row-start-1", height: "min-h-[212px]", pts: "text-[30px]", avatar: 40 as const },
+  3: { col: "col-start-3 row-start-1", height: "min-h-[196px]", pts: "text-[30px]", avatar: 40 as const },
 } as const;
 
 function JokerTag() {
@@ -41,9 +41,13 @@ function PodiumStep({ rank, players, meId }: { rank: 1 | 2 | 3; players: Display
           <Avatar key={p.playerId} playerId={p.playerId} name={p.playerName} avatarVersion={p.avatarVersion} size={tied ? 40 : st.avatar} className="ring-2 ring-surface" />
         ))}
       </span>
-      <p className="mt-1.5 truncate text-sm font-semibold">
-        {players.map((p) => p.playerName.split(" ")[0]).join(" · ")}
-        {players.some((p) => p.jokerUsed) && <JokerTag />}
+      <p className="mt-1.5 text-sm font-semibold leading-tight">
+        {players.map((p) => (
+          <span key={p.playerId} className="block truncate">
+            {p.playerName.split(" ")[0]}
+            {p.jokerUsed && <JokerTag />}
+          </span>
+        ))}
       </p>
       <p className={`mt-1 font-display font-extrabold leading-none tabular-nums ${st.pts}`}>
         {players[0].points}

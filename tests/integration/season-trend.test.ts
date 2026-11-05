@@ -92,13 +92,12 @@ describe("buildSeasonTrend", () => {
     const byName = Object.fromEntries(trend.players.map((p) => [p.name, p.values]));
     // Day A standings: Paul 5pts, Patrick 4, Michi 2, Thomas 1.
     // Day B cumulative: Paul 8 (rank 1), Patrick & Thomas tied on 7pts;
-    // tiebreaker is ppg — both 1.75 — so they're fully tied and the
-    // player id decides (stable across days). Then Michi at rank 4.
-    const [tiedFirst] = [patrick.id, thomas.id].sort((a, b) => (a < b ? -1 : 1));
+    // tiebreaker is ppg — both 1.75 — so they share place 2 and Michi
+    // follows on 3 (1, 2, 2, 3).
     expect(byName.Paul).toEqual([1, 1]);
-    expect(byName.Patrick).toEqual([2, tiedFirst === patrick.id ? 2 : 3]);
-    expect(byName.Michi).toEqual([3, 4]);
-    expect(byName.Thomas).toEqual([4, tiedFirst === thomas.id ? 2 : 3]);
+    expect(byName.Patrick).toEqual([2, 2]);
+    expect(byName.Michi).toEqual([3, 3]);
+    expect(byName.Thomas).toEqual([4, 2]);
   });
 
   it("emits null for a player who has not yet appeared by a given day", async () => {
@@ -132,12 +131,11 @@ describe("buildSeasonTrend", () => {
     //   Sort: Paul 5pts → 1, Eva 3pts → 2, Patrick 2pts → 3,
     //         Thomas 1pt/ppg1.0 → 4 (ppg DESC beats Michi 0.5),
     //         Michi 1pt/ppg0.5 → 5
-    // Day A: Paul & Patrick fully tied → the player id decides.
-    const paulFirst = paul.id < patrick.id;
-    expect(byName.Paul).toEqual([paulFirst ? 1 : 2, 1]);
+    // Day A: Paul & Patrick fully tied → both place 1.
+    expect(byName.Paul).toEqual([1, 1]);
     expect(byName.Eva[0]).toBeNull();
     expect(byName.Eva[1]).toBe(2);
-    expect(byName.Patrick).toEqual([paulFirst ? 2 : 1, 3]);
+    expect(byName.Patrick).toEqual([1, 3]);
     // Thomas at end of Day B: 1pt over 1 game (didn't play Day B), ppg 1.0.
     // Michi: 1pt over 2 games, ppg 0.5. Thomas's higher ppg ranks above
     // Michi by the NULLS LAST ordering. Both are below Patrick (2pts).
@@ -178,14 +176,13 @@ describe("buildSeasonTrend", () => {
     const trend = await buildSeasonTrend(season.id);
     expect(trend.totalPlayers).toBe(5);
     const byName = Object.fromEntries(trend.players.map((p) => [p.name, p.values]));
-    // Anna & Ben tied at 2pts/1g, Clara & Dirk tied at 1pt/1g; within a
-    // tie the player id decides. Eva has 0pts/0g → ppg null → NULLS LAST → rank 5.
-    const first = (a: { id: string }, b: { id: string }) => (a.id < b.id ? a : b);
-    expect(byName[first(active1, active2) === active1 ? "Anna" : "Ben"]).toEqual([1]);
-    expect(byName[first(active1, active2) === active1 ? "Ben" : "Anna"]).toEqual([2]);
-    expect(byName[first(active3, active4) === active3 ? "Clara" : "Dirk"]).toEqual([3]);
-    expect(byName[first(active3, active4) === active3 ? "Dirk" : "Clara"]).toEqual([4]);
-    expect(byName.Eva).toEqual([5]);
+    // Anna & Ben share place 1 (2pts/1g), Clara & Dirk share place 2
+    // (1pt/1g). Eva has 0pts/0g → ppg null → NULLS LAST → place 3.
+    expect(byName.Anna).toEqual([1]);
+    expect(byName.Ben).toEqual([1]);
+    expect(byName.Clara).toEqual([2]);
+    expect(byName.Dirk).toEqual([2]);
+    expect(byName.Eva).toEqual([3]);
   });
 
   it("ignores planned/in-progress days and only reports finished ones", async () => {

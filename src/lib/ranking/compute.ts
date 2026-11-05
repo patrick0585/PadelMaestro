@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { getSeasonGroupId } from "@/lib/group/season-group";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { MEDAL_BY_RANK, type MedalKind } from "@/lib/game-day/competition-rank";
+import { sharedRanks } from "./standing";
 
 export interface RankingRow {
   rank: number;
@@ -112,11 +113,12 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
     computeMedalsBySeason(seasonId),
   ]);
 
+  const ranks = sharedRanks(rows.map((r) => ({ points: Number(r.points), games: Number(r.games) })));
   return rows.map((r, i) => {
     const games = Number(r.games);
     const points = Number(r.points);
     return {
-      rank: i + 1,
+      rank: ranks[i],
       playerId: r.player_id,
       playerName: r.player_name,
       avatarVersion: Number(r.avatar_version),

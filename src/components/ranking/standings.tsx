@@ -3,6 +3,7 @@ import { FormBars } from "@/components/home/form-bars";
 import { MEDAL } from "@/components/home/styles";
 import type { Gap } from "@/lib/ranking/standing";
 import { Movement } from "./movement";
+import { splitPodium } from "@/lib/game-day/day-podium";
 
 export interface StandingRow {
   playerId: string;
@@ -19,10 +20,10 @@ export interface StandingRow {
   isMe: boolean;
 }
 
-const PODIUM_SIZE = 3;
 
 function gapText(gap: Gap): string {
   if (gap.kind === "lead") return `+${gap.over} Vorsprung`;
+  if (gap.kind === "tied") return `geteilter Platz ${gap.rank}`;
   if (gap.gap === 0) return `punktgleich mit Platz ${gap.toRank}`;
   return `−${gap.gap} auf Platz ${gap.toRank}`;
 }
@@ -37,49 +38,68 @@ function medalLine(m: StandingRow["medals"]): string {
     .join(" ");
 }
 
-const STEP_HEIGHT = { 1: "min-h-[212px]", 2: "min-h-[188px]", 3: "min-h-[172px]" } as const;
+// Tall enough for two stacked names on a shared step, so the 2-1-3 heights hold.
+const STEP_HEIGHT = { 1: "min-h-[244px]", 2: "min-h-[220px]", 3: "min-h-[204px]" } as const;
 // DOM order stays 1-2-3 for screen readers; the grid shows 2-1-3.
 const STEP_COL = { 1: "col-start-2 row-start-1", 2: "col-start-1 row-start-1", 3: "col-start-3 row-start-1" } as const;
 
-function PodiumStep({ r, place }: { r: StandingRow; place: 1 | 2 | 3 }) {
+function PodiumStep({ players, place }: { players: StandingRow[]; place: 1 | 2 | 3 }) {
   const first = place === 1;
+  const tied = players.length > 1;
+  const mine = players.some((p) => p.isMe);
+  const lead = players[0];
   return (
     <li
-      aria-current={r.isMe ? "true" : undefined}
+      aria-current={mine ? "true" : undefined}
       className={`flex min-w-0 flex-col justify-end rounded-t-2xl rounded-b-md border px-1.5 pb-2.5 pt-3 text-center ${STEP_HEIGHT[place]} ${STEP_COL[place]} ${
         first
           ? "border-amber-400/35 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(251,191,36,0.22),transparent_70%),linear-gradient(#1a2440,var(--surface))]"
           : "border-border bg-[linear-gradient(#1a2440,var(--surface))]"
-      } ${r.isMe ? "ring-2 ring-primary" : ""}`}
+      } ${mine ? "ring-2 ring-primary" : ""}`}
     >
       <span className="mb-1.5 flex items-center justify-center gap-1">
-        <span className="text-[22px] leading-none" role="img" aria-label={`Platz ${r.rank}`}>
+        <span className="text-[22px] leading-none" role="img" aria-label={tied ? `Geteilter Platz ${place}` : `Platz ${place}`}>
           {MEDAL[place]}
         </span>
-        <Movement value={r.movement} />
+        {!tied && <Movement value={lead.movement} />}
       </span>
-      <Avatar playerId={r.playerId} name={r.name} avatarVersion={r.avatarVersion} size={first ? 48 : 40} className="mx-auto" />
-      <p className="mt-1.5 truncate text-sm font-semibold">
-        {r.name.split(" ")[0]}
-        {r.isMe && <span className="sr-only"> (Du)</span>}
+      <span className="flex justify-center -space-x-2">
+        {players.slice(0, 2).map((p) => (
+          <Avatar
+            key={p.playerId}
+            playerId={p.playerId}
+            name={p.name}
+            avatarVersion={p.avatarVersion}
+            size={first && !tied ? 48 : 40}
+            className="ring-2 ring-surface"
+          />
+        ))}
+      </span>
+      <p className="mt-1.5 text-sm font-semibold leading-tight">
+        {players.map((p) => (
+          <span key={p.playerId} className="block truncate">
+            {p.name.split(" ")[0]}
+          </span>
+        ))}
+        {mine && <span className="sr-only"> (Du)</span>}
       </p>
       <p className={`font-display font-extrabold leading-none tabular-nums ${first ? "mt-1 text-[38px] text-amber-300" : "mt-1 text-[30px]"}`}>
-        {r.points.toFixed(0)}
+        {lead.points.toFixed(0)}
         <span className="sr-only"> Punkte</span>
       </p>
-      <p className="mt-0.5 text-[11.5px] tabular-nums text-foreground-muted">Ø {r.ppg.toFixed(2)}</p>
+      <p className="mt-0.5 text-[11.5px] tabular-nums text-foreground-muted">{tied ? "geteilt" : `Ø ${lead.ppg.toFixed(2)}`}</p>
     </li>
   );
 }
 
 export function Standings({ rows, myGap }: { rows: StandingRow[]; myGap: Gap | null }) {
-  const podium = rows.slice(0, PODIUM_SIZE);
-  const rest = rows.slice(PODIUM_SIZE);
+  const { steps, rest } = splitPodium(rows);
+  const podium = steps.flatMap((st) => st.players);
   return (
     <>
       <ol aria-label="Podium" className="grid grid-cols-[1fr_1.15fr_1fr] items-end gap-2">
-        {podium.map((r, i) => (
-          <PodiumStep key={r.playerId} r={r} place={(i + 1) as 1 | 2 | 3} />
+        {steps.map((st) => (
+          <PodiumStep key={st.rank} players={st.players} place={st.rank as 1 | 2 | 3} />
         ))}
       </ol>
       {myGap && podium.some((r) => r.isMe) && (

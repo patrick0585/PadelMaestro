@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gapToAbove, movementByPlayer } from "@/lib/ranking/standing";
+import { gapToAbove, movementByPlayer, sharedRanks } from "@/lib/ranking/standing";
 
 describe("movementByPlayer", () => {
   it("Plätze seit dem vorletzten Spieltag (positiv = hoch)", () => {
@@ -35,12 +35,42 @@ describe("gapToAbove", () => {
     expect(gapToAbove(rows, "a")).toEqual({ kind: "lead", over: 8 });
   });
 
-  it("punktgleich nach Rundung", () => {
-    expect(gapToAbove(rows, "d")).toEqual({ kind: "behind", gap: 0, toRank: 3 });
+  it("geteilter Platz statt Abstand", () => {
+    const tied = [
+      { playerId: "a", rank: 1, points: 50 },
+      { playerId: "b", rank: 1, points: 50 },
+      { playerId: "c", rank: 2, points: 40 },
+    ];
+    expect(gapToAbove(tied, "a")).toEqual({ kind: "tied", rank: 1 });
+    expect(gapToAbove(tied, "b")).toEqual({ kind: "tied", rank: 1 });
+    expect(gapToAbove(tied, "c")).toEqual({ kind: "behind", gap: 10, toRank: 1 });
   });
 
   it("allein oder nicht in der Rangliste", () => {
     expect(gapToAbove([{ playerId: "a", rank: 1, points: 10 }], "a")).toBeNull();
     expect(gapToAbove(rows, "x")).toBeNull();
+  });
+});
+
+describe("sharedRanks", () => {
+  const row = (points: number, games: number) => ({ points, games });
+
+  it("gleiche angezeigte Punkte und gleicher Schnitt teilen sich den Platz, danach ohne Lücke weiter", () => {
+    expect(sharedRanks([row(240, 128), row(239.4, 128), row(239.2, 128), row(230, 128), row(230, 128), row(200, 128)])).toEqual([
+      1, 2, 2, 3, 3, 4,
+    ]);
+  });
+
+  it("gleiche Punkte, anderer Schnitt: kein Gleichstand", () => {
+    expect(sharedRanks([row(60, 30), row(60, 40)])).toEqual([1, 2]);
+  });
+
+  it("Schnitt wird auf 2 Nachkommastellen verglichen", () => {
+    expect(sharedRanks([row(100, 61), row(100, 61.001)])).toEqual([1, 1]);
+  });
+
+  it("ohne Spiele", () => {
+    expect(sharedRanks([row(0, 0), row(0, 0)])).toEqual([1, 1]);
+    expect(sharedRanks([])).toEqual([]);
   });
 });
