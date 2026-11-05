@@ -57,10 +57,10 @@ export function EmailNoticeClient({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {showProfileLink && (
             <Link
-              href="/profil"
+              href="/profil/email"
               className={`inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline ${ring}`}
             >
-              Zum Profil
+              Zur E-Mail-Adresse
             </Link>
           )}
           {variant === "unverified" && <ResendVerificationButton />}

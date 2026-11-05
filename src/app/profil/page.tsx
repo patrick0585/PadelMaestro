@@ -1,117 +1,130 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { KeyRound, Mail, Users } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { Card, CardBody } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { contextFromSession } from "@/lib/auth/group-context";
+import { loadPlayerPass } from "@/lib/profile/player-pass";
+import { GroupedList, ListRow, SectionFooter, SectionLabel } from "@/components/ui/list";
 import { LeaveGroupButton } from "./leave-group-button";
-import { ChangePasswordForm } from "./change-password-form";
-import { AvatarUploader } from "./avatar-uploader";
-import { EmailForm } from "./email-form";
 import { PushSettings } from "./push-settings";
 import { EmailNotice } from "@/components/email-notice";
 import { AccountSection } from "./account-section";
+import { PlayerPassTicket } from "./player-pass-ticket";
 import { LegalFooter } from "@/components/legal-footer";
 
 export const dynamic = "force-dynamic";
 
-const LINK_CLASS =
-  "rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-
+const ICON = "size-[17px]";
 const ROLE_LABELS = { owner: "Besitzer", admin: "Admin", member: "Mitglied" } as const;
 
 export default async function ProfilePage() {
   const session = await auth();
   if (!session) redirect("/login");
-
-  const player = await prisma.player.findUnique({
-    where: { id: session.user.id },
-    select: {
-      avatarVersion: true,
-      email: true,
-      emailVerifiedAt: true,
-      pendingEmail: true,
-      passwordHash: true,
-      pushRemindersEnabled: true,
-    },
-  });
-  const avatarVersion = player?.avatarVersion ?? 0;
-  const email = player?.email ?? session.user.email;
   const ctx = contextFromSession(session);
-  const group = ctx
-    ? await prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } })
-    : null;
+
+  const [player, group, pass] = await Promise.all([
+    prisma.player.findUnique({
+      where: { id: session.user.id },
+      select: {
+        avatarVersion: true,
+        email: true,
+        emailVerifiedAt: true,
+        pendingEmail: true,
+        passwordHash: true,
+        pushRemindersEnabled: true,
+      },
+    }),
+    ctx ? prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } }) : null,
+    ctx ? loadPlayerPass(session.user.id, ctx.groupId) : null,
+  ]);
+  const email = player?.email ?? session.user.email;
+  const emailHint = player?.pendingEmail
+    ? `Bestätigung für ${player.pendingEmail} ausstehend`
+    : player?.emailVerifiedAt
+      ? undefined
+      : "Noch nicht bestätigt";
 
   return (
-    <div className="space-y-4">
-      <EmailNotice playerId={session.user.id} showProfileLink={false} />
+    <div className="space-y-1">
+      <div className="space-y-2.5">
+        <EmailNotice playerId={session.user.id} showProfileLink={false} />
+        <PlayerPassTicket
+          playerId={session.user.id}
+          name={session.user.name}
+          avatarVersion={player?.avatarVersion ?? 0}
+          groupName={group?.name ?? null}
+          roleLabel={ctx ? ROLE_LABELS[ctx.role] : null}
+          memberSince={pass?.memberSince ?? null}
+          seasonName={pass?.seasonName ?? null}
+          stats={pass?.stats ?? null}
+        />
+      </div>
 
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-          Profil
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">{session.user.name}</h1>
-        <p className="mt-0.5 text-sm text-foreground-muted">{email}</p>
-      </header>
-
-      <Card>
-        <CardBody className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">Profilbild</h2>
-          <AvatarUploader
-            playerId={session.user.id}
-            name={session.user.name}
-            avatarVersion={avatarVersion}
+      {ctx && (
+        <GroupedList className="mt-2.5">
+          <ListRow
+            href="/duos"
+            icon={{ node: <Users className={ICON} />, color: "#0e7490" }}
+            title="Meine Duos"
+            chevron
           />
-        </CardBody>
-      </Card>
+        </GroupedList>
+      )}
 
-      <Card>
-        <CardBody className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">E-Mail-Adresse</h2>
-          <EmailForm
-            email={email ?? ""}
-            pendingEmail={player?.pendingEmail ?? null}
-            emailVerified={!!player?.emailVerifiedAt}
+      <section>
+        <SectionLabel>Konto</SectionLabel>
+        <GroupedList>
+          <ListRow
+            href="/profil/email"
+            icon={{ node: <Mail className={ICON} />, color: "#0369a1" }}
+            title="E-Mail"
+            subtitle={emailHint}
+            value={email}
+            truncateValue
+            chevron
           />
-        </CardBody>
-      </Card>
+          <ListRow
+            href="/profil/passwort"
+            icon={{ node: <KeyRound className={ICON} />, color: "#475569" }}
+            title="Passwort ändern"
+            chevron
+          />
+        </GroupedList>
+      </section>
 
       <PushSettings remindersEnabled={player?.pushRemindersEnabled ?? true} />
 
       {ctx && group && (
-        <Card>
-          <CardBody className="space-y-3">
-            <h2 className="text-base font-semibold text-foreground">Gruppe</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="min-w-0 break-words font-medium text-foreground">{group.name}</span>
-              <Badge variant="neutral">{ROLE_LABELS[ctx.role]}</Badge>
-            </div>
-            {ctx.role === "owner" ? (
-              <p className="text-sm text-foreground-muted">
-                Als Besitzer kannst du die Gruppe nicht verlassen. Übertrage den Besitz im{" "}
-                <Link href="/admin" className={LINK_CLASS}>
-                  Admin-Bereich
-                </Link>
-                .
-              </p>
-            ) : (
+        <section>
+          <SectionLabel>Gruppe</SectionLabel>
+          <GroupedList>
+            <ListRow title={group.name} />
+          </GroupedList>
+          {ctx.role === "owner" ? (
+            <SectionFooter>
+              Als Besitzer kannst du die Gruppe nicht verlassen. Übertrage den Besitz in der{" "}
+              <Link
+                href="/admin/einstellungen"
+                className="rounded text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Verwaltung
+              </Link>
+              .
+            </SectionFooter>
+          ) : (
+            <div className="mx-1.5 mt-1.5">
               <LeaveGroupButton groupId={ctx.groupId} groupName={group.name} />
-            )}
-          </CardBody>
-        </Card>
+            </div>
+          )}
+        </section>
       )}
-
-      <Card>
-        <CardBody className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">Passwort ändern</h2>
-          <ChangePasswordForm />
-        </CardBody>
-      </Card>
 
       <AccountSection hasPassword={player?.passwordHash != null} />
 
-      <LegalFooter />
+      <div className="pt-4">
+        <LegalFooter />
+      </div>
     </div>
   );
 }

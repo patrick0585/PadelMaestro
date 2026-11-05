@@ -13,7 +13,7 @@ describe("<EmailNoticeClient>", () => {
     expect(
       await screen.findByText("Hinterlege deine E-Mail-Adresse, damit du dein Passwort zurücksetzen kannst."),
     ).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Zum Profil" }).getAttribute("href")).toBe("/profil");
+    expect(screen.getByRole("link", { name: "Zur E-Mail-Adresse" }).getAttribute("href")).toBe("/profil/email");
     expect(screen.queryByRole("button", { name: "Mail erneut senden" })).toBeNull();
   });
 
@@ -44,19 +44,19 @@ describe("<EmailNoticeClient>", () => {
     render(<EmailNoticeClient variant="placeholder" pending={null} />);
     fireEvent.click(await screen.findByRole("button", { name: "Hinweis schließen" }));
     expect(sessionStorage.getItem("email-notice-dismissed")).toBe("1");
-    await waitFor(() => expect(screen.queryByText("Zum Profil")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("Zur E-Mail-Adresse")).toBeNull());
   });
 
   it("stays hidden when already dismissed", async () => {
     sessionStorage.setItem("email-notice-dismissed", "1");
     render(<EmailNoticeClient variant="placeholder" pending={null} />);
-    await waitFor(() => expect(screen.queryByText("Zum Profil")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("Zur E-Mail-Adresse")).toBeNull());
   });
 
   it("showProfileLink=false hides the link; region is labelled", async () => {
     render(<EmailNoticeClient variant="placeholder" pending={null} showProfileLink={false} />);
     expect(await screen.findByRole("region", { name: "Hinweis zur E-Mail-Adresse" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Zum Profil" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Zur E-Mail-Adresse" })).toBeNull();
   });
 
   it("resend 401 redirects to /login", async () => {
