@@ -26,11 +26,11 @@ function DuoRow({ kind, label, p }: { kind: keyof typeof TONE; label: string; p:
       </div>
       <div className="text-right">
         <p className={`font-display text-[30px] font-extrabold leading-none tabular-nums ${t.num}`}>
-          {p.pointsTogether}
-          <span className="sr-only"> Punkte zusammen</span>
+          {(p.pointsTogether / p.matches).toFixed(1)}
+          <span className="sr-only"> Punkte pro Match</span>
         </p>
         <p className="mt-0.5 text-[11.5px] text-foreground-muted">
-          {p.matches} {p.matches === 1 ? "Match" : "Matches"}
+          {p.matches} {p.matches === 1 ? "Match" : "Matches"} · {p.pointsTogether} Pkt
         </p>
       </div>
     </li>
@@ -42,7 +42,7 @@ export function DuoCards({ best, worst }: { best: PartnerStat; worst: PartnerSta
     <section aria-label="Deine Duos" className="overflow-hidden rounded-[18px] border border-border bg-surface">
       <div className={`flex justify-between border-b border-border px-3.5 py-2.5 ${LABEL}`}>
         <span>Deine Duos</span>
-        <span aria-hidden="true">Punkte zusammen</span>
+        <span aria-hidden="true">Punkte pro Match</span>
       </div>
       <ul className="divide-y divide-border">
         <DuoRow kind="best" label="Bestes Duo" p={best} />

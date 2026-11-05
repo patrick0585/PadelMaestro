@@ -318,7 +318,7 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.worstPartner).toBeNull();
   });
 
-  it("uses match count as tiebreaker when partners tie on points", async () => {
+  it("nur ein Partner mit Mindest-Matches: er ist Bestes Duo, kein Schlechtestes", async () => {
     const season = await makeSeason();
     const [me, alex, bob, x, y] = await Promise.all(
       ["Me", "Alex", "Bob", "X", "Y"].map((n) => makePlayer(season, n)),
@@ -326,7 +326,7 @@ describe("computePlayerSeasonStats", () => {
     const day = await prisma.gameDay.create({
       data: { groupId: season.groupId, seasonId: season.id, date: new Date("2026-04-10"), playerCount: 4, status: "finished" },
     });
-    // Alex: 3 matches, 5 points together → best must be Alex (more matches beats Bob on tie)
+    // Alex: 3 Matches, 5 Punkte zusammen
     await prisma.match.create({
       data: {
         gameDayId: day.id, matchNumber: 1,
@@ -351,7 +351,7 @@ describe("computePlayerSeasonStats", () => {
         team1Score: 1, team2Score: 0,
       },
     });
-    // Bob: 2 matches, 5 points together → worst must be Bob (fewer matches wins on tie)
+    // Bob: 2 Matches, 5 Punkte zusammen
     await prisma.match.create({
       data: {
         gameDayId: day.id, matchNumber: 4,
@@ -369,8 +369,10 @@ describe("computePlayerSeasonStats", () => {
       },
     });
     const stats = await computePlayerSeasonStats(me.id, season.id);
+    // Bob hat den höheren Schnitt (2.5), aber nur Alex hat 3 gemeinsame Matches.
     expect(stats.bestPartner).toEqual({ playerId: alex.id, name: "Alex", avatarVersion: 0, pointsTogether: 5, matches: 3 });
-    expect(stats.worstPartner).toEqual({ playerId: bob.id, name: "Bob", avatarVersion: 0, pointsTogether: 5, matches: 2 });
+    expect(stats.worstPartner).toBeNull();
+    expect(stats.partners.map((x) => x.name)).toEqual(["Alex", "Bob"]);
   });
 
   it("computes joker balance from JokerUse rows for the season", async () => {
@@ -523,7 +525,7 @@ describe("computePlayerSeasonStats", () => {
     expect(stats.bestPartner?.name).not.toBe(stats.worstPartner?.name);
   });
 
-  it("returns all partners sorted by points, matches, then name", async () => {
+  it("sortiert alle Partner nach Schnitt pro Match", async () => {
     const season = await makeSeason();
     const [me, anna, ben, carl] = await Promise.all(
       ["Me", "Anna", "Ben", "Carl"].map((n) => makePlayer(season, n)),
@@ -563,10 +565,10 @@ describe("computePlayerSeasonStats", () => {
 
     const stats = await computePlayerSeasonStats(me.id, season.id);
 
-    // Anna 6 Pt/2 M und Ben 6 Pt/1 M sind punktgleich → mehr Matches zuerst.
+    // Ben 6.0, Anna 3.0, Carl 2.0 Punkte pro Match.
     expect(stats.partners.map((p) => [p.name, p.pointsTogether, p.matches])).toEqual([
-      ["Anna", 6, 2],
       ["Ben", 6, 1],
+      ["Anna", 6, 2],
       ["Carl", 2, 1],
     ]);
     // Konsistenz: erstes Element == bestPartner.
