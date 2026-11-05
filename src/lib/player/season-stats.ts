@@ -3,6 +3,7 @@ import { getSeasonGroupId } from "@/lib/group/season-group";
 import { activeMemberPlayers, type MemberPlayer } from "@/lib/group/members";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { MEDAL_BY_RANK } from "@/lib/game-day/competition-rank";
+import { rankPartners } from "./partner-ranking";
 
 export type MatchOutcome = "W" | "L" | "D";
 
@@ -240,23 +241,10 @@ export async function computePlayerSeasonStats(
       ...stat,
     };
   });
-  const bestSorted = [...partners].sort((a, b) => {
-    if (b.pointsTogether !== a.pointsTogether) return b.pointsTogether - a.pointsTogether;
-    if (b.matches !== a.matches) return b.matches - a.matches;
-    return a.name.localeCompare(b.name, "de");
-  });
-  const worstSorted = [...partners].sort((a, b) => {
-    if (a.pointsTogether !== b.pointsTogether) return a.pointsTogether - b.pointsTogether;
-    if (a.matches !== b.matches) return a.matches - b.matches;
-    return a.name.localeCompare(b.name, "de");
-  });
   const stripId = ({ id: _id, ...rest }: PartnerWithId): PartnerStat => rest;
-  const best = bestSorted[0] ?? null;
-  // Guard against best and worst resolving to the same partner when ties cascade into the
-  // name tiebreaker (same points, same matches, sorts identically in both directions).
-  const worstCandidate = worstSorted.find((p) => p.id !== best?.id) ?? null;
-  const bestPartner = best ? stripId(best) : null;
-  const worstPartner = partners.length >= 2 && worstCandidate ? stripId(worstCandidate) : null;
+  const ranked = rankPartners(partners);
+  const bestPartner = ranked.best ? stripId(ranked.best) : null;
+  const worstPartner = ranked.worst ? stripId(ranked.worst) : null;
 
   return {
     medals,
@@ -265,7 +253,7 @@ export async function computePlayerSeasonStats(
     recentDays,
     bestPartner,
     worstPartner,
-    partners: bestSorted.map(stripId),
+    partners: ranked.sorted.map(stripId),
     jokers: {
       used: jokerCount,
       remaining: Math.max(0, jokersTotal - jokerCount),

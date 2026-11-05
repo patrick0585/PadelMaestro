@@ -162,8 +162,8 @@ describe("TrophyShelf und DuoCards", () => {
     expect(card).toContainElement(rows[0]);
     expect(rows[0]).toHaveTextContent("Bestes Duo");
     expect(rows[0]).toHaveTextContent("Christian Hoffmann");
-    expect(rows[0]).toHaveTextContent("31");
-    expect(rows[0]).toHaveTextContent("12 Matches");
+    expect(rows[0]).toHaveTextContent("2.6");
+    expect(rows[0]).toHaveTextContent("12 Matches · 31 Pkt");
     expect(rows[1]).toHaveTextContent("Weniger Glück");
     expect(rows[1]).toHaveTextContent("1 Match");
   });
