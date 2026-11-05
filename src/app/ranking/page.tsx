@@ -4,10 +4,13 @@ import { contextFromSession } from "@/lib/auth/group-context";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { buildSeasonTrend } from "@/lib/ranking/season-trend";
-import { RankingTable } from "@/components/ranking-table";
-import { Card, CardBody } from "@/components/ui/card";
+import { gapToAbove, movementByPlayer } from "@/lib/ranking/standing";
+import { recentFormByPlayer } from "@/lib/home/recent-form";
 import { SeasonTrendChart } from "@/components/season-trend-chart";
 import { NoGroupNotice } from "@/components/no-group-notice";
+import { Standings, type StandingRow } from "@/components/ranking/standings";
+import { LABEL } from "@/components/home/styles";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,41 +19,70 @@ export default async function RankingPage() {
   if (!session) redirect("/login");
   const ctx = contextFromSession(session);
   if (!ctx) return <NoGroupNotice />;
+  const meId = session.user.id;
 
   const season = await getOrCreateActiveSeason(ctx.groupId);
-  const [ranking, trend] = await Promise.all([
+  const [ranking, trend, liveDays] = await Promise.all([
     computeRanking(season.id),
     buildSeasonTrend(season.id),
+    prisma.gameDay.count({ where: { seasonId: season.id, status: "in_progress" } }),
   ]);
+  const form = await recentFormByPlayer(
+    season.id,
+    ranking.map((r) => r.playerId),
+  );
+  // While a day is running, ranks already include its scores but the trend only
+  // knows finished days, so arrows could contradict the shown rank.
+  const movement = liveDays > 0 ? new Map<string, number | null>() : movementByPlayer(trend.players);
+
+  const rows: StandingRow[] = ranking.map((r) => ({
+    playerId: r.playerId,
+    name: r.playerName,
+    avatarVersion: r.avatarVersion,
+    rank: r.rank,
+    points: r.points,
+    ppg: r.pointsPerGame,
+    games: r.games,
+    jokersUsed: r.jokersUsed,
+    medals: r.medals,
+    movement: movement.get(r.playerId) ?? null,
+    form: form.get(r.playerId) ?? [],
+    isMe: r.playerId === meId,
+  }));
+  const days = trend.days.length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3.5">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+        <p className={`${LABEL} text-primary`}>
           {season.name}
+          {days > 0 && ` · ${days} ${days === 1 ? "Spieltag" : "Spieltage"}`}
         </p>
-        <h1 className="text-2xl font-bold text-foreground">Rangliste</h1>
+        <h1 className="mt-1 font-display text-[30px] font-extrabold uppercase leading-none">Rangliste</h1>
       </header>
-      <RankingTable ranking={ranking} />
 
-      <Card>
-        <CardBody>
-          <div className="mb-2">
-            <h2 className="text-sm font-semibold text-foreground">Saison-Verlauf</h2>
-            <p className="text-xs text-foreground-muted">
-              Tabellenstand nach jedem Spieltag.
-            </p>
-          </div>
-          <SeasonTrendChart
-            data={{
-              days: trend.days.map((d) => ({ date: d.date.toISOString() })),
-              players: trend.players,
-              totalPlayers: trend.totalPlayers,
-            }}
-            currentPlayerId={session.user.id}
-          />
-        </CardBody>
-      </Card>
+      {rows.length === 0 ? (
+        <p className="rounded-[18px] border border-dashed border-border p-4 text-sm text-foreground-muted">
+          Noch keine Spieler mit Matches in dieser Saison.
+        </p>
+      ) : (
+        <Standings rows={rows} myGap={gapToAbove(ranking, meId)} />
+      )}
+
+      <section aria-labelledby="season-trend" className="rounded-[18px] border border-border bg-surface px-3.5 py-3">
+        <div className={`mb-2 flex justify-between ${LABEL}`}>
+          <h2 id="season-trend">Saisonverlauf · Platz</h2>
+          <span aria-hidden="true">Du hervorgehoben</span>
+        </div>
+        <SeasonTrendChart
+          data={{
+            days: trend.days.map((d) => ({ date: d.date.toISOString() })),
+            players: trend.players,
+            totalPlayers: trend.totalPlayers,
+          }}
+          currentPlayerId={meId}
+        />
+      </section>
     </div>
   );
 }

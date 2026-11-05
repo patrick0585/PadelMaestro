@@ -106,7 +106,8 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
           COALESCE(COUNT(played.points), 0)::float + COALESCE(j.games_credited, 0)::float,
           0
         )
-    ) DESC NULLS LAST
+    ) DESC NULLS LAST,
+    p.id COLLATE "C" ASC
   `,
     computeMedalsBySeason(seasonId),
   ]);
