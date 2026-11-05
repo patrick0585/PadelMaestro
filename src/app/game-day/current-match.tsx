@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ScoreEditor, type EditableMatch } from "./score-editor";
+import type { EditableMatch } from "./score-editor";
+import { CourtBoard } from "./court-board";
 import { requestOpenMatch } from "./match-rows";
 import type { ScoringRule } from "@/lib/scoring/rule";
 
@@ -8,10 +9,42 @@ const TOAST_MS = 8000;
 
 type Segment = "done" | "current" | "open";
 
+export interface NextUp {
+  matchNumber: number;
+  team1: [string, string];
+  team2: [string, string];
+  /** "plays" if the viewer is in this match, "pauses" if they play today but not here. */
+  you: "plays" | "pauses" | null;
+}
+
+const pair = (t: [string, string]) => t.join(" & ");
+
+function NextCard({ next }: { next: NextUp }) {
+  const label =
+    next.you === "plays" ? (
+      <>
+        <b className="text-primary">Du spielst als Nächstes</b> · Match {next.matchNumber}
+      </>
+    ) : (
+      <>
+        Als Nächstes · Match {next.matchNumber}
+        {next.you === "pauses" && " · du pausierst"}
+      </>
+    );
+  return (
+    <div className={`mt-3 rounded-2xl bg-[#0f1729] px-3.5 py-2.5 ${next.you === "plays" ? "border-2 border-primary" : "border border-border"}`}>
+      <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-[#a7b4c8]">{label}</p>
+      <p className="mt-0.5 text-base font-semibold text-white">
+        {pair(next.team1)} <span className="font-normal text-[#a7b4c8]">gegen</span> {pair(next.team2)}
+      </p>
+    </div>
+  );
+}
+
 const SEG: Record<Segment, string> = {
   done: "bg-lime",
   current: "bg-white anim-pulse",
-  open: "bg-white/20",
+  open: "bg-[#1f2a40]",
 };
 
 export function CurrentMatch({
@@ -19,13 +52,15 @@ export function CurrentMatch({
   segments,
   rule,
   canEdit,
-  nextLabel,
+  myName,
+  next,
 }: {
   current: EditableMatch | null;
   segments: Segment[];
   rule: ScoringRule;
   canEdit: boolean;
-  nextLabel: string | null;
+  myName: string | null;
+  next: NextUp | null;
 }) {
   const [saved, setSaved] = useState<{ id: string; number: number; score: [number, number]; winner: string } | null>(null);
 
@@ -40,53 +75,43 @@ export function CurrentMatch({
 
   return (
     <>
-      <section aria-label="Laufendes Match" className="ticket" data-testid="current-match" data-match-number={current?.matchNumber}>
-        <div className="flex items-center justify-between font-display text-[12.5px] font-bold uppercase tracking-[0.16em] text-[#d9f6fb]">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-2.5 py-0.5 text-[11.5px] tracking-[0.12em] text-white">
+      <section aria-label="Laufendes Match" data-testid="current-match" data-match-number={current?.matchNumber}>
+        <div className="flex items-center justify-between font-display text-sm font-bold uppercase tracking-[0.14em] text-white">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-2.5 py-0.5 text-xs tracking-[0.12em]">
             <i aria-hidden="true" className="anim-pulse size-[7px] rounded-full bg-white" />
             Live
           </span>
           <span>{progress}</span>
         </div>
         {total > 0 && (
-          <div className="mt-2.5 grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }} aria-hidden="true">
+          <div className="mt-2 grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }} aria-hidden="true">
             {segments.map((s, i) => (
-              <i key={i} className={`h-1.5 rounded-sm ${SEG[s]}`} />
+              <i key={i} className={`h-[7px] rounded-sm ${SEG[s]}`} />
             ))}
           </div>
         )}
         {current ? (
-          <>
-            <p className="mt-3 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[#d9f6fb]">
-              {canEdit ? "Ergebnis eintragen" : "Jetzt"}
-            </p>
-            <div className="mt-1.5">
-              {canEdit ? (
-                <ScoreEditor
-                  key={current.id}
-                  match={current}
-                  rule={rule}
-                  size="hero"
-                  onSaved={(score) =>
-                    setSaved({
-                      id: current.id,
-                      number: current.matchNumber,
-                      score,
-                      winner: (score[0] > score[1] ? current.team1 : current.team2).join(" & "),
-                    })
-                  }
-                />
-              ) : (
-                <p className="rounded-2xl bg-black/50 p-3 text-center text-[15px] text-white">
-                  {current.team1.join(" & ")} <span className="text-[#7dd3e0]">gegen</span> {current.team2.join(" & ")}
-                </p>
-              )}
-            </div>
-          </>
+          <div className="mt-2.5">
+            <CourtBoard
+              key={current.id}
+              match={current}
+              rule={rule}
+              myName={myName}
+              readOnly={!canEdit}
+              onSaved={(score) =>
+                setSaved({
+                  id: current.id,
+                  number: current.matchNumber,
+                  score,
+                  winner: pair(score[0] > score[1] ? current.team1 : current.team2),
+                })
+              }
+            />
+          </div>
         ) : (
-          <p className="mt-3 text-sm text-[#d9f6fb]">Alle Ergebnisse sind eingetragen.</p>
+          <p className="mt-3 rounded-2xl border border-border bg-[#0f1729] p-4 text-[15px] text-white">Alle Ergebnisse sind eingetragen.</p>
         )}
-        {nextLabel && <p className="mt-2.5 text-[13px] text-[#d9f6fb]">{nextLabel}</p>}
+        {next && <NextCard next={next} />}
       </section>
 
       {/* Live region stays mounted so screen readers announce the toast text. */}

@@ -170,7 +170,7 @@ export function MatchRows({
                 <ScoreEditor
                   match={m}
                   rule={rule}
-                  size="row"
+
                   onSaved={() => setOpenId(null)}
                   onCancel={() => setOpenId(null)}
                 />

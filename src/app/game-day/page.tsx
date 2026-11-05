@@ -17,7 +17,7 @@ import { StartGameDayButton } from "./start-game-day-button";
 import { ShufflePreviewButton } from "./shuffle-preview-button";
 import { GameDayLiveUpdates } from "./live-updates";
 import { RefreshButton } from "./refresh-button";
-import { CurrentMatch } from "./current-match";
+import { CurrentMatch, type NextUp } from "./current-match";
 import { MatchRows, type RowMatch } from "./match-rows";
 import { DashboardHero } from "../dashboard-hero";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
@@ -305,12 +305,19 @@ async function LiveView({
   const current = rows.find((m) => !isScored(m)) ?? null;
   const open = rows.filter((m) => !isScored(m) && m !== current);
   const scored = rows.filter(isScored);
-  const next = open.slice(0, NEXT_SHOWN);
-  const later = open.slice(NEXT_SHOWN);
+  // The court board already shows the next match; the list continues after it.
+  const next = open.slice(1, 1 + NEXT_SHOWN);
+  const later = open.slice(1 + NEXT_SHOWN);
   const plays = (m: RowMatch) => myName !== null && [...m.team1, ...m.team2].includes(myName);
   const myNext = open.find(plays);
-  const nextLabel = open[0]
-    ? `Danach: Match ${open[0].matchNumber}${myNext && myNext !== open[0] ? ` · du spielst in Match ${myNext.matchNumber}` : plays(open[0]) ? " · du spielst" : ""}`
+  const playsToday = rows.some(plays);
+  const nextUp: NextUp | null = open[0]
+    ? {
+        matchNumber: open[0].matchNumber,
+        team1: open[0].team1,
+        team2: open[0].team2,
+        you: plays(open[0]) ? "plays" : playsToday ? "pauses" : null,
+      }
     : null;
 
   return (
@@ -320,7 +327,8 @@ async function LiveView({
         segments={rows.map((m) => (isScored(m) ? "done" : m === current ? "current" : "open"))}
         rule={rule}
         canEdit={canScore}
-        nextLabel={nextLabel}
+        myName={myName}
+        next={nextUp}
       />
 
       {!current && isAdmin && rows.length > 0 && <FinishBanner gameDayId={day.id} />}
@@ -328,8 +336,8 @@ async function LiveView({
       {next.length > 0 && (
         <section aria-labelledby="gd-next" className={CARD}>
           <div className={CARD_HEAD}>
-            <h2 id="gd-next">Als Nächstes</h2>
-            {myNext && !next.includes(myNext) && <span>du spielst in Match {myNext.matchNumber}</span>}
+            <h2 id="gd-next">Danach</h2>
+            {myNext && myNext !== open[0] && !next.includes(myNext) && <span>du spielst in Match {myNext.matchNumber}</span>}
           </div>
           <MatchRows matches={next} rule={rule} canEdit={canScore} gameDayId={day.id} myName={myName} />
           {later.length > 0 && (

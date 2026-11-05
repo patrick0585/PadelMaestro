@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   DEFAULT_SCORING,
   canIncrement,
+  isSettledScore,
   describeRule,
   examplesFor,
   hintFor,
@@ -97,5 +98,20 @@ describe("Wertung", () => {
       "6": fixed3,
     });
     expect(parseScoring(null)).toEqual(DEFAULT_SCORING);
+  });
+});
+
+describe("isSettledScore", () => {
+  it("settles a fixed-sum score once the sum is reached without a tie", () => {
+    expect(isSettledScore(fixed3, 2, 1)).toBe(true);
+    expect(isSettledScore(fixed3, 0, 3)).toBe(true);
+    expect(isSettledScore(fixed3, 1, 1)).toBe(false);
+    expect(isSettledScore(fixed3, 0, 0)).toBe(false);
+  });
+
+  it("never settles a set score, since a valid 6:4 or 6:5 can still go on", () => {
+    expect(isSettledScore(set67, 6, 4)).toBe(false);
+    expect(isSettledScore(set67, 7, 5)).toBe(false);
+    expect(isSettledScore(set6, 6, 0)).toBe(false);
   });
 });
