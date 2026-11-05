@@ -1,7 +1,11 @@
 import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ScoreEditor, germanInvalidReason, type EditableMatch } from "@/app/game-day/score-editor";
+import { ScoreEditor, type EditableMatch } from "@/app/game-day/score-editor";
+import type { ScoringRule } from "@/lib/scoring/rule";
+
+const SUM3: ScoringRule = { mode: "fixed", games: 3 };
+const SET67: ScoringRule = { mode: "set", target: 6, max: 7 };
 import { CurrentMatch } from "@/app/game-day/current-match";
 import { MatchRows, requestOpenMatch, type RowMatch } from "@/app/game-day/match-rows";
 
@@ -38,7 +42,7 @@ async function score(a: number, b: number) {
 describe("ScoreEditor", () => {
   it("Speichern erst bei gültigem Ergebnis, schickt Stand und Version", async () => {
     const fetch = stubFetch(Response.json({}));
-    render(<ScoreEditor match={match} playerCount={6} size="hero" />);
+    render(<ScoreEditor match={match} rule={SUM3} size="hero" />);
     expect(screen.getByText("Summe 3: 3:0, 2:1, 1:2 oder 0:3")).toBeInTheDocument();
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toBeDisabled();
@@ -54,7 +58,7 @@ describe("ScoreEditor", () => {
   });
 
   it("Summe 3: Plus sperrt, sobald die Summe erreicht ist (kein 2:3)", async () => {
-    render(<ScoreEditor match={match} playerCount={6} size="hero" />);
+    render(<ScoreEditor match={match} rule={SUM3} size="hero" />);
     await score(2, 1);
     expect(screen.getByRole("button", { name: "Punkt für Ben & Anna hinzufügen" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Punkt für Patrick & Eva hinzufügen" })).toBeDisabled();
@@ -64,7 +68,7 @@ describe("ScoreEditor", () => {
 
   it("4 Spieler: 7:6 ist gültig, 5:3 nicht; Obergrenze greift", async () => {
     stubFetch(Response.json({}));
-    render(<ScoreEditor match={match} playerCount={4} size="row" />);
+    render(<ScoreEditor match={match} rule={SET67} size="row" />);
     await score(5, 3);
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
     await score(2, 3);
@@ -74,8 +78,8 @@ describe("ScoreEditor", () => {
   it("übernimmt fremde Änderungen, solange nichts angetippt wurde", async () => {
     const fetch = stubFetch(Response.json({}));
     const scored = { ...match, team1Score: 2, team2Score: 1, version: 1 };
-    const { rerender } = render(<ScoreEditor match={scored} playerCount={6} size="row" />);
-    rerender(<ScoreEditor match={{ ...scored, team1Score: 3, team2Score: 0, version: 2 }} playerCount={6} size="row" />);
+    const { rerender } = render(<ScoreEditor match={scored} rule={SUM3} size="row" />);
+    rerender(<ScoreEditor match={{ ...scored, team1Score: 3, team2Score: 0, version: 2 }} rule={SUM3} size="row" />);
     await userEvent.click(screen.getByRole("button", { name: "Speichern · 3:0" }));
     expect(JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string).expectedVersion).toBe(2);
   });
@@ -83,12 +87,12 @@ describe("ScoreEditor", () => {
   it("nach eigenem Antippen bleibt die alte Version, damit der Server den Konflikt meldet", async () => {
     const fetch = stubFetch(Response.json({}, { status: 409 }));
     const scored = { ...match, team1Score: 2, team2Score: 1, version: 1 };
-    const { rerender } = render(<ScoreEditor match={scored} playerCount={6} size="row" />);
+    const { rerender } = render(<ScoreEditor match={scored} rule={SUM3} size="row" />);
     await userEvent.click(screen.getByRole("button", { name: "Punkt für Ben & Anna entfernen" }));
     await userEvent.click(screen.getByRole("button", { name: "Punkt für Ben & Anna entfernen" }));
     await userEvent.click(screen.getByRole("button", { name: "Punkt für Patrick & Eva hinzufügen" }));
     await userEvent.click(screen.getByRole("button", { name: "Punkt für Patrick & Eva hinzufügen" }));
-    rerender(<ScoreEditor match={{ ...scored, team1Score: 3, team2Score: 0, version: 2 }} playerCount={6} size="row" />);
+    rerender(<ScoreEditor match={{ ...scored, team1Score: 3, team2Score: 0, version: 2 }} rule={SUM3} size="row" />);
     expect(screen.getByRole("button", { name: "Speichern · 0:3" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Speichern · 0:3" }));
     expect(JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string).expectedVersion).toBe(1);
@@ -97,7 +101,7 @@ describe("ScoreEditor", () => {
 
   it("nach erfolgreichem Speichern kein zweites Absenden", async () => {
     const fetch = stubFetch(Response.json({}));
-    render(<ScoreEditor match={match} playerCount={6} size="hero" />);
+    render(<ScoreEditor match={match} rule={SUM3} size="hero" />);
     await score(2, 1);
     await userEvent.click(screen.getByRole("button", { name: "Speichern · 2:1" }));
     const btn = screen.getByRole("button", { name: /Speichern|…/ });
@@ -107,15 +111,31 @@ describe("ScoreEditor", () => {
   });
 
   it("ungültiger Stand: Hinweis sagt warum", async () => {
-    render(<ScoreEditor match={match} playerCount={6} size="hero" />);
+    render(<ScoreEditor match={match} rule={SUM3} size="hero" />);
     await score(1, 1);
     expect(screen.getByText("Summe muss 3 sein (jetzt 2)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Speichern" })).toHaveAccessibleDescription("Summe muss 3 sein (jetzt 2)");
   });
 
+  it("zeigt die Begründung des Servers bei ungültigem Ergebnis", async () => {
+    stubFetch(Response.json({ error: "Höchstens 7 Spiele" }, { status: 400 }));
+    render(<ScoreEditor match={match} rule={SUM3} size="hero" />);
+    await score(2, 1);
+    await userEvent.click(screen.getByRole("button", { name: "Speichern · 2:1" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Höchstens 7 Spiele.");
+  });
+
+  it("Satz bis 6, höchstens 7: Plus sperrt bei 7, Hinweis nennt die Regel", async () => {
+    render(<ScoreEditor match={match} rule={SET67} size="row" />);
+    expect(screen.getByText("Satz bis 6, höchstens 7 – z. B. 6:4 oder 7:6")).toBeInTheDocument();
+    await score(7, 0);
+    expect(screen.getByRole("button", { name: "Punkt für Ben & Anna hinzufügen" })).toBeDisabled();
+    expect(screen.getByText("7 Spiele nur nach 6:5 oder 6:6")).toBeInTheDocument();
+  });
+
   it("zeigt Konflikt-Fehler", async () => {
     stubFetch(Response.json({}, { status: 409 }));
-    render(<ScoreEditor match={match} playerCount={6} size="hero" />);
+    render(<ScoreEditor match={match} rule={SUM3} size="hero" />);
     await score(3, 0);
     await userEvent.click(screen.getByRole("button", { name: "Speichern · 3:0" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Zwischenzeitlich geändert");
@@ -127,14 +147,14 @@ describe("CurrentMatch", () => {
   const segments = ["done", "done", "done", "current", "open"] as const;
 
   it("Fortschritt, Eingabe und Hinweis aufs nächste Match", () => {
-    render(<CurrentMatch current={match} segments={[...segments]} playerCount={6} canEdit nextLabel="Danach: Match 5 · du spielst" />);
+    render(<CurrentMatch current={match} segments={[...segments]} rule={SUM3} canEdit nextLabel="Danach: Match 5 · du spielst" />);
     expect(screen.getByText("Match 4 von 5")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Ergebnis Match 4" })).toBeInTheDocument();
     expect(screen.getByText("Danach: Match 5 · du spielst")).toBeInTheDocument();
   });
 
   it("ohne Eintragsrecht nur die Paarung", () => {
-    render(<CurrentMatch current={match} segments={[...segments]} playerCount={6} canEdit={false} nextLabel={null} />);
+    render(<CurrentMatch current={match} segments={[...segments]} rule={SUM3} canEdit={false} nextLabel={null} />);
     expect(screen.queryByRole("group", { name: "Ergebnis Match 4" })).not.toBeInTheDocument();
     expect(screen.getByText(/Ben & Anna/)).toBeInTheDocument();
   });
@@ -145,8 +165,8 @@ describe("CurrentMatch", () => {
     const scoredRow: RowMatch = { ...match, team1Score: 1, team2Score: 2, version: 1, scoredByName: null, scoredAt: null, removable: false };
     const { rerender } = render(
       <>
-        <CurrentMatch current={match} segments={[...segments]} playerCount={6} canEdit nextLabel={null} />
-        <MatchRows matches={[]} playerCount={6} canEdit gameDayId="d" myName={null} />
+        <CurrentMatch current={match} segments={[...segments]} rule={SUM3} canEdit nextLabel={null} />
+        <MatchRows matches={[]} rule={SUM3} canEdit gameDayId="d" myName={null} />
       </>,
     );
     await score(1, 2);
@@ -157,15 +177,15 @@ describe("CurrentMatch", () => {
     // Das Match taucht erst nach dem Neuladen in „Gewertet“ auf.
     rerender(
       <>
-        <CurrentMatch current={null} segments={[...segments]} playerCount={6} canEdit nextLabel={null} />
-        <MatchRows matches={[scoredRow]} playerCount={6} canEdit gameDayId="d" myName={null} />
+        <CurrentMatch current={null} segments={[...segments]} rule={SUM3} canEdit nextLabel={null} />
+        <MatchRows matches={[scoredRow]} rule={SUM3} canEdit gameDayId="d" myName={null} />
       </>,
     );
     expect(screen.getByRole("button", { name: /Match 4.*korrigieren/ })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("alle gewertet", () => {
-    render(<CurrentMatch current={null} segments={["done", "done"]} playerCount={6} canEdit nextLabel={null} />);
+    render(<CurrentMatch current={null} segments={["done", "done"]} rule={SUM3} canEdit nextLabel={null} />);
     expect(screen.getByText("Alle 2 Matches gewertet")).toBeInTheDocument();
   });
 });
@@ -182,7 +202,7 @@ describe("MatchRows", () => {
   });
 
   it("Antippen öffnet die Eingabe in der Zeile, eigener Name hervorgehoben", async () => {
-    render(<MatchRows matches={[row({ team1Score: 2, team2Score: 1 })]} playerCount={6} canEdit gameDayId="d" myName="Patrick" />);
+    render(<MatchRows matches={[row({ team1Score: 2, team2Score: 1 })]} rule={SUM3} canEdit gameDayId="d" myName="Patrick" />);
     expect(screen.getByText("Patrick").className).toContain("text-primary");
     await userEvent.click(screen.getByRole("button", { name: "Match 1, Ben & Anna gegen Patrick & Eva, 2:1, korrigieren" }));
     expect(screen.getByRole("button", { name: "Speichern · 2:1" })).toBeInTheDocument();
@@ -191,52 +211,24 @@ describe("MatchRows", () => {
   });
 
   it("ohne Eintragsrecht nicht antippbar", () => {
-    render(<MatchRows matches={[row({})]} playerCount={6} canEdit={false} gameDayId="d" myName={null} />);
+    render(<MatchRows matches={[row({})]} rule={SUM3} canEdit={false} gameDayId="d" myName={null} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("–:–")).toBeInTheDocument();
   });
 
   it("öffnet sich über das Korrigieren-Ereignis", () => {
     Element.prototype.scrollIntoView = vi.fn();
-    render(<MatchRows matches={[row({ team1Score: 3, team2Score: 0 })]} playerCount={6} canEdit gameDayId="d" myName={null} />);
+    render(<MatchRows matches={[row({ team1Score: 3, team2Score: 0 })]} rule={SUM3} canEdit gameDayId="d" myName={null} />);
     act(() => requestOpenMatch("r1"));
     expect(screen.getByRole("button", { name: /Match 1.*korrigieren/ })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("Zusatz-Match kann ein Admin entfernen", async () => {
     const fetch = stubFetch(new Response(null, { status: 204 }));
-    render(<MatchRows matches={[row({ id: "x16", matchNumber: 16, removable: true })]} playerCount={6} canEdit gameDayId="d" myName={null} />);
+    render(<MatchRows matches={[row({ id: "x16", matchNumber: 16, removable: true })]} rule={SUM3} canEdit gameDayId="d" myName={null} />);
     await userEvent.click(screen.getByRole("button", { name: /Match 16.*eintragen/ }));
     await userEvent.click(screen.getByRole("button", { name: "Zusatz-Match entfernen" }));
     fireEvent.click(screen.getByRole("button", { name: "Wirklich entfernen" }));
     expect(fetch).toHaveBeenCalledWith("/api/game-days/d/matches/x16", { method: "DELETE" });
-  });
-});
-
-describe("germanInvalidReason", () => {
-  it("translates the tie rejection", () => {
-    expect(germanInvalidReason("Ties are not allowed")).toBe("Unentschieden ist nicht erlaubt.");
-  });
-
-  it("translates the sum-to-3 rejection", () => {
-    expect(
-      germanInvalidReason("Total points must sum to 3 (e.g. 3:0, 2:1, 1:2, 0:3)"),
-    ).toBe("Summe muss 3 ergeben (z. B. 3:0, 2:1, 1:2, 0:3).");
-  });
-
-  it("translates the non-negative-integer rejection", () => {
-    expect(germanInvalidReason("Scores must be non-negative integers")).toBe(
-      "Nur ganze Zahlen ≥ 0 erlaubt.",
-    );
-  });
-
-  it("translates the tennis-set 'winner must reach 6' rejection", () => {
-    expect(germanInvalidReason("Winner must reach at least 6")).toBe(
-      "Der Sieger muss mindestens 6 erreichen.",
-    );
-  });
-
-  it("falls back to the generic copy on an unknown reason", () => {
-    expect(germanInvalidReason("future server error wording")).toBe("Ungültiges Ergebnis.");
   });
 });

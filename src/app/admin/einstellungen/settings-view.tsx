@@ -18,53 +18,13 @@ import {
   JOKER_GAMES_CREDITED_MIN,
 } from "@/lib/joker/constants";
 import type { GroupRules } from "@/lib/group/rules";
+import { describeRule, PLAYER_COUNTS, type ScoringRules } from "@/lib/scoring/rule";
+import { RuleStepper } from "./rule-stepper";
 import { DeleteGroupDialog } from "../delete-group-dialog";
 import { TransferOwnerDialog } from "../transfer-owner-dialog";
 import { TransferPicker } from "./transfer-picker";
 
 type Candidate = { id: string; name: string };
-
-function RuleStepper({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (next: number) => void;
-}) {
-  const btn =
-    "grid size-11 place-items-center rounded-lg text-lg font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40";
-  return (
-    <span role="group" aria-label={label} className="-my-2 -mr-2 inline-flex items-center">
-      <button
-        type="button"
-        aria-label={`${label} verringern`}
-        disabled={value <= min}
-        onClick={() => onChange(value - 1)}
-        className={btn}
-      >
-        −
-      </button>
-      <output aria-live="polite" className="min-w-6 text-center text-[15px] font-semibold tabular-nums">
-        {value}
-      </output>
-      <button
-        type="button"
-        aria-label={`${label} erhöhen`}
-        disabled={value >= max}
-        onClick={() => onChange(value + 1)}
-        className={btn}
-      >
-        +
-      </button>
-    </span>
-  );
-}
 
 type Message = { kind: "error" | "success"; text: string };
 
@@ -74,6 +34,7 @@ export function SettingsView({
   name,
   slug,
   rules,
+  scoring,
   transferCandidates,
 }: {
   isOwner: boolean;
@@ -81,6 +42,7 @@ export function SettingsView({
   name: string;
   slug: string;
   rules: GroupRules;
+  scoring: ScoringRules;
   transferCandidates: Candidate[];
 }) {
   const router = useRouter();
@@ -259,6 +221,20 @@ export function SettingsView({
           Sichern
         </PrimaryAction>
       </div>
+
+      <SectionLabel>Wertung</SectionLabel>
+      <GroupedList>
+        {PLAYER_COUNTS.map((n) => (
+          <ListRow
+            key={n}
+            href={`/admin/einstellungen/wertung/${n}`}
+            title={`${n} Spieler`}
+            value={describeRule(scoring[n])}
+            chevron
+          />
+        ))}
+      </GroupedList>
+      <SectionFooter>Gilt für neue Spieltage. Laufende und beendete Spieltage behalten ihre Regel.</SectionFooter>
 
       {isOwner && (
         <>

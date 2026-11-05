@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { getGroupScoring } from "@/lib/group/scoring";
+import { ruleForPlayerCount } from "@/lib/scoring/rule";
 import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
 
 export class GameDayAlreadyStartedError extends Error {
@@ -58,6 +60,7 @@ export async function startGameDay(gameDayId: string, actorId: string) {
     }
     const seed = inTx.seed ?? gameDayId;
     const plans = assignPlayersToTemplate(players, seed);
+    const scoring = ruleForPlayerCount(await getGroupScoring(day.groupId, tx), players.length);
 
     // Optimistic lock: only flip if status AND seed are still what
     // we just observed. A concurrent shuffle would have moved seed,
@@ -68,6 +71,7 @@ export async function startGameDay(gameDayId: string, actorId: string) {
         status: "in_progress",
         playerCount: players.length,
         seed,
+        scoring,
       },
     });
     if (flipped.count === 0) {
@@ -94,7 +98,7 @@ export async function startGameDay(gameDayId: string, actorId: string) {
         action: "game_day.start",
         entityType: "GameDay",
         entityId: gameDayId,
-        payload: { playerCount: players.length, seed, matches: plans.length },
+        payload: { playerCount: players.length, seed, matches: plans.length, scoring },
       },
     });
 

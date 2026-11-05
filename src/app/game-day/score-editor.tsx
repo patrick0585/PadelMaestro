@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { scoreRuleFor } from "@/lib/game-day/score-rule";
+import { canIncrement, hintFor, invalidReason, type ScoringRule } from "@/lib/scoring/rule";
 
 export interface EditableMatch {
   id: string;
@@ -13,23 +13,13 @@ export interface EditableMatch {
   version: number;
 }
 
-// Map the English server-side validate.ts reasons to localized copy.
-// Matched by substring so wording tweaks on the server don't silently
-// fall back to the generic message.
-export function germanInvalidReason(serverError: string): string {
-  if (/tie/i.test(serverError)) return "Unentschieden ist nicht erlaubt.";
-  if (/sum to 3/i.test(serverError)) return "Summe muss 3 ergeben (z. B. 3:0, 2:1, 1:2, 0:3).";
-  if (/non-negative integers/i.test(serverError)) return "Nur ganze Zahlen ≥ 0 erlaubt.";
-  if (/winner must reach at least 6/i.test(serverError)) return "Der Sieger muss mindestens 6 erreichen.";
-  return "Ungültiges Ergebnis.";
-}
-
 async function saveErrorText(res: Response): Promise<string> {
   if (res.status === 409) return "Zwischenzeitlich geändert – Seite neu laden.";
   if (res.status === 403) return "Du darfst dieses Ergebnis nicht eintragen.";
   if (res.status === 400) {
+    // The server explains invalid scores in German (src/lib/scoring/rule.ts).
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    return body?.error ? germanInvalidReason(body.error) : "Ungültiges Ergebnis.";
+    return body?.error && body.error !== "Invalid body" ? `${body.error}.` : "Ungültiges Ergebnis.";
   }
   return `Konnte Ergebnis nicht speichern (HTTP ${res.status}).`;
 }
@@ -77,27 +67,20 @@ function Counter({
   );
 }
 
-function invalidReason(format: "sum-to-3" | "tennis-set", a: number, b: number): string {
-  if (format === "sum-to-3" && a + b !== 3) return `Summe muss 3 sein (jetzt ${a + b})`;
-  if (a === b) return "Unentschieden ist nicht erlaubt";
-  return "Gewinner braucht mindestens 6 Spiele";
-}
-
 export function ScoreEditor({
   match,
-  playerCount,
+  rule,
   size,
   onSaved,
   onCancel,
 }: {
   match: EditableMatch;
-  playerCount: number | null;
+  rule: ScoringRule;
   size: "hero" | "row";
   onSaved?: (score: [number, number]) => void;
   onCancel?: () => void;
 }) {
   const router = useRouter();
-  const rule = scoreRuleFor(playerCount);
   const hintId = useId();
   const [t1, setT1] = useState(match.team1Score ?? 0);
   const [t2, setT2] = useState(match.team2Score ?? 0);
@@ -118,9 +101,10 @@ export function ScoreEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match.version, match.team1Score, match.team2Score]);
 
-  const valid = rule.isValid(t1, t2);
+  const reason = invalidReason(rule, t1, t2);
+  const valid = reason === null;
   const untouchedZero = t1 === 0 && t2 === 0;
-  const hint = valid || untouchedZero ? rule.hint : invalidReason(rule.format, t1, t2);
+  const hint = valid || untouchedZero ? hintFor(rule) : reason;
   const hero = size === "hero";
 
   const edit = (setter: (n: number) => void) => (n: number) => {
@@ -163,11 +147,11 @@ export function ScoreEditor({
         role="group"
         aria-label={`Ergebnis Match ${match.matchNumber}`}
       >
-        <Counter names={match.team1} value={t1} canIncrement={rule.canIncrement(t1, t2)} leading={valid && t1 > t2} size={size} onChange={edit(setT1)} />
+        <Counter names={match.team1} value={t1} canIncrement={canIncrement(rule, t1, t2)} leading={valid && t1 > t2} size={size} onChange={edit(setT1)} />
         <span aria-hidden="true" className={`mt-8 font-display text-[36px] font-extrabold ${hero ? "text-[#7dd3e0]" : "text-foreground-muted"}`}>
           :
         </span>
-        <Counter names={match.team2} value={t2} canIncrement={rule.canIncrement(t2, t1)} leading={valid && t2 > t1} size={size} onChange={edit(setT2)} />
+        <Counter names={match.team2} value={t2} canIncrement={canIncrement(rule, t2, t1)} leading={valid && t2 > t1} size={size} onChange={edit(setT2)} />
       </div>
       <p
         id={hintId}

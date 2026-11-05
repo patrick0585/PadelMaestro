@@ -25,6 +25,7 @@ import { loadTemplate } from "@/lib/pairings/load";
 import { buildHeroState, dateShortOf } from "@/lib/home/hero-state";
 import { computeRanking } from "@/lib/ranking/compute";
 import { getGroupRules } from "@/lib/group/rules";
+import { ruleForGameDay, type ScoringRule } from "@/lib/scoring/rule";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +123,7 @@ export default async function GameDayPage() {
     removable: isAdmin && status === "in_progress" && m.matchNumber > templateTotal,
   }));
   const isScored = (m: RowMatch) => m.team1Score !== null && m.team2Score !== null;
+  const rule = ruleForGameDay(day);
 
   return (
     <div className="space-y-3.5">
@@ -145,7 +147,7 @@ export default async function GameDayPage() {
       {status === "planned" && (await PlannedView({ day, meId, isAdmin }))}
 
       {status === "in_progress" && (
-        <LiveView rows={rows} isScored={isScored} canScore={canScore} day={day} myName={myName} isAdmin={isAdmin} />
+        <LiveView rows={rows} isScored={isScored} canScore={canScore} day={day} rule={rule} myName={myName} isAdmin={isAdmin} />
       )}
 
       {status === "finished" && (
@@ -161,7 +163,7 @@ export default async function GameDayPage() {
                 <h2 id="gd-matches">Matches</h2>
                 <span>{rows.length}</span>
               </div>
-              <MatchRows matches={rows} playerCount={day.playerCount} canEdit={false} gameDayId={day.id} myName={myName} />
+              <MatchRows matches={rows} rule={rule} canEdit={false} gameDayId={day.id} myName={myName} />
             </section>
           )}
         </>
@@ -277,13 +279,15 @@ async function LiveView({
   isScored,
   canScore,
   day,
+  rule,
   myName,
   isAdmin,
 }: {
   rows: RowMatch[];
   isScored: (m: RowMatch) => boolean;
   canScore: boolean;
-  day: { id: string; playerCount: number | null };
+  day: { id: string };
+  rule: ScoringRule;
   myName: string | null;
   isAdmin: boolean;
 }) {
@@ -304,7 +308,7 @@ async function LiveView({
       <CurrentMatch
         current={current}
         segments={rows.map((m) => (isScored(m) ? "done" : m === current ? "current" : "open"))}
-        playerCount={day.playerCount}
+        rule={rule}
         canEdit={canScore}
         nextLabel={nextLabel}
       />
@@ -317,7 +321,7 @@ async function LiveView({
             <h2 id="gd-next">Als Nächstes</h2>
             {myNext && !next.includes(myNext) && <span>du spielst in Match {myNext.matchNumber}</span>}
           </div>
-          <MatchRows matches={next} playerCount={day.playerCount} canEdit={canScore} gameDayId={day.id} myName={myName} />
+          <MatchRows matches={next} rule={rule} canEdit={canScore} gameDayId={day.id} myName={myName} />
           {later.length > 0 && (
             <details className="group border-t border-border">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-sm font-semibold text-primary">
@@ -327,7 +331,7 @@ async function LiveView({
                 </span>
               </summary>
               <div className="border-t border-border">
-                <MatchRows matches={later} playerCount={day.playerCount} canEdit={canScore} gameDayId={day.id} myName={myName} />
+                <MatchRows matches={later} rule={rule} canEdit={canScore} gameDayId={day.id} myName={myName} />
               </div>
             </details>
           )}
@@ -365,7 +369,7 @@ async function LiveView({
             <h2 id="gd-scored">Gewertet · {scored.length}</h2>
             {canScore && <span>antippen zum Korrigieren</span>}
           </div>
-          <MatchRows matches={scored} playerCount={day.playerCount} canEdit={canScore} gameDayId={day.id} myName={myName} />
+          <MatchRows matches={scored} rule={rule} canEdit={canScore} gameDayId={day.id} myName={myName} />
         </section>
       )}
 

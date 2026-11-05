@@ -1,6 +1,5 @@
 {
   "playerCount": 5,
-  "format": "sum-to-3",
   "totalMatches": 15,
   "matches": [
     { "matchNumber":  1, "team1": [3, 5], "team2": [2, 4], "sitting": [1] },

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { ScoreEditor, type EditableMatch } from "./score-editor";
 import { requestOpenMatch } from "./match-rows";
+import type { ScoringRule } from "@/lib/scoring/rule";
 
 const TOAST_MS = 8000;
 
@@ -16,13 +17,13 @@ const SEG: Record<Segment, string> = {
 export function CurrentMatch({
   current,
   segments,
-  playerCount,
+  rule,
   canEdit,
   nextLabel,
 }: {
   current: EditableMatch | null;
   segments: Segment[];
-  playerCount: number | null;
+  rule: ScoringRule;
   canEdit: boolean;
   nextLabel: string | null;
 }) {
@@ -64,7 +65,7 @@ export function CurrentMatch({
                 <ScoreEditor
                   key={current.id}
                   match={current}
-                  playerCount={playerCount}
+                  rule={rule}
                   size="hero"
                   onSaved={(score) =>
                     setSaved({

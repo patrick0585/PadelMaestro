@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatScoredBy } from "@/lib/match/scored-by";
 import { ScoreEditor, type EditableMatch } from "./score-editor";
+import type { ScoringRule } from "@/lib/scoring/rule";
 
 const OPEN_MATCH_EVENT = "padel:open-match";
 // Survives until the requested match appears in some list (it may only show up
@@ -86,13 +87,13 @@ function RemoveButton({ gameDayId, matchId }: { gameDayId: string; matchId: stri
 
 export function MatchRows({
   matches,
-  playerCount,
+  rule,
   canEdit,
   gameDayId,
   myName,
 }: {
   matches: RowMatch[];
-  playerCount: number | null;
+  rule: ScoringRule;
   canEdit: boolean;
   gameDayId: string;
   myName: string | null;
@@ -168,7 +169,7 @@ export function MatchRows({
               <div className="px-3 pb-3">
                 <ScoreEditor
                   match={m}
-                  playerCount={playerCount}
+                  rule={rule}
                   size="row"
                   onSaved={() => setOpenId(null)}
                   onCancel={() => setOpenId(null)}
