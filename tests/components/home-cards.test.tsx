@@ -119,6 +119,12 @@ describe("LeagueTable", () => {
     ...over,
   });
 
+  it("rundet Punkte mit Joker-Gutschrift wie die Rangliste", () => {
+    render(<LeagueTable rows={[row({ playerId: "w", name: "Werner", points: 238.69 })]} />);
+    expect(screen.getByRole("listitem")).toHaveTextContent("239");
+    expect(screen.getByRole("listitem")).not.toHaveTextContent("238.69");
+  });
+
   it("hebt die eigene Zeile hervor und verlinkt zur Rangliste", () => {
     render(
       <LeagueTable
@@ -144,12 +150,30 @@ describe("TrophyShelf und DuoCards", () => {
     expect(screen.getByText("6 Medaillen")).toBeInTheDocument();
   });
 
-  it("zeigt bestes Duo und Platzhalter ohne schlechtestes", () => {
+  it("zeigt beide Duos als Zeilen einer Karte mit vollem Namen", () => {
+    render(
+      <DuoCards
+        best={{ playerId: "f", name: "Christian Hoffmann", avatarVersion: 0, pointsTogether: 31, matches: 12 }}
+        worst={{ playerId: "m", name: "Maximilian Schulte", avatarVersion: 0, pointsTogether: 9, matches: 1 }}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "Deine Duos" });
+    const rows = screen.getAllByRole("listitem");
+    expect(card).toContainElement(rows[0]);
+    expect(rows[0]).toHaveTextContent("Bestes Duo");
+    expect(rows[0]).toHaveTextContent("Christian Hoffmann");
+    expect(rows[0]).toHaveTextContent("31");
+    expect(rows[0]).toHaveTextContent("12 Matches");
+    expect(rows[1]).toHaveTextContent("Weniger Glück");
+    expect(rows[1]).toHaveTextContent("1 Match");
+  });
+
+  it("Platzhalter ohne schlechtestes Duo", () => {
     render(
       <DuoCards best={{ playerId: "f", name: "Finn Overbeck", avatarVersion: 0, pointsTogether: 31, matches: 5 }} worst={null} />,
     );
-    expect(screen.getByText("Finn")).toBeInTheDocument();
-    expect(screen.getByText("31")).toBeInTheDocument();
+    expect(screen.getByText("Finn Overbeck")).toBeInTheDocument();
     expect(screen.getByText(/zu wenig Partner-Daten/)).toBeInTheDocument();
   });
+
 });

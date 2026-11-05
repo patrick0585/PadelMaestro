@@ -63,7 +63,7 @@ export function LeagueTable({ rows }: { rows: LeagueRow[] }) {
               </span>
               <FormBars values={r.form} me={r.isMe} />
               <span className="min-w-[3ch] text-right font-display text-[24px] font-extrabold tabular-nums">
-                {r.points}
+                {r.points.toFixed(0)}
                 <span className="sr-only"> Punkte</span>
               </span>
             </li>
