@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -6,25 +5,29 @@ import { contextFromSession } from "@/lib/auth/group-context";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
+import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { Avatar } from "@/components/ui/avatar";
-import { StatTile } from "@/components/ui/stat-tile";
 import { DashboardHero, type HeroState } from "./dashboard-hero";
-import { JokerSeasonCard } from "@/components/joker-season-card";
-import { DayPpgStrip } from "@/components/day-ppg-strip";
 import { EmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
+import { LiveTicket } from "@/components/home/live-ticket";
+import { RecapTicket } from "@/components/home/recap-ticket";
+import { SeasonCard, SeasonCardEmpty } from "@/components/home/season-card";
+import { LeagueTable, type LeagueRow } from "@/components/home/league-table";
+import { TrophyShelf } from "@/components/home/trophy-shelf";
+import { DuoCards } from "@/components/home/duo-cards";
 import { canFoundGroup } from "@/lib/group/create";
 import { getGroupRules } from "@/lib/group/rules";
+import { countdownLabel, daysUntil } from "@/lib/home/countdown";
+import { deriveLiveTicket } from "@/lib/home/live-ticket";
+import { recentFormByPlayer } from "@/lib/home/recent-form";
+import { pickTableRows } from "@/lib/home/table-rows";
 
 export const dynamic = "force-dynamic";
 
-function ppgFromStats(
-  stats: { winRate: { matches: number } },
-  myRow: { pointsPerGame: number } | undefined,
-): number | null {
-  if (!myRow || stats.winRate.matches === 0) return null;
-  return myRow.pointsPerGame;
-}
+const weekdayOf = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "long", timeZone: "UTC" });
+const dateShortOf = (d: Date) =>
+  d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -34,258 +37,186 @@ export default async function DashboardPage() {
     const canFound = await canFoundGroup(session.user.id);
     return <NoGroupNotice canFound={canFound} />;
   }
-
-  const me = await prisma.player.findUnique({
-    where: { id: session.user.id },
-    select: { avatarVersion: true },
-  });
-  const meAvatarVersion = me?.avatarVersion ?? 0;
+  const meId = session.user.id;
 
   const season = await getOrCreateActiveSeason(ctx.groupId);
-  const [ranking, plannedDay, stats, rules] = await Promise.all([
+  const dayScope = { seasonId: season.id, groupId: ctx.groupId };
+  const [me, group, ranking, liveDay, plannedDay, stats, rules] = await Promise.all([
+    prisma.player.findUnique({ where: { id: meId }, select: { avatarVersion: true } }),
+    prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } }),
     computeRanking(season.id),
     prisma.gameDay.findFirst({
-      where: { status: "planned", seasonId: season.id, groupId: ctx.groupId },
+      where: { ...dayScope, status: "in_progress" },
       orderBy: { date: "asc" },
-      include: { participants: { select: { playerId: true, attendance: true } } },
+      select: {
+        matches: {
+          select: {
+            matchNumber: true,
+            team1PlayerAId: true,
+            team1PlayerBId: true,
+            team2PlayerAId: true,
+            team2PlayerBId: true,
+            team1Score: true,
+            team2Score: true,
+          },
+        },
+      },
     }),
-    computePlayerSeasonStats(session.user.id, season.id),
+    prisma.gameDay.findFirst({
+      where: { ...dayScope, status: "planned" },
+      orderBy: { date: "asc" },
+      include: {
+        participants: {
+          select: {
+            playerId: true,
+            attendance: true,
+            player: { select: { name: true, avatarVersion: true } },
+          },
+        },
+      },
+    }),
+    computePlayerSeasonStats(meId, season.id),
     getGroupRules(ctx.groupId),
   ]);
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
+  const myRow = ranking.find((r) => r.playerId === meId);
+  const hasPlayed = stats.winRate.matches > 0 && myRow !== undefined;
 
-  const myRow = ranking.find((r) => r.playerId === session.user.id);
+  const tableSource = pickTableRows(ranking, meId);
+  const formPromise = recentFormByPlayer(
+    season.id,
+    tableSource.map((r) => r.playerId),
+  );
 
-  let heroState: HeroState | null = null;
-  if (plannedDay) {
-    const confirmed = plannedDay.participants.filter((p) => p.attendance === "confirmed").length;
-    const total = plannedDay.participants.length;
-    const date = plannedDay.date.toISOString();
-    const startTime = plannedDay.startTime;
-    const meParticipant = plannedDay.participants.find((p) => p.playerId === session.user.id);
-    if (!meParticipant) {
-      heroState = { kind: "not-member", gameDayId: plannedDay.id, date, startTime, confirmed, total };
-    } else {
-      const attendance =
-        meParticipant.attendance === "confirmed" ||
-        meParticipant.attendance === "declined" ||
-        meParticipant.attendance === "joker"
-          ? meParticipant.attendance
-          : "pending";
-      heroState = {
-        kind: "member",
-        gameDayId: plannedDay.id,
-        date,
-        startTime,
-        confirmed,
-        total,
-        attendance,
-        jokersRemaining: stats.jokers.remaining,
-        jokersTotal: stats.jokers.total,
-        jokerGamesCredited: rules.jokerGamesCredited,
-        ppgSnapshot: ppgFromStats(stats, myRow),
-      };
-    }
+  let liveTicket: React.ReactNode = null;
+  let plannedTicket: React.ReactNode = null;
+  let recapTicket: React.ReactNode = null;
+  if (liveDay) {
+    const ids = [
+      ...new Set(
+        liveDay.matches.flatMap((m) => [m.team1PlayerAId, m.team1PlayerBId, m.team2PlayerAId, m.team2PlayerBId]),
+      ),
+    ];
+    const players = await prisma.player.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
+    const nameById = Object.fromEntries(players.map((p) => [p.id, p.name.split(" ")[0]]));
+    const data = deriveLiveTicket(
+      liveDay.matches.map((m) => ({
+        matchNumber: m.matchNumber,
+        team1: [m.team1PlayerAId, m.team1PlayerBId],
+        team2: [m.team2PlayerAId, m.team2PlayerBId],
+        team1Score: m.team1Score,
+        team2Score: m.team2Score,
+      })),
+      nameById,
+    );
+    liveTicket = <LiveTicket data={data} />;
   }
-
-  const myPpg = myRow ? myRow.pointsPerGame.toFixed(2) : null;
-  const myRank = myRow ? `#${myRow.rank}` : null;
-
-  const top3 = ranking.slice(0, 3);
-
-  const bestPartner = stats.bestPartner;
-  const restPartners = bestPartner
-    ? stats.partners.filter(
-        (p) =>
-          p.playerId !== bestPartner.playerId &&
-          p.playerId !== stats.worstPartner?.playerId,
-      )
-    : [];
-
-  const subtitleParts: string[] = [];
-  if (myRow) subtitleParts.push(`Platz ${myRow.rank}`);
-  if (stats.attendance.attended > 0) {
-    subtitleParts.push(
-      `${stats.attendance.attended} ${stats.attendance.attended === 1 ? "Spieltag" : "Spieltage"}`,
+  if (plannedDay) {
+    const confirmedParts = plannedDay.participants.filter((p) => p.attendance === "confirmed");
+    const base = {
+      gameDayId: plannedDay.id,
+      weekday: weekdayOf(plannedDay.date),
+      dateShort: dateShortOf(plannedDay.date),
+      startTime: plannedDay.startTime,
+      countdown: countdownLabel(daysUntil(plannedDay.date, new Date())),
+      confirmed: confirmedParts.length,
+      pending: plannedDay.participants.filter((p) => p.attendance === "pending").length,
+      total: plannedDay.participants.length,
+      pips: confirmedParts.map((p) => ({
+        playerId: p.playerId,
+        name: p.player.name,
+        avatarVersion: p.player.avatarVersion,
+      })),
+    };
+    const mine = plannedDay.participants.find((p) => p.playerId === meId);
+    const heroState: HeroState = !mine
+      ? { kind: "not-member", ...base }
+      : {
+          kind: "member",
+          ...base,
+          attendance:
+            mine.attendance === "confirmed" || mine.attendance === "declined" || mine.attendance === "joker"
+              ? mine.attendance
+              : "pending",
+          jokersRemaining: stats.jokers.remaining,
+          jokersTotal: stats.jokers.total,
+          jokerGamesCredited: rules.jokerGamesCredited,
+          ppgSnapshot: hasPlayed ? myRow.pointsPerGame : null,
+        };
+    plannedTicket = <DashboardHero state={heroState} />;
+  }
+  if (!liveDay && !plannedDay) {
+    const lastDay = await prisma.gameDay.findFirst({
+      where: { ...dayScope, status: "finished" },
+      orderBy: { date: "desc" },
+      select: { id: true },
+    });
+    const summary = lastDay ? await computeGameDaySummary(lastDay.id) : null;
+    recapTicket = (
+      <RecapTicket
+        dateLabel={summary ? dateShortOf(summary.date) : null}
+        podium={(summary?.podium ?? []).map((r) => ({
+          playerId: r.playerId,
+          name: r.playerName.split(" ")[0],
+          rank: r.rank,
+          ppg: r.matches > 0 ? r.points / r.matches : 0,
+        }))}
+      />
     );
   }
-  if (stats.jokers.remaining > 0) {
-    subtitleParts.push(`${stats.jokers.remaining} Joker`);
-  }
-  const subtitle =
-    subtitleParts.length > 0 ? subtitleParts.join(" · ") : season.name;
+
+  const form = await formPromise;
+  const tableRows: LeagueRow[] = tableSource.map((r) => ({
+    playerId: r.playerId,
+    name: r.playerName,
+    avatarVersion: r.avatarVersion,
+    rank: r.rank,
+    points: r.points,
+    ppg: r.pointsPerGame,
+    form: form.get(r.playerId) ?? [],
+    isMe: r.playerId === meId,
+  }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <header className="flex items-center gap-3">
-        <Avatar
-          playerId={session.user.id}
-          name={session.user.name ?? ""}
-          avatarVersion={meAvatarVersion}
-          size={48}
-        />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Hi{firstName ? `, ${firstName}` : ""}
-          </h1>
-          <p className="mt-0.5 text-sm text-foreground-muted">{subtitle}</p>
-        </div>
+        <Avatar playerId={meId} name={session.user.name ?? ""} avatarVersion={me?.avatarVersion ?? 0} size={48} />
+        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-[0.01em]">
+          Hi{firstName ? `, ${firstName}` : ""}
+        </h1>
       </header>
 
-      <EmailNotice playerId={session.user.id} />
+      <EmailNotice playerId={meId} />
 
-      {heroState && <DashboardHero state={heroState} />}
+      {liveTicket}
+      {plannedTicket}
+      {recapTicket}
 
-      <div className="grid grid-cols-2 gap-3">
-        <StatTile label="Dein PPG" value={myPpg} tone="primary" />
-        <StatTile label="Rang" value={myRank} tone="lime" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <StatTile
-          label="Teilnahme"
-          value={stats.attendance.total === 0 ? null : `${stats.attendance.attended}/${stats.attendance.total}`}
-          hint="Spieltage"
-          tone="primary"
+      {hasPlayed ? (
+        <SeasonCard
+          seasonName={season.name}
+          groupName={group?.name ?? ""}
+          ppg={myRow.pointsPerGame}
+          wins={stats.winRate.wins}
+          matches={stats.winRate.matches}
+          rank={myRow.rank}
+          rankedCount={ranking.length}
+          attended={stats.attendance.attended}
+          totalDays={stats.attendance.total}
+          jokersUsed={stats.jokers.used}
+          form={[...stats.recentDays].reverse().map((d) => d.ppg)}
+          muted={recapTicket !== null}
         />
-        <StatTile
-          label="Win-Rate"
-          value={
-            stats.winRate.matches === 0
-              ? null
-              : `${Math.round((stats.winRate.wins / stats.winRate.matches) * 100)}%`
-          }
-          hint={stats.winRate.matches === 0 ? undefined : `${stats.winRate.wins} von ${stats.winRate.matches}`}
-          tone="lime"
-        />
-      </div>
-
-      <div className="rounded-2xl border border-border bg-surface p-4">
-        <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-          Medaillen {season.name}
-        </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <div className="text-2xl" aria-hidden="true">🥇</div>
-            <div className="text-xl font-extrabold tabular-nums text-foreground">
-              {stats.medals.gold}
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl" aria-hidden="true">🥈</div>
-            <div className="text-xl font-extrabold tabular-nums text-foreground">
-              {stats.medals.silver}
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl" aria-hidden="true">🥉</div>
-            <div className="text-xl font-extrabold tabular-nums text-foreground">
-              {stats.medals.bronze}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {stats.recentDays.length > 0 && (
-        <div className="rounded-2xl border border-border bg-surface p-4">
-          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Letzte {stats.recentDays.length}{" "}
-            {stats.recentDays.length === 1 ? "Spieltag" : "Spieltage"}
-          </div>
-          <div className="mt-2">
-            <DayPpgStrip days={stats.recentDays} />
-          </div>
-        </div>
+      ) : (
+        <SeasonCardEmpty seasonName={season.name} jokersRemaining={stats.jokers.remaining} />
       )}
 
-      {stats.bestPartner && (
-        <div className="rounded-2xl border border-border bg-surface p-4">
-          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Teamwork
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl border border-success/30 bg-success-soft/40 p-3">
-              <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-success">
-                Beste Chemie
-              </div>
-              <div className="mt-1 flex items-center gap-2 font-bold text-foreground">
-                <Avatar playerId={stats.bestPartner.playerId} name={stats.bestPartner.name} avatarVersion={stats.bestPartner.avatarVersion} size={32} />
-                {stats.bestPartner.name}
-              </div>
-              <div className="mt-0.5 text-xs text-foreground-muted">
-                {stats.bestPartner.pointsTogether} Pt · {stats.bestPartner.matches}{" "}
-                {stats.bestPartner.matches === 1 ? "Match" : "Matches"}
-              </div>
-            </div>
-            {stats.worstPartner ? (
-              <div className="rounded-xl border border-destructive/30 bg-destructive-soft/40 p-3">
-                <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-destructive">
-                  Weniger Glück
-                </div>
-                <div className="mt-1 flex items-center gap-2 font-bold text-foreground">
-                  <Avatar playerId={stats.worstPartner.playerId} name={stats.worstPartner.name} avatarVersion={stats.worstPartner.avatarVersion} size={32} />
-                  {stats.worstPartner.name}
-                </div>
-                <div className="mt-0.5 text-xs text-foreground-muted">
-                  {stats.worstPartner.pointsTogether} Pt · {stats.worstPartner.matches}{" "}
-                  {stats.worstPartner.matches === 1 ? "Match" : "Matches"}
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-border p-3 text-xs text-foreground-muted">
-                Noch zu wenig Partner-Daten für einen Vergleich.
-              </div>
-            )}
-          </div>
-          {restPartners.length > 0 && (
-            <ul className="mt-3 space-y-1 border-t border-border pt-2">
-              {restPartners.map((p) => (
-                <li key={p.playerId} className="flex items-center gap-3 py-1 text-sm">
-                  <Avatar
-                    playerId={p.playerId}
-                    name={p.name}
-                    avatarVersion={p.avatarVersion}
-                    size={32}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{p.name}</span>
-                  <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-foreground-muted">
-                    {p.pointsTogether} Pt · {p.matches} {p.matches === 1 ? "Match" : "Matches"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {tableRows.length > 0 && <LeagueTable rows={tableRows} />}
 
-      <JokerSeasonCard seasonName={season.name} jokers={stats.jokers} />
+      {hasPlayed && <TrophyShelf medals={stats.medals} />}
 
-      <div className="rounded-2xl border border-border bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-foreground-muted">
-            Top 3
-          </span>
-          <Link href="/ranking" className="text-xs font-semibold text-primary">
-            ansehen →
-          </Link>
-        </div>
-        <ul className="mt-2 space-y-1">
-          {top3.length === 0 && (
-            <li className="py-2 text-sm text-foreground-dim">Noch keine Spieler mit Matches.</li>
-          )}
-          {top3.map((r) => (
-            <li key={r.playerId} className="flex items-center gap-3 py-1 text-sm">
-              <span className="w-5 text-right font-extrabold text-primary">{r.rank}</span>
-              <Avatar playerId={r.playerId} name={r.playerName} avatarVersion={r.avatarVersion} size={32} />
-              <span className="flex-1 font-semibold text-foreground">{r.playerName}</span>
-              <span className="font-semibold tabular-nums text-foreground-muted">
-                {r.pointsPerGame.toFixed(2)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {stats.bestPartner && <DuoCards best={stats.bestPartner} worst={stats.worstPartner} />}
     </div>
   );
 }
