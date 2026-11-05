@@ -6,6 +6,21 @@ import { GroupedList, LargeTitle, ListRow, SectionFooter, SectionLabel } from "@
 import { formatGameDayDate } from "@/lib/admin/format";
 import type { OpenGameDay, RecentGameDay } from "@/lib/admin/game-days";
 import { withStartTime } from "@/lib/game-day/start-time";
+import { dateBlockOf, formatGameDayDate as formatFullDate } from "@/lib/archive/format";
+import { LABEL } from "@/components/home/styles";
+
+function DateBlock({ date }: { date: Date }) {
+  const { day, month } = dateBlockOf(date);
+  return (
+    <span className="w-10 shrink-0 text-center">
+      <span className="sr-only">{formatFullDate(date)}: </span>
+      <span aria-hidden="true">
+        <span className="block font-display text-2xl font-extrabold leading-none tabular-nums">{day}</span>
+        <span className={LABEL}>{month}</span>
+      </span>
+    </span>
+  );
+}
 
 function Pill({ running }: { running: boolean }) {
   const tone = running
@@ -68,8 +83,26 @@ export function GameDaysView({
             <ListRow
               key={d.id}
               href={`/archive/${d.id}`}
-              title={formatGameDayDate(d.date)}
-              subtitle={d.winners.length > 0 ? `🥇 ${d.winners.join(" · ")}` : undefined}
+              leading={<DateBlock date={d.date} />}
+              title={
+                d.winners.length > 0 ? (
+                  <>
+                    <span role="img" aria-label="Tagessieg">
+                      🥇
+                    </span>{" "}
+                    {d.winners.join(" · ")}{" "}
+                    {d.winnerPoints !== null && (
+                      <span className="font-display text-[17px] font-bold tabular-nums text-lime">
+                        {d.winnerPoints}
+                        <span className="sr-only"> Punkte</span>
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "Kein Ergebnis"
+                )
+              }
+              subtitle={`${d.playerCount} Spieler`}
               chevron
             />
           ))}

@@ -44,7 +44,7 @@ describe("loadAdminOverview", () => {
     });
     void d;
     const o = await loadAdminOverview(groupId);
-    expect(o.hero).toMatchObject({ kind: "planned", id: early.id, confirmed: 2, total: 4, pending: 1 });
+    expect(o.hero).toMatchObject({ kind: "planned", id: early.id, confirmed: 2, declined: 1, joker: 0, total: 4, pending: 1 });
     expect(o.plannedCount).toBe(2);
   });
 

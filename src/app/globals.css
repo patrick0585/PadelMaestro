@@ -39,7 +39,6 @@
   --destructive-soft: rgba(244, 63, 94, 0.15);
   --success: #bef264;
   --success-soft: rgba(163, 230, 53, 0.15);
-  --hero-gradient: linear-gradient(135deg, #0e7490 0%, #134e4a 100%);
   --cta-gradient: linear-gradient(90deg, #06b6d4, #22d3ee);
   color-scheme: dark;
 }

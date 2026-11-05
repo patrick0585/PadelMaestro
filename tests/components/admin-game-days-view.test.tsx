@@ -9,7 +9,7 @@ const date = (n: number) => new Date(Date.UTC(2026, 10, n));
 
 const base = {
   open: [{ id: "p1", date: date(11), status: "planned" as const, startTime: null, confirmed: 5, total: 6 }],
-  recent: [{ id: "f1", date: date(4), winners: ["Jonas", "Mara"] }],
+  recent: [{ id: "f1", date: date(4), winners: ["Jonas", "Mara"], winnerPoints: 12, playerCount: 5 }],
   seasonName: "Saison 2026",
   maxJokers: 2,
 };
@@ -31,8 +31,12 @@ describe("<GameDaysView>", () => {
       "/admin/spieltage/p1",
     );
     expect(screen.getByText("Zuletzt gespielt")).toBeInTheDocument();
-    expect(screen.getByText("🥇 Jonas · Mara")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Jonas · Mara/ })).toHaveAttribute("href", "/archive/f1");
+    const recent = screen.getByRole("link", { name: /Jonas · Mara/ });
+    expect(recent).toHaveAttribute("href", "/archive/f1");
+    expect(recent).toHaveTextContent("04");
+    expect(recent).toHaveTextContent("Nov");
+    expect(recent).toHaveTextContent("12 Punkte");
+    expect(recent).toHaveTextContent("5 Spieler");
   });
 
   it("links a running day to /game-day with pill Läuft", () => {
@@ -50,6 +54,13 @@ describe("<GameDaysView>", () => {
     render(<GameDaysView {...base} recent={[]} open={[]} />);
     expect(screen.getByText("Noch keine Spieltage gespielt")).toBeInTheDocument();
     expect(screen.queryByText("Offen")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Kein Ergebnis' without points for a day with no scored matches", () => {
+    render(<GameDaysView {...base} recent={[{ id: "f2", date: date(3), winners: [], winnerPoints: null, playerCount: 4 }]} />);
+    const row = screen.getByRole("link", { name: /Kein Ergebnis/ });
+    expect(row).toHaveTextContent("4 Spieler");
+    expect(row).not.toHaveTextContent("Punkte");
   });
 
   it("opens the close-season dialog from the red entry", async () => {

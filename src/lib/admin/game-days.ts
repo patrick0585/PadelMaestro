@@ -49,6 +49,8 @@ export interface RecentGameDay {
   id: string;
   date: Date;
   winners: string[];
+  winnerPoints: number | null;
+  playerCount: number;
 }
 
 const RECENT_LIMIT = 3;
@@ -94,8 +96,15 @@ export async function listAdminGameDays(
   const recent = await Promise.all(
     finished.map(async (d) => {
       const summary = await computeGameDaySummary(d.id);
-      const winners = (summary?.rows ?? []).filter((r) => r.rank === 1).map((r) => r.playerName);
-      return { id: d.id, date: d.date, winners };
+      const rows = summary?.rows ?? [];
+      const top = rows.filter((r) => r.rank === 1);
+      return {
+        id: d.id,
+        date: d.date,
+        winners: top.map((r) => r.playerName),
+        winnerPoints: top[0]?.points ?? null,
+        playerCount: rows.length,
+      };
     }),
   );
 

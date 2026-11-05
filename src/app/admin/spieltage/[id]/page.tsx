@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/guard";
 import { loadPlannedGameDay } from "@/lib/admin/game-days";
-import { formatGameDayDate } from "@/lib/admin/format";
 import { LargeTitle, SectionLabel } from "@/components/ui/list";
+import { AdminTicket, AttendanceBar, attendanceCaption, countdownPill } from "../../admin-ticket";
 import { ParticipantsRoster } from "../../participants-roster";
 import { StartGameDayButton } from "../../start-game-day-button";
 import { DeleteGameDayButton } from "../../delete-game-day-button";
@@ -17,12 +17,17 @@ export default async function AdminGameDayPage({ params }: { params: Promise<{ i
   if (!result) notFound();
   if (result.kind === "redirect") redirect(result.to);
 
-  const title = formatGameDayDate(result.date);
+  const count = (a: string) => result.roster.filter((r) => r.attendance === a).length;
+  const counts = { confirmed: count("confirmed"), declined: count("declined"), joker: count("joker"), pending: count("pending") };
   const dateLabel = result.date.toLocaleDateString("de-DE", { timeZone: "UTC" });
 
   return (
     <div className="mx-auto max-w-2xl">
-      <LargeTitle title={title} back={{ href: "/admin/spieltage", label: "Spieltage" }} />
+      <LargeTitle title="Spieltag" back={{ href: "/admin/spieltage", label: "Spieltage" }} />
+      <AdminTicket label="Spieltag · geplant" date={result.date} startTime={result.startTime} pill={countdownPill(result.date)}>
+        <AttendanceBar counts={counts} decorative />
+        <p className="mt-2 text-[13px] text-[#d9f6fb]">{attendanceCaption(counts)}</p>
+      </AdminTicket>
       <SectionLabel>Zusagen</SectionLabel>
       <ParticipantsRoster
         gameDayId={result.id}
