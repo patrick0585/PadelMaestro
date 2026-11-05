@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { contextFromSession } from "@/lib/auth/group-context";
 import { NoGroupNotice } from "@/components/no-group-notice";
 import { prisma } from "@/lib/db";
+import { findCurrentGameDayId } from "@/lib/game-day/current";
 import { getGroupRules } from "@/lib/group/rules";
 import { describeRule, ruleForGameDay } from "@/lib/scoring/rule";
 import { PrintSheet } from "./print-sheet";
@@ -16,24 +17,26 @@ export default async function GameDayPrintPage() {
   const ctx = contextFromSession(session);
   if (!ctx) return <NoGroupNotice />;
 
-  const day = await prisma.gameDay.findFirst({
-    where: { groupId: ctx.groupId, status: { in: ["planned", "in_progress"] } },
-    orderBy: { date: "desc" },
-    include: {
-      participants: {
-        include: { player: { select: { id: true, name: true } } },
-      },
-      matches: {
-        orderBy: { matchNumber: "asc" },
+  const currentId = await findCurrentGameDayId(ctx.groupId);
+  const day = currentId
+    ? await prisma.gameDay.findUnique({
+        where: { id: currentId },
         include: {
-          team1PlayerA: { select: { name: true } },
-          team1PlayerB: { select: { name: true } },
-          team2PlayerA: { select: { name: true } },
-          team2PlayerB: { select: { name: true } },
+          participants: {
+            include: { player: { select: { id: true, name: true } } },
+          },
+          matches: {
+            orderBy: { matchNumber: "asc" },
+            include: {
+              team1PlayerA: { select: { name: true } },
+              team1PlayerB: { select: { name: true } },
+              team2PlayerA: { select: { name: true } },
+              team2PlayerB: { select: { name: true } },
+            },
+          },
         },
-      },
-    },
-  });
+      })
+    : null;
 
   if (!day) {
     return (
