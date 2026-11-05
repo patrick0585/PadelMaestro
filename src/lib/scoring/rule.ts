@@ -75,6 +75,15 @@ export function isValidScore(rule: ScoringRule, a: number, b: number): boolean {
   return invalidReason(rule, a, b) === null;
 }
 
+/**
+ * True when the score is final as entered, so the court board may save it on
+ * its own. Only fixed-sum rules qualify: under set rules a valid 6:4 can still
+ * become 6:5 or 7:5.
+ */
+export function isSettledScore(rule: ScoringRule, a: number, b: number): boolean {
+  return rule.mode === "fixed" && isValidScore(rule, a, b);
+}
+
 export function canIncrement(rule: ScoringRule, own: number, other: number): boolean {
   return rule.mode === "fixed" ? own + other < rule.games : own < rule.max;
 }

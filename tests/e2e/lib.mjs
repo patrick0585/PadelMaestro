@@ -275,7 +275,8 @@ export async function enterScore(page, matchNumber, scoreA, scoreB) {
 
   const [resp] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/matches/") && r.request().method() === "PUT", { timeout: 10000 }).catch(() => null),
-    box.locator('button:has-text("Speichern")').first().click(),
+    // Court board: "Speichert x:y" during the auto-save countdown, "Speichern · x:y" otherwise.
+    box.locator('[data-testid="court-save"], button:has-text("Speichern")').first().click(),
   ]);
   await page.waitForLoadState("domcontentloaded");
   if (resp && !resp.ok()) {
