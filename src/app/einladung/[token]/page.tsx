@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { findOwnInvitationUse, previewInvitation } from "@/lib/invitations/lookup";
 import { findGroupMembership } from "@/lib/group/active-membership";
 import type { InvitationInvalidReason } from "@/lib/invitations/errors";
+import { appleConfigured } from "@/lib/auth/apple/config";
 import { PadelLogo } from "@/components/padel-logo";
 import { LegalFooter } from "@/components/legal-footer";
 import { SignupForm } from "./signup-form";
@@ -113,7 +114,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
   if (!session) {
     return (
       <Shell title={title}>
-        <SignupForm token={token} kind={preview.kind} />
+        <SignupForm token={token} kind={preview.kind} appleEnabled={appleConfigured()} />
       </Shell>
     );
   }

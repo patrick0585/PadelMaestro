@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { AppleButton, useAppleAvailable } from "@/components/apple-button";
 
 type Status =
   | { kind: "idle" }
@@ -22,7 +23,16 @@ const INLINE_LINK_CLASS =
   "font-semibold text-primary underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 /** Signup with an invitation (`token`) or, for kind "open", without one. */
-export function SignupForm({ token, kind }: { token?: string; kind: "founder" | "member" | "open" }) {
+export function SignupForm({
+  token,
+  kind,
+  appleEnabled = false,
+}: {
+  token?: string;
+  kind: "founder" | "member" | "open";
+  appleEnabled?: boolean;
+}) {
+  const appleAvailable = useAppleAvailable() && appleEnabled;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,6 +80,31 @@ export function SignupForm({ token, kind }: { token?: string; kind: "founder" | 
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+      {appleAvailable && (
+        <div className="space-y-3">
+          <AppleButton
+            label={kind === "open" ? "Mit Apple fortfahren" : "Mit Apple beitreten"}
+            invitationToken={token}
+            next={token ? "/einladung/" + token : undefined}
+          />
+          <p className="text-center text-xs text-foreground-muted">
+            Mit Apple akzeptierst du die{" "}
+            <Link href="/nutzungsbedingungen" target="_blank" rel="noreferrer" className={INLINE_LINK_CLASS}>
+              Nutzungsbedingungen
+            </Link>{" "}
+            und die{" "}
+            <Link href="/datenschutz" target="_blank" rel="noreferrer" className={INLINE_LINK_CLASS}>
+              Datenschutzerklärung
+            </Link>
+            .
+          </p>
+          <div className="flex items-center gap-2.5 text-xs text-foreground-muted" aria-hidden="true">
+            <span className="h-px flex-1 bg-border" />
+            oder mit E-Mail
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+      )}
       <form onSubmit={onSubmit} className="space-y-3">
         {/* Honeypot against bots: inert, off-screen, not focusable, not in the accessibility tree. */}
         <div aria-hidden="true" inert className="pointer-events-none absolute -left-[9999px] h-px w-px overflow-hidden">
