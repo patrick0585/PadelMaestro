@@ -21,13 +21,15 @@ const LINK_CLASS =
 const INLINE_LINK_CLASS =
   "font-semibold text-primary underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-export function SignupForm({ token, kind }: { token: string; kind: "founder" | "member" }) {
+/** Signup with an invitation (`token`) or, for kind "open", without one. */
+export function SignupForm({ token, kind }: { token?: string; kind: "founder" | "member" | "open" }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [trap, setTrap] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
-  const loginHref = "/login?next=" + encodeURIComponent("/einladung/" + token);
+  const loginHref = token ? "/login?next=" + encodeURIComponent("/einladung/" + token) : "/login";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +39,14 @@ export function SignupForm({ token, kind }: { token: string; kind: "founder" | "
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token, name: name.trim(), email: email.trim(), password, acceptTerms: true }),
+        body: JSON.stringify({
+          ...(token && { token }),
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          acceptTerms: true,
+          ...(trap && { company_url: trap }),
+        }),
       });
       if (res.status === 201) {
         const login = await signIn("credentials", { identifier: email.trim(), password, redirect: false });
@@ -62,6 +71,17 @@ export function SignupForm({ token, kind }: { token: string; kind: "founder" | "
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
       <form onSubmit={onSubmit} className="space-y-3">
+        {/* Honeypot against bots: inert, off-screen, not focusable, not in the accessibility tree. */}
+        <div aria-hidden="true" inert className="pointer-events-none absolute -left-[9999px] h-px w-px overflow-hidden">
+          <input
+            type="text"
+            name="company_url"
+            tabIndex={-1}
+            autoComplete="off"
+            value={trap}
+            onChange={(e) => setTrap(e.target.value)}
+          />
+        </div>
         <div>
           <Label htmlFor="signup-name">Name</Label>
           <Input

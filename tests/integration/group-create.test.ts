@@ -100,6 +100,30 @@ describe("createGroup", () => {
   });
 });
 
+describe("Gründen bei offener Registrierung", () => {
+  it("ohne Gründer-Link höchstens drei eigene Gruppen", async () => {
+    vi.stubEnv("PUBLIC_SIGNUP", "true");
+    const p = await plain();
+    for (const name of ["Eins", "Zwei", "Drei"]) await createGroup({ name, founderId: p.id });
+    expect(await canFoundGroup(p.id)).toBe(false);
+    await expect(createGroup({ name: "Vier", founderId: p.id })).rejects.toBeInstanceOf(NotFounderError);
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("Grenze bei parallelen Anfragen", () => {
+  it("auch gleichzeitig gestartete Gründungen überschreiten die Grenze nicht", async () => {
+    vi.stubEnv("PUBLIC_SIGNUP", "true");
+    const p = await plain();
+    const results = await Promise.allSettled(
+      ["A1", "B2", "C3", "D4", "E5", "F6"].map((name) => createGroup({ name, founderId: p.id })),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(3);
+    expect(await prisma.membership.count({ where: { playerId: p.id, role: "owner" } })).toBe(3);
+    vi.unstubAllEnvs();
+  });
+});
+
 describe("canFoundGroup", () => {
   it("reflects open use or flag", async () => {
     const f = await founder();

@@ -56,6 +56,33 @@ describe("<SignupForm>", () => {
     expect(screen.getByRole("link", { name: "Schon ein Konto? Anmelden" }).getAttribute("href")).toBe(LOGIN_HREF);
   });
 
+  it("ohne Einladung: schickt kein Token, meldet an und führt zur Startseite", async () => {
+    const fn = stubFetch(201, { playerId: "p1" });
+    signIn.mockResolvedValue({ ok: true, error: undefined });
+    render(<SignupForm kind="open" />);
+    fill();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
+    expect(JSON.parse(fn.mock.calls[0][1].body)).toEqual({
+      name: "Maxi",
+      email: "maxi@x.de",
+      password: "geheim123",
+      acceptTerms: true,
+    });
+    expect(screen.getByRole("link", { name: "Schon ein Konto? Anmelden" }).getAttribute("href")).toBe("/login");
+  });
+
+  it("das Bot-Feld ist für Menschen unsichtbar und wird mitgeschickt, wenn es gefüllt ist", async () => {
+    const fn = stubFetch(400);
+    const { container } = render(<SignupForm kind="open" />);
+    const trap = container.querySelector('input[name="company_url"]') as HTMLInputElement;
+    expect(trap).not.toBeNull();
+    expect(trap.tabIndex).toBe(-1);
+    fireEvent.change(trap, { target: { value: "http://spam" } });
+    fill();
+    await waitFor(() => expect(fn).toHaveBeenCalled());
+    expect(JSON.parse(fn.mock.calls[0][1].body).company_url).toBe("http://spam");
+  });
+
   it("navigates to /gruppe/neu after signup on a founder link", async () => {
     stubFetch(201, { playerId: "p1", kind: "founder", groupId: null });
     signIn.mockResolvedValue({ ok: true, error: undefined });
