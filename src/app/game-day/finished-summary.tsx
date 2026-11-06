@@ -7,6 +7,7 @@ import { listJokersForGameDay } from "@/lib/joker/list";
 import { JokerBlock } from "./joker-block";
 import { mergeJokersIntoRows, type DisplayRow } from "./joker-summary-merge";
 import { PartnershipCounts } from "./partnership-counts";
+import { ShareResultButton } from "./share-result-button";
 
 const STEP = {
   1: { col: "col-start-2 row-start-1", height: "min-h-[236px]", pts: "text-[38px] text-amber-300", avatar: 48 as const },
@@ -147,6 +148,9 @@ export async function FinishedSummary({
   return (
     <>
       <DayStandings rows={displayRows} meId={meId} scoredMatchCount={scoredMatchCount} totalMatchCount={totalMatchCount} />
+      {summary.status === "finished" && (
+        <ShareResultButton gameDayId={gameDayId} fileName={`padelmaestro-${summary.date.toISOString().slice(0, 10)}.png`} />
+      )}
       <PartnershipCounts gameDayId={gameDayId} />
     </>
   );
