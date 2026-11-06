@@ -17,6 +17,11 @@ const CredentialsSchema = z.object({
 const DUMMY_HASH =
   "$2b$12$8sANOXIue.8nEZjolEcnOeIuI/e.bcGuTH1cYjCoyhiLMSVkd6I4W";
 
+/** Thrown instead of returning null so the login form can say "too many attempts" rather than "wrong password". */
+export class LoginRateLimited extends Error {
+  readonly code = "rate_limited";
+}
+
 export type AuthorizedUser = {
   id: string;
   email: string;
@@ -37,7 +42,7 @@ export async function authorizeCredentials(
   const { identifier, password } = parsed.data;
   if (request) {
     const rl = rateLimitRequest(request, "login", { windowMs: 60_000, max: 10 });
-    if (!rl.allowed) return null;
+    if (!rl.allowed) throw new LoginRateLimited();
   }
   const normalised = normaliseUsername(identifier);
   const player = await prisma.player.findFirst({

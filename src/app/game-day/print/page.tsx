@@ -54,6 +54,7 @@ export default async function GameDayPrintPage() {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: "Europe/Berlin",
   });
   const playing = day.participants
     .filter((p) => p.attendance === "confirmed")

@@ -18,6 +18,7 @@ import {
   readScore,
   consoleErrors,
   writeFindings,
+  currentMatchNumber,
 } from "./lib.mjs";
 
 // Admin credentials come from the env so the script doesn't ship a
@@ -139,8 +140,11 @@ async function main() {
     // M1-broadcast regression guard.
     const m1ObserverState = { checked: false, observers: {} };
     for (let i = 0; i < matches.length; i++) {
-      const m = matches[i];
       const scorer = scorers[i % scorers.length];
+      // Score the running match (court card); the next one sits in its own card, not in the list.
+      const cur = await currentMatchNumber(scorer);
+      if (cur === null) break;
+      const m = { matchNumber: cur };
       const observer = adminPage; // we'll observe on admin tab
       const scorerKey = USERS.find(
         (u) => userPages[u.key]?.page === scorer,
@@ -344,68 +348,38 @@ async function main() {
       }
     }
 
-    // 10. Optimistic-locking probe: Eva and Daniel try to edit the same match
+    // 10. Optimistic locking: a stale version must get 409, and of two simultaneous saves exactly one wins.
     if (evaPage && danielPage) {
-      log("Optimistic-locking probe: Eva and Daniel both edit a scored match");
-      const ms2 = await getMatches(evaPage);
-      // Pick a match where we can still flip the score and remain valid
-      // (sum to 3, no ties). Score "2:1" → "1:2" works.
-      const scored = ms2.find((m) => (m.scoreA === "2" && m.scoreB === "1") || (m.scoreA === "1" && m.scoreB === "2"));
-      if (scored) {
-        const evaCard = evaPage.locator('div.rounded-xl').filter({ hasText: new RegExp(`Match ${scored.matchNumber}( |·|$)`) }).first();
-        const danCard = danielPage.locator('div.rounded-xl').filter({ hasText: new RegExp(`Match ${scored.matchNumber}( |·|$)`) }).first();
-        await evaCard.locator('button:has-text("bearbeiten")').click().catch(() => null);
-        await danCard.locator('button:has-text("bearbeiten")').click().catch(() => null);
-        await evaPage.waitForTimeout(300);
-        await danielPage.waitForTimeout(300);
-
-        // The two steppers are inside `[role="group"]` with aria-label "Team A Score" / "Team B Score"
-        // and contain "Wert verringern" / "Wert erhöhen" buttons.
-        const evaT1Dec = evaCard.locator('[aria-label="Team A Score"] button[aria-label="Wert verringern"]');
-        const evaT2Inc = evaCard.locator('[aria-label="Team B Score"] button[aria-label="Wert erhöhen"]');
-        // Eva flips: 2:1 → 1:2 (or 1:2 → 0:3 if base is 1:2)
-        if ((await evaT1Dec.count()) > 0) await evaT1Dec.first().click();
-        if ((await evaT2Inc.count()) > 0) await evaT2Inc.first().click();
-        await Promise.all([
-          evaPage.waitForResponse((r) => r.url().includes("/api/matches/") && r.request().method() === "PUT", { timeout: 5000 }).catch(() => null),
-          evaCard.locator('button:has-text("Speichern")').click().catch(() => null),
-        ]);
-        await evaPage.waitForTimeout(500);
-
-        // Daniel saves with stale version — should get 409
-        const respPromise = danielPage.waitForResponse(
-          (r) => r.url().includes("/api/matches/") && r.request().method() === "PUT",
-          { timeout: 5000 },
-        ).catch(() => null);
-        await danCard.locator('button:has-text("Speichern")').click().catch(() => null);
-        const resp = await respPromise;
-        if (resp) {
-          if (resp.status() === 409) {
-            log("Optimistic-locking returned 409 as expected");
-            const errVisible = await danCard.locator("text=Zwischenzeitlich geändert").count();
-            if (errVisible === 0) {
-              record("nit", "conflict-error-message-missing", {
-                note: "Got 409 but 'Zwischenzeitlich geändert – Seite neu laden' was not visible on Daniel's card",
-              });
-            }
-          } else if (resp.status() === 200) {
-            // SSE refreshed Daniel's view before he saved, bumping his
-            // expectedVersion. Healthy outcome — note it.
-            record("info", "optimistic-conflict-prevented-by-sse", {
-              status: 200,
-              note: "SSE update propagated to Daniel before he clicked Save, so version matched. Conflict path could not be triggered in this run.",
-            });
-          } else {
-            record("important", "unexpected-save-status", {
-              status: resp.status(),
-              note: "Expected 409 or 200; got something else",
-            });
-          }
-        } else {
-          record("important", "no-response-on-conflict-save", {});
-        }
-        // Cleanup: cancel Daniel's editor
-        await danCard.locator('button:has-text("Abbrechen")').click().catch(() => null);
+      log("Optimistic-locking probe: Eva corrects a match, Daniel saves stale, then both save at once");
+      await evaPage.goto(`${BASE}/game-day`, { waitUntil: "domcontentloaded" });
+      const scored = (await getMatches(evaPage)).find((m) => m.hasScore);
+      if (!scored) {
+        record("important", "conflict-probe-no-scored-match", {});
+      } else {
+        const reqP = evaPage.waitForRequest((r) => r.url().includes("/api/matches/") && r.method() === "PUT", { timeout: 15000 });
+        const flip = scored.scoreA === "3" ? [0, 3] : [3, 0];
+        await enterScore(evaPage, scored.matchNumber, flip[0], flip[1]);
+        const req = await reqP;
+        const url = new URL(req.url()).pathname;
+        const sent = JSON.parse(req.postData() ?? "{}");
+        await danielPage.goto(`${BASE}/game-day`, { waitUntil: "domcontentloaded" });
+        const put = (page, version, a, b) =>
+          page.evaluate(
+            async ({ url, version, a, b }) =>
+              (await fetch(url, {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ team1Score: a, team2Score: b, expectedVersion: version }),
+              })).status,
+            { url, version, a, b },
+          );
+        const stale = await put(danielPage, sent.expectedVersion, 2, 1);
+        if (stale !== 409) record("critical", "stale-version-accepted", { status: stale });
+        else log("Stale version rejected with 409");
+        const next = sent.expectedVersion + 1;
+        const both = (await Promise.all([put(evaPage, next, 2, 1), put(danielPage, next, 1, 2)])).sort();
+        if (both[0] !== 200 || both[1] !== 409) record("critical", "concurrent-save-not-exclusive", { statuses: both });
+        else log("Simultaneous saves: one 200, one 409");
       }
     }
 
@@ -417,13 +391,17 @@ async function main() {
 
     // 12. Fill any remaining unscored matches so we can finish the day
     log("Filling all remaining unscored matches via admin");
-    const allMatches = await getMatches(adminPage);
-    for (const m of allMatches) {
-      if (!m.hasScore) {
-        await enterScore(adminPage, m.matchNumber, 2, 1).catch((e) =>
-          record("important", "fill-score-failed", { match: m.matchNumber, error: e.message }),
-        );
-      }
+    // The court card always shows the first unscored match; score it until none is left.
+    for (let guard = 0; guard < 30; guard++) {
+      await adminPage.goto(`${BASE}/game-day`, { waitUntil: "domcontentloaded" });
+      const n = await currentMatchNumber(adminPage);
+      if (n === null) break;
+      const ok = await enterScore(adminPage, n, 2, 1).then(
+        () => true,
+        (e) => (record("important", "fill-score-failed", { match: n, error: e.message }), false),
+      );
+      if (!ok) break;
+      await adminPage.waitForTimeout(300);
     }
     await adminPage.waitForLoadState("domcontentloaded");
     await adminPage.waitForTimeout(500);

@@ -1,7 +1,7 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
-import { authorizeCredentials } from "@/lib/auth/authorize";
+import { authorizeCredentials, LoginRateLimited } from "@/lib/auth/authorize";
 import { findPlayerForRefresh } from "@/lib/auth/refresh-lookup";
 import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 import { prisma } from "@/lib/db";
@@ -27,6 +27,11 @@ if (process.env.NODE_ENV === "production") {
 
 export { authorizeCredentials as authorizeForTests };
 
+// next-auth only passes a `code` to the client for CredentialsSignin errors.
+class RateLimitedSignin extends CredentialsSignin {
+  code = "rate_limited";
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -35,7 +40,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         identifier: { label: "E-Mail oder Benutzername" },
         password: { label: "Passwort", type: "password" },
       },
-      authorize: authorizeCredentials,
+      authorize: async (credentials, request) => {
+        try {
+          return await authorizeCredentials(credentials, request);
+        } catch (err) {
+          if (err instanceof LoginRateLimited) throw new RateLimitedSignin();
+          throw err;
+        }
+      },
     }),
   ],
   callbacks: {

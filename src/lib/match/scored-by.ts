@@ -6,6 +6,7 @@ export function formatScoredBy(
   const time = new Date(scoredAtIso).toLocaleTimeString("de-DE", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Berlin",
   });
   return `eingetragen von ${scoredByName} · ${time}`;
 }
