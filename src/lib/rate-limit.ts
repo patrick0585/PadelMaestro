@@ -32,6 +32,19 @@ export function rateLimit(
   return { allowed: true, retryAfterMs: 0 };
 }
 
+/** Checks a bucket without counting; pair with rateLimitRecord to count only successful actions. */
+export function rateLimitPeek(key: string, opts: RateLimitOptions): { allowed: boolean; retryAfterMs: number } {
+  const now = Date.now();
+  const hits = (buckets.get(key) ?? []).filter((t) => t > now - opts.windowMs);
+  buckets.set(key, hits);
+  if (hits.length >= opts.max) return { allowed: false, retryAfterMs: opts.windowMs - (now - hits[0]) };
+  return { allowed: true, retryAfterMs: 0 };
+}
+
+export function rateLimitRecord(key: string): void {
+  buckets.set(key, [...(buckets.get(key) ?? []), Date.now()]);
+}
+
 export function rateLimitRequest(
   req: Request,
   scope: string,

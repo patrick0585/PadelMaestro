@@ -22,8 +22,17 @@ export async function findOpenFounderUse(
   });
 }
 
+// Self-registered players may found a few groups; founder links stay unlimited.
+export const MAX_OPEN_FOUNDED_GROUPS = 3;
+
+async function mayFoundWithoutLink(db: Prisma.TransactionClient | PrismaClient, playerId: string): Promise<boolean> {
+  if (!publicSignupEnabled()) return false;
+  const owned = await db.membership.count({ where: { playerId, role: "owner", removedAt: null } });
+  return owned < MAX_OPEN_FOUNDED_GROUPS;
+}
+
 export async function canFoundGroup(playerId: string): Promise<boolean> {
-  return publicSignupEnabled() || (await findOpenFounderUse(prisma, playerId)) !== null;
+  return (await findOpenFounderUse(prisma, playerId)) !== null || (await mayFoundWithoutLink(prisma, playerId));
 }
 
 export async function createGroup(i: {
@@ -35,8 +44,10 @@ export async function createGroup(i: {
   const name = i.name.trim();
 
   const group = await prisma.$transaction(async (tx) => {
+    // Serialise a player's concurrent founding requests so the owned-group cap holds.
+    await tx.$queryRaw`SELECT id FROM "Player" WHERE id = ${i.founderId} FOR UPDATE`;
     const use = await findOpenFounderUse(tx, i.founderId);
-    if (!use && !publicSignupEnabled()) throw new NotFounderError();
+    if (!use && !(await mayFoundWithoutLink(tx, i.founderId))) throw new NotFounderError();
 
     const slug = await uniqueSlug(tx, name);
     const created = await tx.group.create({

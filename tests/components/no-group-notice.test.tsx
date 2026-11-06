@@ -5,7 +5,8 @@ import { NoGroupNotice } from "@/components/no-group-notice";
 describe("NoGroupNotice", () => {
   it("NoGroupNotice shows the found-group link only when canFound", () => {
     const { unmount } = render(<NoGroupNotice canFound={true} />);
-    expect(screen.getByText("Du kannst jetzt deine eigene Gruppe gründen.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Eigene Runde gründen/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Ich wurde eingeladen/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Gruppe gründen" })).toHaveAttribute("href", "/gruppe/neu");
     unmount();
 

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitedResponse } from "@/lib/rate-limit-response";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { createGroup, NotFounderError } from "@/lib/group/create";
@@ -11,6 +13,8 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const rl = rateLimit(`group-create:${session.user.id}`, { windowMs: 3_600_000, max: 5 });
+  if (!rl.allowed) return rateLimitedResponse(rl);
   const parsed = Schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid" }, { status: 400 });

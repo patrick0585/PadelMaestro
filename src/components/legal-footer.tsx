@@ -4,6 +4,7 @@ const ITEM_CLASS =
   "inline-flex min-h-11 items-center rounded-lg px-1 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const LINKS = [
+  { href: "/support", label: "Hilfe" },
   { href: "/impressum", label: "Impressum" },
   { href: "/datenschutz", label: "Datenschutz" },
   { href: "/nutzungsbedingungen", label: "Nutzungsbedingungen" },
