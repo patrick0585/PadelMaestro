@@ -54,6 +54,16 @@ export async function authorizeCredentials(
   const hash = player?.passwordHash ?? DUMMY_HASH;
   const ok = await verifyPassword(password, hash);
   if (!ok || !player) return null;
+  return buildAuthorizedUser(player);
+}
+
+export async function buildAuthorizedUser(player: {
+  id: string;
+  email: string;
+  name: string;
+  username: string | null;
+  sessionVersion: number;
+}): Promise<AuthorizedUser> {
   const membership = await findActiveMembership(prisma, player.id);
   return {
     id: player.id,

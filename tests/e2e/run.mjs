@@ -479,6 +479,7 @@ async function main() {
         // can race with our wait — be defensive.
         try {
           const evaUser = USERS.find((u) => u.key === "eva");
+          await evaPage.goto(`${BASE}/login/email`);
           await evaPage.locator("#identifier").fill(evaUser.email);
           await evaPage.locator("#password").fill(evaUser.password);
           await evaPage.locator('button[type="submit"]').click();

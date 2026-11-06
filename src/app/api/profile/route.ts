@@ -8,10 +8,14 @@ import {
   OwnerOfGroupError,
   deleteOwnAccount,
 } from "@/lib/account/delete";
+import { AppleReauthRequiredError, APPLE_REAUTH_MESSAGE, verifyReauthToken } from "@/lib/auth/apple/reauth";
 import { WrongPasswordError } from "@/lib/account/errors";
 import { PlayerNotFoundError } from "@/lib/players/errors";
 
-const Schema = z.object({ password: z.string().min(1) });
+const Schema = z.object({
+  password: z.string().min(1).optional(),
+  identityToken: z.string().min(1).max(8000).optional(),
+});
 
 export async function DELETE(req: Request) {
   const session = await auth();
@@ -29,11 +33,15 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    await deleteOwnAccount({ playerId: userId, password: parsed.data.password });
+    const appleProof = await verifyReauthToken(req, parsed.data.identityToken);
+    await deleteOwnAccount({ playerId: userId, password: parsed.data.password, appleProof });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     if (e instanceof WrongPasswordError) {
       return NextResponse.json({ error: "wrong_password" }, { status: 403 });
+    }
+    if (e instanceof AppleReauthRequiredError) {
+      return NextResponse.json({ error: "apple_reauth_required", message: APPLE_REAUTH_MESSAGE }, { status: 403 });
     }
     if (e instanceof OwnerOfGroupError) {
       return NextResponse.json({ error: "owner_of_group", groups: e.groups }, { status: 409 });

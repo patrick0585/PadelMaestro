@@ -11,6 +11,8 @@ import { PushSettings } from "./push-settings";
 import { EmailNotice } from "@/components/email-notice";
 import { AccountSection } from "./account-section";
 import { SignOutButton } from "./sign-out-button";
+import { AppleLinkRow } from "./apple-link-row";
+import { appleConfigured } from "@/lib/auth/apple/config";
 import { PlayerPassTicket } from "./player-pass-ticket";
 import { TrophyShelf } from "@/components/home/trophy-shelf";
 import { LegalFooter } from "@/components/legal-footer";
@@ -34,12 +36,14 @@ export default async function ProfilePage() {
         emailVerifiedAt: true,
         pendingEmail: true,
         passwordHash: true,
+        appleSub: true,
         pushRemindersEnabled: true,
       },
     }),
     ctx ? prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } }) : null,
     ctx ? loadPlayerPass(session.user.id, ctx.groupId) : null,
   ]);
+  const hasPassword = player?.passwordHash != null;
   const email = player?.email ?? session.user.email;
   const emailHint = player?.pendingEmail
     ? `Bestätigung für ${player.pendingEmail} ausstehend`
@@ -90,9 +94,10 @@ export default async function ProfilePage() {
           <ListRow
             href="/profil/passwort"
             icon={{ node: <KeyRound className={ICON} />, color: "#475569" }}
-            title="Passwort ändern"
+            title={hasPassword ? "Passwort ändern" : "Passwort festlegen"}
             chevron
           />
+          <AppleLinkRow linked={player?.appleSub != null} configured={appleConfigured()} />
           <SignOutButton />
         </GroupedList>
       </section>
@@ -124,7 +129,7 @@ export default async function ProfilePage() {
         </section>
       )}
 
-      <AccountSection hasPassword={player?.passwordHash != null} />
+      <AccountSection hasPassword={hasPassword} />
 
       <div className="pt-4">
         <LegalFooter />

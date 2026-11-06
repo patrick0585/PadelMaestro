@@ -3,6 +3,7 @@ import { isAdminRole, type GroupRole } from "@/lib/auth/roles";
 
 export interface PlayerLookup {
   email: string;
+  name?: string;
   username: string | null;
   deletedAt: Date | null;
   sessionVersion: number;
@@ -74,6 +75,7 @@ export async function refreshTokenFromPlayer(
     groupId: player.membership?.groupId ?? null,
     role: player.membership?.role ?? null,
     email: player.email,
+    ...(player.name ? { name: player.name } : {}),
     username: player.username,
     refreshedAt: now,
   };

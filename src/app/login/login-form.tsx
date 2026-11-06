@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Input, Label } from "@/components/ui/input";
@@ -11,6 +11,7 @@ export function LoginForm({ next }: { next?: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const errorId = useId();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,43 +32,54 @@ export function LoginForm({ next }: { next?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-      <div>
+    <form onSubmit={onSubmit} className="space-y-3">
+      <div className="space-y-1.5">
         <Label htmlFor="identifier">E-Mail oder Benutzername</Label>
         <Input
           id="identifier"
           type="text"
+          className="h-[46px]"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           required
           autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
       </div>
-      <div>
+      <div className="space-y-1.5">
         <Label htmlFor="password">Passwort</Label>
         <Input
           id="password"
           type="password"
+          className="h-[46px]"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
+        <div className="flex justify-end">
+          <Link
+            href="/passwort-vergessen"
+            className="inline-flex min-h-11 items-center rounded-lg text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Passwort vergessen?
+          </Link>
+        </div>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
       <Button type="submit" loading={loading} className="w-full">
         Anmelden
       </Button>
-      <Link
-        href="/passwort-vergessen"
-        className="flex min-h-11 items-center justify-center rounded-xl text-sm text-foreground-muted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      >
-        Passwort vergessen?
-      </Link>
     </form>
   );
 }

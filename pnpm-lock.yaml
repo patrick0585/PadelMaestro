@@ -32,6 +32,9 @@ importers:
       '@capacitor/status-bar':
         specifier: 8.0.4
         version: 8.0.4(@capacitor/core@8.6.0)
+      '@capawesome/capacitor-apple-sign-in':
+        specifier: ^0.1.4
+        version: 0.1.4(@capacitor/core@8.6.0)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -50,6 +53,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      jose:
+        specifier: ^6.2.15
+        version: 6.2.15
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
@@ -256,6 +262,11 @@ packages:
 
   '@capacitor/synapse@1.0.4':
     resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
+
+  '@capawesome/capacitor-apple-sign-in@0.1.4':
+    resolution: {integrity: sha512-B6aEtGCJ4WDe71LFdBkSeHQQ1aluJCNFHE7oMAZlB1f37oD0i6mYEoWMCKtAY4RGmR//el/SY8Sed9JIZ1+eXA==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@csstools/color-helpers@6.0.2':
     resolution: {integrity: sha512-LMGQLS9EuADloEFkcTBR3BwV/CGHV7zyDxVRtVDTwdI2Ca4it0CCVTT9wCkxSgokjE5Ho41hEPgb8OEUwoXr6Q==}
@@ -2264,8 +2275,8 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jose@6.2.2:
-    resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
+  jose@6.2.15:
+    resolution: {integrity: sha512-qdF6ewcZARtef63fJ9AKKZPgxw+t7USH6HLXYcD4CrdmSvDp79rpJSPFEKc90QBeGS63u1KQtN2MZQHC0yDIzA==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -3362,7 +3373,7 @@ snapshots:
   '@auth/core@0.41.3':
     dependencies:
       '@panva/hkdf': 1.2.1
-      jose: 6.2.2
+      jose: 6.2.15
       oauth4webapi: 3.8.5
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
@@ -3438,6 +3449,10 @@ snapshots:
       '@capacitor/core': 8.6.0
 
   '@capacitor/synapse@1.0.4': {}
+
+  '@capawesome/capacitor-apple-sign-in@0.1.4(@capacitor/core@8.6.0)':
+    dependencies:
+      '@capacitor/core': 8.6.0
 
   '@csstools/color-helpers@6.0.2': {}
 
@@ -5451,7 +5466,7 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jose@6.2.2: {}
+  jose@6.2.15: {}
 
   js-tokens@4.0.0: {}
 

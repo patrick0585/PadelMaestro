@@ -43,6 +43,7 @@ describe("findPlayerForRefresh", () => {
     const res = await findPlayerForRefresh(prisma, p.id);
     expect(res).toEqual({
       email: "p@x",
+      name: p.name,
       username: "pp",
       deletedAt: null,
       sessionVersion: 0,

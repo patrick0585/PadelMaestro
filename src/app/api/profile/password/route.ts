@@ -7,12 +7,14 @@ import {
   WrongCurrentPasswordError,
   PlayerNotFoundError,
 } from "@/lib/players/change-password";
+import { AppleReauthRequiredError, APPLE_REAUTH_MESSAGE, verifyReauthToken } from "@/lib/auth/apple/reauth";
 
 const Schema = z.object({
   // Cap at 72 bytes — bcrypt silently truncates longer inputs, which would let
   // an attacker who knows the first 72 bytes authenticate with any suffix.
-  currentPassword: z.string().min(1).max(72),
+  currentPassword: z.string().min(1).max(72).optional(),
   newPassword: z.string().min(8).max(72),
+  identityToken: z.string().min(1).max(8000).optional(),
 });
 
 export async function POST(req: Request) {
@@ -39,13 +41,18 @@ export async function POST(req: Request) {
   }
 
   try {
+    const appleProof = await verifyReauthToken(req, parsed.data.identityToken);
     await changeOwnPassword({
       playerId: session.user.id,
       currentPassword: parsed.data.currentPassword,
       newPassword: parsed.data.newPassword,
+      appleProof,
     });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
+    if (e instanceof AppleReauthRequiredError) {
+      return NextResponse.json({ error: "apple_reauth_required", message: APPLE_REAUTH_MESSAGE }, { status: 403 });
+    }
     if (e instanceof WrongCurrentPasswordError) {
       return NextResponse.json({ error: "wrong_password" }, { status: 401 });
     }

@@ -13,6 +13,10 @@ model Player {
   email                String    @unique
   username             String?   @unique
   passwordHash         String?
+  appleSub             String?   @unique
+  appleRefreshToken    String?
+  appleClientId        String?
+  needsName            Boolean   @default(false)
   avatarData           Bytes?
   avatarMimeType       String?
   avatarVersion        Int       @default(0)

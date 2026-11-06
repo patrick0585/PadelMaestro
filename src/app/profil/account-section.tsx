@@ -16,14 +16,12 @@ export function AccountSection({ hasPassword }: { hasPassword: boolean }) {
         <a href="/api/profile/export" download className={EXPORT_ROW_CLASS}>
           Daten exportieren
         </a>
-        {hasPassword && <ListRow title="Konto löschen" tone="destructive" onClick={() => setDeleting(true)} />}
+        <ListRow title="Konto löschen" tone="destructive" onClick={() => setDeleting(true)} />
       </GroupedList>
       <SectionFooter>
-        {hasPassword
-          ? "Export als JSON. Löschen entfernt dich aus allen Gruppen; deine Spielergebnisse bleiben ohne deinen Namen erhalten."
-          : "Export als JSON. Dieses Konto hat kein Passwort und kann nur von einem Admin entfernt werden."}
+        Export als JSON. Löschen entfernt dich aus allen Gruppen; deine Spielergebnisse bleiben ohne deinen Namen erhalten.
       </SectionFooter>
-      {hasPassword && <DeleteAccountDialog open={deleting} onClose={() => setDeleting(false)} />}
+      <DeleteAccountDialog open={deleting} onClose={() => setDeleting(false)} hasPassword={hasPassword} />
     </section>
   );
 }

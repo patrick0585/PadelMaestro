@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+const signInWithApple = vi.fn();
+vi.mock("@/lib/native/apple-sign-in", () => ({
+  signInWithApple: () => signInWithApple(),
+  isAppleCancel: (e: { code?: string } | null) => e?.code === "SIGN_IN_CANCELED",
+}));
 import { DeleteGroupDialog } from "@/app/admin/delete-group-dialog";
 
 describe("DeleteGroupDialog", () => {
@@ -8,6 +13,7 @@ describe("DeleteGroupDialog", () => {
 
   beforeEach(() => {
     assign.mockReset();
+    signInWithApple.mockReset().mockResolvedValue({ identityToken: "apple-tok" });
     Object.defineProperty(window, "location", {
       configurable: true,
       value: { ...originalLocation, assign },
@@ -117,5 +123,22 @@ describe("DeleteGroupDialog", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("dialog-backdrop"));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("fragt Apple-Konten nach Apple statt nach einem Passwort", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<DeleteGroupDialog open onClose={vi.fn()} groupId="g-1" name="Padelfreunde" hasPassword={false} />);
+    expect(screen.queryByLabelText("Dein Passwort")).toBeNull();
+    const confirm = screen.getByRole("button", { name: "Endgültig löschen" });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Gruppenname zur Bestätigung"), { target: { value: "Padelfreunde" } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      groupId: "g-1",
+      name: "Padelfreunde",
+      identityToken: "apple-tok",
+    });
   });
 });

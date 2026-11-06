@@ -24,7 +24,7 @@ beforeEach(async () => {
 });
 
 describe("DELETE /api/profile", () => {
-  it("DELETE /api/profile 401, 400 without password, 403 wrong_password, 409 owner_of_group with groups, 204 then player anonymised, 429 after five attempts", async () => {
+  it("DELETE /api/profile 401, 403 without password for a password account, 400 on empty password, 403 wrong_password, 409 owner_of_group with groups, 204 then player anonymised, 429 after five attempts", async () => {
     const g = await createTestGroup("Padelfreunde");
     const passwordHash = await hashPassword("geheim123");
     const owner = await createMember(g.id, { name: "O", email: "o@x.de", role: "owner", passwordHash });
@@ -34,7 +34,7 @@ describe("DELETE /api/profile", () => {
     expect((await DELETE(req({ password: "geheim123" }))).status).toBe(401);
 
     authMock.mockResolvedValue({ user: { id: member.id } });
-    expect((await DELETE(req({}))).status).toBe(400);
+    expect((await DELETE(req({}))).status).toBe(403);
     expect((await DELETE(req({ password: "" }))).status).toBe(400);
     const wrong = await DELETE(req({ password: "falsch" }));
     expect(wrong.status).toBe(403);

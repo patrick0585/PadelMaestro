@@ -62,7 +62,7 @@ export function attachDiagnostics(key, page) {
 export async function login(context, user) {
   const page = await context.newPage();
   attachDiagnostics(user.key, page);
-  await page.goto(`${BASE}/login`);
+  await page.goto(`${BASE}/login/email`);
   await page.waitForLoadState("domcontentloaded");
   await page.locator("#identifier").fill(user.email);
   await page.locator("#password").fill(user.password);

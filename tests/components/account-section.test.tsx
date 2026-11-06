@@ -18,10 +18,10 @@ describe("<AccountSection>", () => {
     expect(screen.getByLabelText("Dein Passwort")).toBeInTheDocument();
   });
 
-  it("shows the no-password hint and no delete row without a password", () => {
+  it("lets accounts without a password delete without a password field", () => {
     render(<AccountSection hasPassword={false} />);
-    expect(screen.getByRole("link", { name: "Daten exportieren" })).toHaveAttribute("download");
-    expect(screen.getByText(/kann nur von einem Admin entfernt werden/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Konto löschen" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Konto löschen" }));
+    expect(screen.queryByLabelText("Dein Passwort")).toBeNull();
+    expect(screen.getByRole("button", { name: "Endgültig löschen" })).toBeEnabled();
   });
 });

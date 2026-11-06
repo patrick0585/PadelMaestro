@@ -126,3 +126,17 @@ body {
   .anim-pulse, .anim-ring, .anim-draw, .court-countdown { animation: none; }
   .court-countdown { stroke-dashoffset: 28; }
 }
+
+/* App builds without the Apple plugin: see src/lib/native/early-script.ts */
+html[data-no-apple] [data-apple] {
+  display: none;
+}
+html[data-no-apple] [data-mail-link] {
+  border-color: transparent;
+  background-image: var(--cta-gradient);
+  color: var(--background);
+  box-shadow: 0 6px 14px -4px rgba(34, 211, 238, 0.35);
+}
+html[data-no-apple] [data-mail-link] svg {
+  color: inherit;
+}

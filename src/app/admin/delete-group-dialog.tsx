@@ -4,10 +4,12 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { isAppleCancel, signInWithApple } from "@/lib/native/apple-sign-in";
 
 const FALLBACK = "Löschen fehlgeschlagen.";
 
 function errorText(status: number, code: string | undefined): string {
+  if (status === 403 && code === "apple_reauth_required") return "Die Bestätigung mit Apple hat nicht geklappt. Bitte versuche es erneut.";
   if (status === 400 && code === "name_mismatch") return "Der Name stimmt nicht.";
   if (status === 403 && code === "wrong_password") return "Passwort falsch.";
   if (status === 403) return "Nur der Besitzer kann die Gruppe löschen.";
@@ -21,11 +23,13 @@ export function DeleteGroupDialog({
   onClose,
   groupId,
   name,
+  hasPassword = true,
 }: {
   open: boolean;
   onClose: () => void;
   groupId: string;
   name: string;
+  hasPassword?: boolean;
 }) {
   const nameId = useId();
   const passwordId = useId();
@@ -49,7 +53,7 @@ export function DeleteGroupDialog({
     }
   }, [open]);
 
-  const canConfirm = typedName === name && password.length > 0;
+  const canConfirm = typedName === name && (!hasPassword || password.length > 0);
   const nameWrong = typedName !== "" && typedName !== name;
 
   async function onSubmit(e: React.FormEvent) {
@@ -61,16 +65,17 @@ export function DeleteGroupDialog({
     setError(null);
     let res: Response;
     try {
+      const proof = hasPassword ? { password } : { identityToken: (await signInWithApple()).identityToken };
       res = await fetch("/api/groups/active", {
         method: "DELETE",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ groupId, name: typedName, password }),
+        body: JSON.stringify({ groupId, name: typedName, ...proof }),
         signal: controller.signal,
       });
-    } catch {
+    } catch (e) {
       if (controller.signal.aborted) return;
       setLoading(false);
-      setError(FALLBACK);
+      if (!isAppleCancel(e)) setError(FALLBACK);
       return;
     }
     if (controller.signal.aborted) return;
@@ -113,20 +118,24 @@ export function DeleteGroupDialog({
             {nameWrong ? "Der Name stimmt noch nicht." : `Gib den Namen genau so ein: ${name}`}
           </p>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor={passwordId}>Dein Passwort</Label>
-          <Input
-            id={passwordId}
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setPasswordInvalid(false);
-            }}
-            autoComplete="current-password"
-            aria-invalid={passwordInvalid || undefined}
-          />
-        </div>
+        {hasPassword ? (
+          <div className="space-y-1">
+            <Label htmlFor={passwordId}>Dein Passwort</Label>
+            <Input
+              id={passwordId}
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordInvalid(false);
+              }}
+              autoComplete="current-password"
+              aria-invalid={passwordInvalid || undefined}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-foreground-muted">Zur Bestätigung meldest du dich kurz mit Apple an.</p>
+        )}
         {error && <InlineMessage kind="error">{error}</InlineMessage>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading} autoFocus>
