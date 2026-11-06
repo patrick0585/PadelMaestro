@@ -1,8 +1,6 @@
 import type { AppleSignInPlugin, SignInOptions, SignInResult } from "@capawesome/capacitor-apple-sign-in";
 import { isNativeApp } from "@/lib/platform";
 
-export const APPLE_SERVICES_ID = "de.padelmaestro.web";
-export const APPLE_RETURN_URL = "https://padelmaestro.de/api/auth/callback/apple";
 const APPLE_JS_URL = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/de_DE/appleid.auth.js";
 
 /** What the "apple" credentials provider expects, see signIn("apple", ...). */
@@ -12,8 +10,6 @@ export interface AppleCredentials {
   givenName?: string;
   familyName?: string;
 }
-
-export const isNativeShell = isNativeApp;
 
 // Nur Typ-Import: das Plugin kommt zur Laufzeit von der nativen Brücke.
 function plugin(): AppleSignInPlugin | undefined {
@@ -26,12 +22,18 @@ export function isNativeAppleAvailable(): boolean {
   return isNativeApp() ? plugin() !== undefined : true;
 }
 
+interface AppleNonce {
+  nonce: string;
+  /** Web client ID and return URL come from the server config; null when Apple is not set up. */
+  servicesId: string | null;
+  redirectUri: string | null;
+}
+
 /** Fetches the one-time nonce; it also sets the matching httpOnly cookie. */
-export async function fetchAppleNonce(): Promise<string> {
+export async function fetchAppleNonce(): Promise<AppleNonce> {
   const res = await fetch("/api/auth/apple/nonce", { cache: "no-store", credentials: "same-origin" });
   if (!res.ok) throw new Error("nonce");
-  const { nonce } = (await res.json()) as { nonce: string };
-  return nonce;
+  return (await res.json()) as AppleNonce;
 }
 
 export function isAppleCancel(e: unknown): boolean {
@@ -86,14 +88,15 @@ function loadAppleJs(): Promise<void> {
   return scriptPromise;
 }
 
-export async function signInWithAppleWeb(nonce: string): Promise<AppleCredentials> {
+export async function signInWithAppleWeb({ nonce, servicesId, redirectUri }: AppleNonce): Promise<AppleCredentials> {
+  if (!servicesId) throw new Error("apple_unconfigured");
   await loadAppleJs();
   const AppleID = (window as unknown as { AppleID?: AppleIdJs }).AppleID;
   if (!AppleID) throw new Error("apple_js_load");
   AppleID.auth.init({
-    clientId: APPLE_SERVICES_ID,
+    clientId: servicesId,
     scope: "name email",
-    redirectURI: APPLE_RETURN_URL,
+    redirectURI: redirectUri ?? `${window.location.origin}/api/auth/callback/apple`,
     usePopup: true,
     nonce,
   });
@@ -108,6 +111,6 @@ export async function signInWithAppleWeb(nonce: string): Promise<AppleCredential
 
 /** Native sheet inside the app, Apple JS popup in the browser. */
 export async function signInWithApple(): Promise<AppleCredentials> {
-  const nonce = await fetchAppleNonce();
-  return isNativeApp() ? signInWithAppleNative(nonce) : signInWithAppleWeb(nonce);
+  const config = await fetchAppleNonce();
+  return isNativeApp() ? signInWithAppleNative(config.nonce) : signInWithAppleWeb(config);
 }

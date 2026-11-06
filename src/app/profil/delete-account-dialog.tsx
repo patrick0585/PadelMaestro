@@ -5,6 +5,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { isAppleCancel, signInWithApple } from "@/lib/native/apple-sign-in";
 import { unregisterThisDevice } from "@/lib/push/client";
 
 const FALLBACK = "Löschen fehlgeschlagen.";
@@ -13,6 +14,9 @@ type ErrorBody = { error?: string; groups?: { id: string; name: string }[] };
 
 function errorText(status: number, body: ErrorBody): string {
   if (status === 403 && body.error === "wrong_password") return "Passwort falsch.";
+  if (status === 403 && body.error === "apple_reauth_required") {
+    return "Die Bestätigung mit Apple hat nicht geklappt. Bitte versuche es erneut.";
+  }
   if (status === 409 && body.error === "owner_of_group") {
     const names = (body.groups ?? []).map((g) => `„${g.name}“`).join(", ");
     return `Du bist Besitzer von ${names}. Übertrage den Besitz oder lösche die Gruppe zuerst.`;
@@ -39,6 +43,7 @@ export function DeleteAccountDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passwordInvalid, setPasswordInvalid] = useState(false);
+  const missingPassword = hasPassword && password.length === 0;
 
   useEffect(() => {
     if (!open) {
@@ -51,19 +56,20 @@ export function DeleteAccountDialog({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if ((hasPassword && password.length === 0) || loading) return;
+    if (missingPassword || loading) return;
     setLoading(true);
     setError(null);
     let res: Response;
     try {
+      const proof = hasPassword ? { password } : { identityToken: (await signInWithApple()).identityToken };
       res = await fetch("/api/profile", {
         method: "DELETE",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(hasPassword ? { password } : {}),
+        body: JSON.stringify(proof),
       });
-    } catch {
+    } catch (e) {
       setLoading(false);
-      setError(FALLBACK);
+      if (!isAppleCancel(e)) setError(FALLBACK);
       return;
     }
     if (res.status === 204) {
@@ -92,6 +98,9 @@ export function DeleteAccountDialog({
           deinen Namen erhalten. Dein Profil und dein Login werden gelöscht. Exportiere vorher deine
           Daten, wenn du sie behalten willst.
         </p>
+        {!hasPassword && (
+          <p className="text-sm text-foreground-muted">Zur Bestätigung meldest du dich kurz mit Apple an.</p>
+        )}
         {hasPassword && (
           <div className="space-y-1">
             <Label htmlFor={passwordId}>Dein Passwort</Label>
@@ -118,7 +127,7 @@ export function DeleteAccountDialog({
             type="submit"
             variant="destructive"
             loading={loading}
-            disabled={hasPassword && password.length === 0}
+            disabled={missingPassword}
           >
             Endgültig löschen
           </Button>

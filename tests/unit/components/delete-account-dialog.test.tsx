@@ -5,6 +5,11 @@ vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
 import { signOut } from "next-auth/react";
 vi.mock("@/lib/push/client", () => ({ unregisterThisDevice: vi.fn() }));
 import { unregisterThisDevice } from "@/lib/push/client";
+const signInWithApple = vi.fn();
+vi.mock("@/lib/native/apple-sign-in", () => ({
+  signInWithApple: () => signInWithApple(),
+  isAppleCancel: (e: { code?: string } | null) => e?.code === "SIGN_IN_CANCELED",
+}));
 import { DeleteAccountDialog } from "@/app/profil/delete-account-dialog";
 
 const signOutMock = signOut as unknown as ReturnType<typeof vi.fn>;
@@ -14,6 +19,7 @@ beforeEach(() => {
   signOutMock.mockReset();
   unregisterMock.mockReset();
   unregisterMock.mockResolvedValue(undefined);
+  signInWithApple.mockReset().mockResolvedValue({ identityToken: "apple-tok" });
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -148,13 +154,35 @@ describe("DeleteAccountDialog", () => {
     expect(order).toEqual(["unregister", "signOut"]);
   });
 
-  it("sendet ohne Passwort-Konto einen leeren Body", async () => {
+  it("sendet ohne Passwort-Konto den frischen Apple-Token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ status: 204, json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);
     render(<DeleteAccountDialog open onClose={vi.fn()} hasPassword={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
     await waitFor(() => expect(signOutMock).toHaveBeenCalled());
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({});
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ identityToken: "apple-tok" });
+  });
+
+  it("sendet nichts, wenn die Apple-Bestätigung abgebrochen wird", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    signInWithApple.mockRejectedValue({ code: "SIGN_IN_CANCELED" });
+    render(<DeleteAccountDialog open onClose={vi.fn()} hasPassword={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+    await waitFor(() => expect(signInWithApple).toHaveBeenCalled());
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("zeigt eine Meldung, wenn der Server die Apple-Bestätigung ablehnt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 403, json: async () => ({ error: "apple_reauth_required" }) }),
+    );
+    render(<DeleteAccountDialog open onClose={vi.fn()} hasPassword={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+    await screen.findByText(/Bestätigung mit Apple hat nicht geklappt/);
+    expect(signOutMock).not.toHaveBeenCalled();
   });
 
   it("meldet das Gerät bei falschem Passwort nicht ab", async () => {

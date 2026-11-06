@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { isAppleCancel, signInWithApple } from "@/lib/native/apple-sign-in";
 
 type Status =
   | { kind: "idle" }
@@ -24,11 +25,24 @@ export function ChangePasswordForm({ hasPassword = true }: { hasPassword?: boole
       return;
     }
     setStatus({ kind: "submitting" });
-    const res = await fetch("/api/profile/password", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(hasPassword ? { currentPassword, newPassword } : { newPassword }),
-    });
+    let res: Response;
+    try {
+      const proof = hasPassword
+        ? { currentPassword }
+        : { identityToken: (await signInWithApple()).identityToken };
+      res = await fetch("/api/profile/password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...proof, newPassword }),
+      });
+    } catch (e) {
+      setStatus(
+        isAppleCancel(e)
+          ? { kind: "idle" }
+          : { kind: "error", message: "Unerwarteter Fehler. Bitte erneut versuchen." },
+      );
+      return;
+    }
     if (res.status === 204) {
       setStatus({ kind: "success" });
       setCurrentPassword("");
@@ -44,6 +58,10 @@ export function ChangePasswordForm({ hasPassword = true }: { hasPassword?: boole
         return;
       }
       setStatus({ kind: "error", message: "Aktuelles Passwort ist falsch." });
+      return;
+    }
+    if (res.status === 403) {
+      setStatus({ kind: "error", message: "Die Bestätigung mit Apple hat nicht geklappt. Bitte versuche es erneut." });
       return;
     }
     if (res.status === 400) {
@@ -108,6 +126,9 @@ export function ChangePasswordForm({ hasPassword = true }: { hasPassword?: boole
         >
           {hasPassword ? "Passwort erfolgreich geändert." : "Passwort festgelegt. Du kannst dich jetzt auch mit E-Mail anmelden."}
         </p>
+      )}
+      {!hasPassword && (
+        <p className="text-sm text-foreground-muted">Zur Bestätigung meldest du dich kurz mit Apple an.</p>
       )}
       <div className="flex justify-end">
         <Button type="submit" loading={submitting}>

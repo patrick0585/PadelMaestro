@@ -30,6 +30,7 @@ type Message = { kind: "error" | "success"; text: string };
 
 export function SettingsView({
   isOwner,
+  hasPassword = true,
   groupId,
   name,
   slug,
@@ -38,6 +39,7 @@ export function SettingsView({
   transferCandidates,
 }: {
   isOwner: boolean;
+  hasPassword?: boolean;
   groupId: string;
   name: string;
   slug: string;
@@ -273,6 +275,7 @@ export function SettingsView({
             onClose={() => setDeleteOpen(false)}
             groupId={groupId}
             name={name}
+            hasPassword={hasPassword}
           />
         </>
       )}

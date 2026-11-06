@@ -15,6 +15,9 @@ export default async function AdminSettingsPage() {
     where: { id: ctx.groupId },
     select: { name: true, slug: true },
   });
+  const me = isOwner
+    ? await prisma.player.findUnique({ where: { id: ctx.userId }, select: { passwordHash: true } })
+    : null;
   const members = isOwner ? await listActiveMembers(ctx.groupId) : [];
   const transferCandidates = members
     .filter((m) => m.role !== "owner" && m.hasPassword)
@@ -22,6 +25,7 @@ export default async function AdminSettingsPage() {
   return (
     <SettingsView
       isOwner={isOwner}
+      hasPassword={me?.passwordHash != null}
       groupId={ctx.groupId}
       name={group.name}
       slug={group.slug}

@@ -94,10 +94,13 @@ describe("POST /api/account/apple/link", () => {
 describe("GET /api/auth/apple/nonce", () => {
   it("returns a nonce and sets it as httpOnly cookie", async () => {
     const res = await nonceGET(new Request("http://test/api/auth/apple/nonce"));
-    const { nonce } = await res.json();
+    const { nonce, servicesId, redirectUri } = await res.json();
+    expect(servicesId).toBe("de.padelmaestro.web");
+    expect(redirectUri === null || redirectUri.endsWith("/api/auth/callback/apple")).toBe(true);
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(nonce.length).toBeGreaterThan(20);
-    expect(cookie).toContain(`${APPLE_NONCE_COOKIE}=${nonce}`);
+    expect(cookie).toContain(`${APPLE_NONCE_COOKIE}=${nonce}.`);
+    expect(cookie).not.toContain(`${APPLE_NONCE_COOKIE}=${nonce};`);
     expect(cookie.toLowerCase()).toContain("httponly");
     expect(cookie).toContain("Max-Age=600");
   });
