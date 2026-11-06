@@ -2,16 +2,29 @@
 
 import { useState } from "react";
 
+export type SeriesTone = "me" | "lead" | "pick" | "rest";
+
 export interface ChartSeries {
+  id: string;
   name: string;
   values: (number | null)[];
-  color: string;
-  highlighted: boolean;
+  tone: SeriesTone;
+  // Per point: the segment leading INTO this point is drawn dashed (joker day).
+  dashed?: boolean[];
 }
 
-const W = 600;
-const H = 260;
-const PAD = { top: 12, right: 88, bottom: 28, left: 36 };
+export const TONE_COLOR: Record<SeriesTone, string> = {
+  me: "#22d3ee",
+  lead: "#fbbf24",
+  pick: "#c4b5fd",
+  rest: "#64748b",
+};
+const TONE_ORDER: Record<SeriesTone, number> = { rest: 0, pick: 1, lead: 2, me: 3 };
+
+// Roughly phone width, so SVG font sizes match on-screen pixels.
+const W = 360;
+const H = 210;
+const PAD = { top: 12, right: 62, bottom: 24, left: 30 };
 const INNER_W = W - PAD.left - PAD.right;
 const INNER_H = H - PAD.top - PAD.bottom;
 
@@ -43,7 +56,8 @@ export function StatsLineChart({
   yTickStyle?: YTickStyle;
   yTickStep?: number;
 }) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
+  const hoveredIdx = picked ?? xLabels.length - 1;
   const xStep = INNER_W / Math.max(1, xLabels.length - 1);
   const xPos = (i: number) => PAD.left + i * xStep;
   const yPos = (v: number) => {
@@ -56,10 +70,10 @@ export function StatsLineChart({
   const yTickValues = Array.from({ length: tickCount + 1 }, (_, i) => yMin + i * tickStep);
 
   return (
-    <div className="space-y-2">
+    <div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
+        className="w-full touch-pan-y"
         role="img"
         aria-label={`Liniendiagramm ${yLabel} pro Spieltag`}
       >
@@ -79,7 +93,7 @@ export function StatsLineChart({
               x={PAD.left - 6}
               y={yPos(v) + 4}
               textAnchor="end"
-              fontSize={10}
+              fontSize={11}
               className="fill-foreground-muted"
             >
               {formatTick(v, yTickStyle)}
@@ -92,100 +106,63 @@ export function StatsLineChart({
           <text
             key={i}
             x={xPos(i)}
-            y={H - 8}
+            y={H - 6}
             textAnchor="middle"
-            fontSize={10}
+            fontSize={11}
             className="fill-foreground-muted"
           >
             {label}
           </text>
         ))}
 
-        {/* Y axis label */}
-        <text
-          x={PAD.left - 28}
-          y={PAD.top + INNER_H / 2}
-          fontSize={10}
-          textAnchor="middle"
-          transform={`rotate(-90 ${PAD.left - 28} ${PAD.top + INNER_H / 2})`}
-          className="fill-foreground-muted"
-        >
-          {yLabel}
-        </text>
-
-        {/* Lines — render muted ones first, highlighted last so it sits on top */}
+        {/* Grey lines first, emphasised ones on top */}
         {[...series]
-          .sort((a, b) => Number(a.highlighted) - Number(b.highlighted))
+          .sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone])
           .map((s) => {
-            const segments: string[] = [];
-            let current: string[] = [];
+            const color = TONE_COLOR[s.tone];
+            const strong = s.tone !== "rest";
+            let lastIdx = -1;
             s.values.forEach((v, i) => {
-              if (v == null) {
-                if (current.length > 1) segments.push(current.join(" "));
-                current = [];
-              } else {
-                current.push(`${xPos(i)},${yPos(v)}`);
-              }
+              if (v != null) lastIdx = i;
             });
-            if (current.length > 1) segments.push(current.join(" "));
-
             return (
-              <g key={s.name}>
-                {segments.map((seg, idx) => (
-                  <polyline
-                    key={idx}
-                    points={seg}
-                    fill="none"
-                    stroke={s.color}
-                    strokeWidth={s.highlighted ? 2.5 : 1.4}
-                    strokeOpacity={s.highlighted ? 1 : 0.75}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                ))}
-                {/* Dots */}
-                {s.values.map((v, i) =>
-                  v == null ? null : (
-                    <circle
-                      key={i}
-                      cx={xPos(i)}
-                      cy={yPos(v)}
-                      r={s.highlighted ? 3 : 2}
-                      fill={s.color}
-                      opacity={s.highlighted ? 1 : 0.75}
-                    />
-                  ),
-                )}
-                {/* Endpoint name */}
-                {(() => {
-                  let lastIdx = -1;
-                  for (let i = s.values.length - 1; i >= 0; i--) {
-                    if (s.values[i] != null) {
-                      lastIdx = i;
-                      break;
-                    }
-                  }
-                  if (lastIdx < 0) return null;
-                  const v = s.values[lastIdx]!;
+              <g key={s.id}>
+                {s.values.map((v, i) => {
+                  const prev = i > 0 ? s.values[i - 1] : null;
+                  if (v == null || prev == null) return null;
                   return (
-                    <text
-                      x={xPos(lastIdx) + 6}
-                      y={yPos(v) + 4}
-                      fontSize={11}
-                      fontWeight={s.highlighted ? 700 : 500}
-                      fill={s.color}
-                      opacity={s.highlighted ? 1 : 0.85}
-                    >
-                      {s.name}
-                    </text>
+                    <line
+                      key={i}
+                      x1={xPos(i - 1)}
+                      y1={yPos(prev)}
+                      x2={xPos(i)}
+                      y2={yPos(v)}
+                      stroke={color}
+                      strokeWidth={strong ? 2.5 : 1.6}
+                      strokeLinecap="round"
+                      strokeDasharray={s.dashed?.[i] ? "6 5" : undefined}
+                    />
                   );
-                })()}
+                })}
+                {strong &&
+                  s.values.map((v, i) =>
+                    v == null ? null : s.dashed?.[i] ? (
+                      <circle key={i} cx={xPos(i)} cy={yPos(v)} r={4} fill="var(--surface)" stroke={color} strokeWidth={2} />
+                    ) : (
+                      <circle key={i} cx={xPos(i)} cy={yPos(v)} r={i === lastIdx ? 4 : 2.5} fill={color} />
+                    ),
+                  )}
+                {strong && lastIdx >= 0 && (
+                  <text x={xPos(lastIdx) + 7} y={yPos(s.values[lastIdx]!) + 4} fontSize={12.5} fontWeight={700} fill={color}>
+                    {s.name}
+                  </text>
+                )}
               </g>
             );
           })}
 
-        {/* Hover overlay — highlights the day */}
-        {hoveredIdx != null && (
+        {/* Selected day */}
+        {xLabels.length > 0 && (
           <line
             x1={xPos(hoveredIdx)}
             x2={xPos(hoveredIdx)}
@@ -213,33 +190,31 @@ export function StatsLineChart({
               width={right - left}
               height={INNER_H}
               fill="transparent"
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              onTouchStart={() => setHoveredIdx(i)}
-              onTouchEnd={() => setHoveredIdx(null)}
+              onPointerEnter={() => setPicked(i)}
+              onPointerDown={() => setPicked(i)}
             />
           );
         })}
       </svg>
 
-      {/* Tooltip / readout below the chart */}
-      {hoveredIdx != null && (
-        <div className="rounded-lg border border-border bg-surface-muted p-2 text-xs">
+      {/* Readout for the selected day (defaults to the latest); always rendered so the layout doesn't jump */}
+      {xLabels.length > 0 && (
+        <div aria-live="polite" className="mt-2 rounded-lg border border-border bg-surface-muted p-2 text-xs">
           <p className="font-semibold text-foreground">Spieltag {xLabels[hoveredIdx]}</p>
           <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
             {series
-              .map((s) => ({ name: s.name, value: s.values[hoveredIdx], color: s.color, highlighted: s.highlighted }))
+              .map((s) => ({ id: s.id, name: s.name, value: s.values[hoveredIdx], tone: s.tone }))
               .filter((r) => r.value != null)
-              .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+              .sort((a, b) => (invertY ? a.value! - b.value! : b.value! - a.value!))
               .map((r) => (
-                <li key={r.name} className="flex items-center gap-1.5">
+                <li key={r.id} className="flex items-center gap-1.5">
                   <span
                     aria-hidden="true"
                     className="inline-block h-1.5 w-3 rounded-sm"
-                    style={{ backgroundColor: r.color }}
+                    style={{ backgroundColor: TONE_COLOR[r.tone] }}
                   />
-                  <span className={`tabular-nums ${r.highlighted ? "font-bold text-foreground" : "text-foreground-muted"}`}>
-                    {r.name}: {r.value}
+                  <span className={`tabular-nums ${r.tone !== "rest" ? "font-bold text-foreground" : "text-foreground-muted"}`}>
+                    {r.name}: {formatTick(r.value!, yTickStyle)}
                   </span>
                 </li>
               ))}

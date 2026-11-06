@@ -64,7 +64,7 @@ export default async function ProfilePage() {
       {ctx && (
         <GroupedList className="mt-2.5">
           <ListRow
-            href="/duos"
+            href="/ranking?ansicht=duos"
             icon={{ node: <Users className={ICON} />, color: "#0e7490" }}
             title="Meine Duos"
             chevron
