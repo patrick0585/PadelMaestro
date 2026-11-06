@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { jwtVerify } from "jose";
 import { verifyAppleIdentityToken } from "@/lib/auth/apple/verify";
-import { claimNonce, nonceMatches, readCookie, resetNoncesForTests } from "@/lib/auth/apple/nonce";
+import { claimNonce, nonceMatches, openNonce, readCookie, readNonceCookie, resetNoncesForTests, signNonce } from "@/lib/auth/apple/nonce";
 import { appleClientSecret } from "@/lib/auth/apple/api";
 import { appleConfig, appleConfigured } from "@/lib/auth/apple/config";
 import { appleTestSetup, BUNDLE_ID, SERVICES_ID } from "../helpers/apple";
@@ -21,7 +21,13 @@ const verify = (token: string, cookieNonce: string | null = "n1") =>
 describe("verifyAppleIdentityToken", () => {
   it("accepts a valid native token and reports the identity", async () => {
     const id = await verify(await t.token({ sub: "001.abc", email: "A@Example.com", nonce: "n1" }));
-    expect(id).toEqual({ sub: "001.abc", email: "a@example.com", emailVerified: true, clientId: BUNDLE_ID });
+    expect(id).toEqual({
+      sub: "001.abc",
+      email: "a@example.com",
+      emailVerified: true,
+      clientId: BUNDLE_ID,
+      issuedAt: expect.any(Number),
+    });
   });
 
   it("accepts the services ID audience and reports it as client", async () => {
@@ -95,6 +101,35 @@ describe("nonce helpers", () => {
   it("reads a cookie by name", () => {
     expect(readCookie("a=1; pm_apple_nonce=xyz; b=2", "pm_apple_nonce")).toBe("xyz");
     expect(readCookie(null, "a")).toBeUndefined();
+  });
+
+  it("returns undefined instead of throwing on a malformed percent escape", () => {
+    expect(readCookie("pm_apple_nonce=%E0%A4%A", "pm_apple_nonce")).toBeUndefined();
+    expect(readNonceCookie("pm_apple_nonce=%")).toBeUndefined();
+  });
+
+  it("opens only nonces signed with the server secret", () => {
+    const signed = signNonce("abc");
+    expect(openNonce(signed)).toBe("abc");
+    expect(openNonce("abc")).toBeUndefined();
+    expect(openNonce("abc.")).toBeUndefined();
+    expect(openNonce(".sig")).toBeUndefined();
+    expect(openNonce(undefined)).toBeUndefined();
+    expect(openNonce(`abd.${signed.split(".")[1]}`)).toBeUndefined();
+    expect(openNonce(`abc.${signed.split(".")[1]}x`)).toBeUndefined();
+    expect(readNonceCookie(`a=1; pm_apple_nonce=${signed}`)).toBe("abc");
+    expect(readNonceCookie("pm_apple_nonce=abc")).toBeUndefined();
+  });
+
+  it("does not open a nonce signed with another secret", () => {
+    const signed = signNonce("abc");
+    const original = process.env.AUTH_SECRET;
+    process.env.AUTH_SECRET = "a-completely-different-secret-value-xyz";
+    try {
+      expect(openNonce(signed)).toBeUndefined();
+    } finally {
+      process.env.AUTH_SECRET = original;
+    }
   });
 });
 

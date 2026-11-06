@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
 import { createMember, createTestGroup } from "../helpers/group";
-import { appleTestSetup, BUNDLE_ID, clearAppleEnv, setAppleEnv } from "../helpers/apple";
+import { appleTestSetup, BUNDLE_ID, clearAppleEnv, nonceCookie, setAppleEnv } from "../helpers/apple";
 import { needsName, resolveAppleAccount } from "@/lib/account/apple";
 import { authorizeApple } from "@/lib/auth/apple/authorize";
-import { APPLE_NONCE_COOKIE, resetNoncesForTests } from "@/lib/auth/apple/nonce";
+import { resetNoncesForTests } from "@/lib/auth/apple/nonce";
 import { rateLimitResetForTests } from "@/lib/rate-limit";
 import type { AppleIdentity } from "@/lib/auth/apple/verify";
 
@@ -15,6 +15,7 @@ const identity = (o: Partial<AppleIdentity> = {}): AppleIdentity => ({
   email: "neu@example.com",
   emailVerified: true,
   clientId: BUNDLE_ID,
+  issuedAt: Math.floor(Date.now() / 1000),
   ...o,
 });
 
@@ -35,11 +36,10 @@ describe("resolveAppleAccount: Grenzfälle", () => {
     process.env.PUBLIC_SIGNUP = "true";
     const g = await createTestGroup();
     const p = await createMember(g.id, { name: "A", email: "neu@example.com", emailVerifiedAt: new Date() });
-    await expect(resolveAppleAccount({ identity: identity({ emailVerified: false }) })).rejects.toMatchObject({
-      code: "apple_email_unverified_account",
-    });
+    const r = await resolveAppleAccount({ identity: identity({ emailVerified: false }) });
+    expect(r.playerId).not.toBe(p.id);
     expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).appleSub).toBeNull();
-    expect(await prisma.player.count()).toBe(1);
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: r.playerId } })).email).toMatch(/@anonym\.invalid$/);
   });
 
   it("verweigert die Verknüpfung, wenn das Konto schon eine andere Apple-ID hat", async () => {
@@ -92,7 +92,7 @@ describe("authorizeApple: Fehlerpfade", () => {
     return t;
   }
   const reqWith = (nonce: string) =>
-    new Request("http://test/x", { headers: { cookie: `${APPLE_NONCE_COOKIE}=${nonce}` } });
+    new Request("http://test/x", { headers: { cookie: nonceCookie(nonce) } });
 
   it("meldet signup_closed für neue Konten ohne Einladung, ohne Konto anzulegen", async () => {
     const t = await setup();

@@ -6,6 +6,7 @@ import { isAdminRole } from "@/lib/auth/roles";
 import { groupNameField } from "@/lib/invitations/schemas";
 import { rateLimit } from "@/lib/rate-limit";
 import { rateLimitedResponse } from "@/lib/rate-limit-response";
+import { AppleReauthRequiredError, APPLE_REAUTH_MESSAGE, verifyReauthToken } from "@/lib/auth/apple/reauth";
 import { renameGroup } from "@/lib/group/rename";
 import { deleteGroup, NameMismatchError, WrongPasswordError } from "@/lib/group/delete";
 
@@ -14,6 +15,7 @@ const DeleteBody = z.object({
   groupId: z.string().uuid(),
   name: z.string(),
   password: z.string().min(1).optional(),
+  identityToken: z.string().min(1).max(8000).optional(),
 });
 
 const forbidden = () => NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -49,11 +51,13 @@ export async function DELETE(req: Request) {
   if (parsed.data.groupId !== g.ctx.groupId) return staleGroup();
   if (g.ctx.role !== "owner") return forbidden();
   try {
+    const appleProof = await verifyReauthToken(req, parsed.data.identityToken);
     await deleteGroup({
       groupId: g.ctx.groupId,
       actorId: g.ctx.userId,
       name: parsed.data.name,
       password: parsed.data.password,
+      appleProof,
     });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
@@ -62,6 +66,9 @@ export async function DELETE(req: Request) {
     }
     if (e instanceof WrongPasswordError) {
       return NextResponse.json({ error: "wrong_password" }, { status: 403 });
+    }
+    if (e instanceof AppleReauthRequiredError) {
+      return NextResponse.json({ error: "apple_reauth_required", message: APPLE_REAUTH_MESSAGE }, { status: 403 });
     }
     if (e instanceof ForbiddenError) return forbidden();
     throw e;

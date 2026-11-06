@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
 import { createMember, createTestGroup } from "../helpers/group";
-import { appleTestSetup, BUNDLE_ID, clearAppleEnv, setAppleEnv } from "../helpers/apple";
+import { appleTestSetup, BUNDLE_ID, clearAppleEnv, nonceCookie, setAppleEnv } from "../helpers/apple";
 import { hashPassword } from "@/lib/auth/hash";
 import { resolveAppleAccount, linkAppleToPlayer, setOwnName, needsName } from "@/lib/account/apple";
 import { createInvitation } from "@/lib/invitations/create";
@@ -11,7 +11,7 @@ import { deleteOwnAccount } from "@/lib/account/delete";
 import { buildAccountExport } from "@/lib/account/export";
 import { changeOwnPassword, WrongCurrentPasswordError } from "@/lib/players/change-password";
 import { authorizeApple } from "@/lib/auth/apple/authorize";
-import { APPLE_NONCE_COOKIE, resetNoncesForTests } from "@/lib/auth/apple/nonce";
+import { resetNoncesForTests } from "@/lib/auth/apple/nonce";
 import { rateLimitResetForTests } from "@/lib/rate-limit";
 import type { AppleIdentity } from "@/lib/auth/apple/verify";
 
@@ -20,6 +20,7 @@ const identity = (o: Partial<AppleIdentity> = {}): AppleIdentity => ({
   email: "neu@example.com",
   emailVerified: true,
   clientId: BUNDLE_ID,
+  issuedAt: Math.floor(Date.now() / 1000),
   ...o,
 });
 
@@ -98,6 +99,28 @@ describe("resolveAppleAccount", () => {
     expect(p.email).toMatch(/^apple-[0-9a-f]{20}@anonym\.invalid$/);
   });
 
+  it("uses the placeholder and no verified timestamp when the e-mail is not verified", async () => {
+    process.env.PUBLIC_SIGNUP = "true";
+    const r = await resolveAppleAccount({
+      identity: identity({ sub: "001.unv", email: "fremd@example.com", emailVerified: false }),
+    });
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: r.playerId } });
+    expect(p.email).toMatch(/^apple-[0-9a-f]{20}@anonym\.invalid$/);
+    expect(p.emailVerifiedAt).toBeNull();
+    const again = await resolveAppleAccount({
+      identity: identity({ sub: "001.unv", email: "fremd@example.com", emailVerified: false }),
+    });
+    expect(again).toMatchObject({ playerId: r.playerId, created: false });
+  });
+
+  it("keeps a verified e-mail and marks it verified", async () => {
+    process.env.PUBLIC_SIGNUP = "true";
+    const r = await resolveAppleAccount({ identity: identity({ sub: "001.ver" }) });
+    const p = await prisma.player.findUniqueOrThrow({ where: { id: r.playerId } });
+    expect(p.email).toBe("neu@example.com");
+    expect(p.emailVerifiedAt).not.toBeNull();
+  });
+
   it("refuses a new account without invitation when signup is closed", async () => {
     await expect(resolveAppleAccount({ identity: identity() })).rejects.toMatchObject({ code: "signup_closed" });
     expect(await prisma.player.count()).toBe(0);
@@ -161,7 +184,7 @@ describe("deleteOwnAccount with Apple", () => {
     const fetchMock = vi.fn(async () => new Response("", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const p = await appleUser();
-    await deleteOwnAccount({ playerId: p.id });
+    await deleteOwnAccount({ playerId: p.id, appleProof: identity() });
     const calls = fetchMock.mock.calls as unknown as [string, { body: URLSearchParams }][];
     expect(calls[0][0]).toBe("https://appleid.apple.com/auth/revoke");
     expect(calls[0][1].body.get("token")).toBe("rt-1");
@@ -177,14 +200,45 @@ describe("deleteOwnAccount with Apple", () => {
     setAppleEnv(t.privateKeyPem);
     vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Error("offline"))));
     const p = await appleUser();
-    await expect(deleteOwnAccount({ playerId: p.id })).resolves.toBeUndefined();
+    await expect(deleteOwnAccount({ playerId: p.id, appleProof: identity() })).resolves.toBeUndefined();
     expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).deletedAt).not.toBeNull();
   });
 
   it("still deletes when Apple is not configured", async () => {
     const p = await appleUser();
-    await deleteOwnAccount({ playerId: p.id });
+    await deleteOwnAccount({ playerId: p.id, appleProof: identity() });
     expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).deletedAt).not.toBeNull();
+  });
+
+  it("demands a fresh Apple proof for Apple-only accounts", async () => {
+    const p = await appleUser();
+    const keep = async () => {
+      expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).deletedAt).toBeNull();
+    };
+    const reauth = { name: "AppleReauthRequiredError" };
+    await expect(deleteOwnAccount({ playerId: p.id })).rejects.toMatchObject(reauth);
+    await expect(
+      deleteOwnAccount({ playerId: p.id, appleProof: identity({ sub: "001.other" }) }),
+    ).rejects.toMatchObject(reauth);
+    await expect(
+      deleteOwnAccount({ playerId: p.id, appleProof: identity({ issuedAt: Math.floor(Date.now() / 1000) - 3600 }) }),
+    ).rejects.toMatchObject(reauth);
+    await expect(
+      deleteOwnAccount({ playerId: p.id, appleProof: identity({ issuedAt: null }) }),
+    ).rejects.toMatchObject(reauth);
+    await keep();
+  });
+
+  it("logs a warning when the revoke fails", async () => {
+    const t = await appleTestSetup();
+    setAppleEnv(t.privateKeyPem);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 500 })));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const p = await appleUser();
+    await deleteOwnAccount({ playerId: p.id, appleProof: identity() });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("revoke failed"));
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("rt-1");
+    warn.mockRestore();
   });
 
   it("still requires the password for password accounts", async () => {
@@ -214,10 +268,34 @@ describe("setting a first password", () => {
     const g = await createTestGroup();
     const apple = await createMember(g.id, { name: "A", email: "a@example.com" });
     await changeOwnPassword({ playerId: apple.id, newPassword: "neues-passwort-1" });
-    expect((await prisma.player.findUniqueOrThrow({ where: { id: apple.id } })).passwordHash).not.toBeNull();
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: apple.id } });
+    expect(after.passwordHash).not.toBeNull();
+    expect(after.sessionVersion).toBe(1);
     await expect(
       changeOwnPassword({ playerId: apple.id, newPassword: "noch-ein-passwort" }),
     ).rejects.toBeInstanceOf(WrongCurrentPasswordError);
+  });
+});
+
+describe("setting a first password on an Apple-only account", () => {
+  async function appleOnly() {
+    const g = await createTestGroup();
+    const p = await createMember(g.id, { name: "A", email: "a@example.com" });
+    await prisma.player.update({ where: { id: p.id }, data: { appleSub: "001.sub" } });
+    return p;
+  }
+
+  it("needs a fresh proof for the own Apple ID", async () => {
+    const p = await appleOnly();
+    const input = { playerId: p.id, newPassword: "neues-passwort-1" };
+    const reauth = { name: "AppleReauthRequiredError" };
+    await expect(changeOwnPassword(input)).rejects.toMatchObject(reauth);
+    await expect(changeOwnPassword({ ...input, appleProof: identity({ sub: "x" }) })).rejects.toMatchObject(reauth);
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: p.id } })).passwordHash).toBeNull();
+    await changeOwnPassword({ ...input, appleProof: identity() });
+    const after = await prisma.player.findUniqueOrThrow({ where: { id: p.id } });
+    expect(after.passwordHash).not.toBeNull();
+    expect(after.sessionVersion).toBe(1);
   });
 });
 
@@ -231,7 +309,7 @@ describe("authorizeApple (provider)", () => {
     const token = await t.token({ sub: "001.web", email: "web@example.com", nonce: "nn" }, { aud: "de.padelmaestro.web" });
     const req = new Request("http://test/api/auth/callback/apple", {
       method: "POST",
-      headers: { cookie: `${APPLE_NONCE_COOKIE}=nn` },
+      headers: { cookie: nonceCookie("nn") },
     });
     const user = await authorizeApple(
       { identityToken: token, authorizationCode: "code-1", givenName: "Web", familyName: "User" },
@@ -256,7 +334,7 @@ describe("authorizeApple (provider)", () => {
     setAppleEnv(t.privateKeyPem);
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 400 })));
     const token = await t.token({ sub: "001.x", email: "x@example.com", nonce: "n2" });
-    const req = new Request("http://test/x", { headers: { cookie: `${APPLE_NONCE_COOKIE}=n2` } });
+    const req = new Request("http://test/x", { headers: { cookie: nonceCookie("n2") } });
     const user = await authorizeApple({ identityToken: token, authorizationCode: "c" }, req, { keys: t.keys });
     expect(user).not.toBeNull();
     expect((await prisma.player.findUniqueOrThrow({ where: { id: user!.id } })).appleRefreshToken).toBeNull();

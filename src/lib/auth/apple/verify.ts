@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import { normaliseEmail } from "@/lib/auth/email";
 import { AppleAuthError } from "./errors";
 import { claimNonce, nonceMatches } from "./nonce";
 
@@ -11,6 +12,8 @@ export interface AppleIdentity {
   emailVerified: boolean;
   /** The audience the token was issued for: bundle ID (native) or services ID (web). */
   clientId: string;
+  /** Token issue time in epoch seconds; null when the claim is absent. */
+  issuedAt: number | null;
 }
 
 let remoteKeys: JWTVerifyGetKey | undefined;
@@ -45,11 +48,12 @@ export async function verifyAppleIdentityToken(
   if (!nonceMatches(opts.cookieNonce, payload.nonce) || !claimNonce(opts.cookieNonce!)) {
     throw new AppleAuthError("apple_invalid_token");
   }
-  const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : null;
+  const email = typeof payload.email === "string" ? normaliseEmail(payload.email) : null;
   return {
     sub: payload.sub,
     email: email || null,
     emailVerified: payload.email_verified === true || payload.email_verified === "true",
     clientId: payload.aud,
+    issuedAt: typeof payload.iat === "number" ? payload.iat : null,
   };
 }

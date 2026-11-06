@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/auth/group-context";
 import { verifyPassword } from "@/lib/auth/hash";
 import { WrongPasswordError } from "@/lib/account/errors";
+import { assertFreshAppleProof } from "@/lib/auth/apple/reauth";
+import type { AppleIdentity } from "@/lib/auth/apple/verify";
 import { findGroupMembership } from "./active-membership";
 
 export { WrongPasswordError } from "@/lib/account/errors";
@@ -18,6 +20,9 @@ export async function deleteGroup(i: {
   actorId: string;
   name: string;
   password?: string;
+  /** Required for Apple-only accounts: a fresh identity token for their own Apple ID. */
+  appleProof?: AppleIdentity;
+  now?: Date;
 }): Promise<void> {
   const { groupId, actorId } = i;
   const actor = await findGroupMembership(prisma, groupId, actorId);
@@ -35,6 +40,8 @@ export async function deleteGroup(i: {
     if (!i.password || !(await verifyPassword(i.password, player.passwordHash))) throw new WrongPasswordError();
   } else if (!player.appleSub) {
     throw new WrongPasswordError();
+  } else {
+    assertFreshAppleProof(player.appleSub, i.appleProof, i.now);
   }
 
   await prisma.$transaction(async (tx) => {

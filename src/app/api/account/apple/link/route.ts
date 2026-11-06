@@ -3,12 +3,11 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { rateLimitedResponse } from "@/lib/rate-limit-response";
-import { linkAppleToPlayer, storeAppleRefreshToken } from "@/lib/account/apple";
-import { exchangeAuthorizationCode } from "@/lib/auth/apple/api";
+import { linkAppleToPlayer } from "@/lib/account/apple";
 import { appleConfig } from "@/lib/auth/apple/config";
 import { AppleAuthError, APPLE_ERROR_MESSAGES } from "@/lib/auth/apple/errors";
-import { APPLE_NONCE_COOKIE, readCookie } from "@/lib/auth/apple/nonce";
-import { verifyAppleIdentityToken } from "@/lib/auth/apple/verify";
+import { exchangeAndStoreRefreshToken, verifyRequestIdentity } from "@/lib/auth/apple/flow";
+import { APPLE_NONCE_COOKIE } from "@/lib/auth/apple/nonce";
 
 const Schema = z.object({
   identityToken: z.string().min(1).max(8000),
@@ -30,14 +29,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
 
   try {
-    const identity = await verifyAppleIdentityToken(parsed.data.identityToken, {
-      audiences: [cfg.bundleId, cfg.servicesId],
-      cookieNonce: readCookie(req.headers.get("cookie"), APPLE_NONCE_COOKIE),
-    });
+    const identity = await verifyRequestIdentity(cfg, req, parsed.data.identityToken);
     await linkAppleToPlayer({ playerId: userId, identity });
     if (parsed.data.authorizationCode) {
-      const refresh = await exchangeAuthorizationCode(cfg, parsed.data.authorizationCode, identity.clientId);
-      if (refresh) await storeAppleRefreshToken(userId, refresh, identity.clientId).catch(() => {});
+      await exchangeAndStoreRefreshToken(cfg, userId, parsed.data.authorizationCode, identity.clientId);
     }
     const res = new NextResponse(null, { status: 204 });
     res.cookies.delete(APPLE_NONCE_COOKIE);

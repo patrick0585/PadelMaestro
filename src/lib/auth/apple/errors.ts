@@ -24,3 +24,11 @@ export class AppleAuthError extends Error {
     this.name = "AppleAuthError";
   }
 }
+
+const FALLBACK_CODE: AppleErrorCode = "apple_invalid_token";
+
+export function appleErrorMessage(code: unknown): string {
+  return typeof code === "string" && code in APPLE_ERROR_MESSAGES
+    ? APPLE_ERROR_MESSAGES[code as AppleErrorCode]
+    : APPLE_ERROR_MESSAGES[FALLBACK_CODE];
+}

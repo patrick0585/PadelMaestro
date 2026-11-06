@@ -3,12 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import { buildAuthorizedUser, type AuthorizedUser } from "@/lib/auth/authorize";
-import { resolveAppleAccount, storeAppleRefreshToken } from "@/lib/account/apple";
-import { exchangeAuthorizationCode } from "./api";
+import { resolveAppleAccount } from "@/lib/account/apple";
 import { appleConfig } from "./config";
 import { AppleAuthError } from "./errors";
-import { APPLE_NONCE_COOKIE, readCookie } from "./nonce";
-import { verifyAppleIdentityToken } from "./verify";
+import { exchangeAndStoreRefreshToken, verifyRequestIdentity } from "./flow";
+import { APPLE_NONCE_COOKIE } from "./nonce";
 import type { JWTVerifyGetKey } from "jose";
 
 const optionalText = z
@@ -49,12 +48,7 @@ export async function authorizeApple(
     if (!rl.allowed) throw new AppleAuthError("rate_limited");
   }
 
-  const cookieNonce = readCookie(request?.headers.get("cookie"), APPLE_NONCE_COOKIE);
-  const identity = await verifyAppleIdentityToken(input.identityToken, {
-    audiences: [cfg.bundleId, cfg.servicesId],
-    cookieNonce,
-    keys: deps.keys,
-  });
+  const identity = await verifyRequestIdentity(cfg, request, input.identityToken, deps.keys);
   await dropNonceCookie();
 
   const resolution = await resolveAppleAccount({
@@ -65,10 +59,7 @@ export async function authorizeApple(
   });
 
   if (input.authorizationCode && resolution.needsRefreshToken) {
-    const refresh = await exchangeAuthorizationCode(cfg, input.authorizationCode, identity.clientId);
-    if (refresh) {
-      await storeAppleRefreshToken(resolution.playerId, refresh, identity.clientId).catch(() => {});
-    }
+    await exchangeAndStoreRefreshToken(cfg, resolution.playerId, input.authorizationCode, identity.clientId);
   }
 
   const player = await prisma.player.findUniqueOrThrow({

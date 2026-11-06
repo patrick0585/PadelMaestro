@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
 import { appleConfig } from "@/lib/auth/apple/config";
 import { revokeRefreshToken } from "@/lib/auth/apple/api";
+import { assertFreshAppleProof } from "@/lib/auth/apple/reauth";
+import type { AppleIdentity } from "@/lib/auth/apple/verify";
 import { PlayerNotFoundError, WrongPasswordError } from "./errors";
 
 export class OwnerOfGroupError extends Error {
@@ -23,6 +25,8 @@ export async function deleteOwnAccount(i: {
   playerId: string;
   /** Required for accounts with a password; Apple-only accounts have none. */
   password?: string;
+  /** Required for Apple-only accounts: a fresh identity token for their own Apple ID. */
+  appleProof?: AppleIdentity;
   now?: Date;
 }): Promise<void> {
   const { playerId, password } = i;
@@ -45,6 +49,8 @@ export async function deleteOwnAccount(i: {
     }
   } else if (!player.appleSub) {
     throw new WrongPasswordError();
+  } else {
+    assertFreshAppleProof(player.appleSub, i.appleProof, now);
   }
   const owned = await prisma.membership.findMany({
     where: { playerId, removedAt: null, role: "owner" },
@@ -72,7 +78,8 @@ async function revokeAppleBestEffort(player: {
 }): Promise<void> {
   const cfg = appleConfig();
   if (!cfg || !player.appleRefreshToken) return;
-  await revokeRefreshToken(cfg, player.appleRefreshToken, player.appleClientId ?? cfg.bundleId);
+  const revoked = await revokeRefreshToken(cfg, player.appleRefreshToken, player.appleClientId ?? cfg.bundleId);
+  if (!revoked) console.warn("[account] Apple token revoke failed after account deletion");
 }
 
 async function anonymise(playerId: string, now: Date): Promise<void> {

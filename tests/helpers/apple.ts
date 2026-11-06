@@ -1,5 +1,7 @@
 import { createLocalJWKSet, exportJWK, exportPKCS8, generateKeyPair, SignJWT, type JWTPayload } from "jose";
 
+import { APPLE_NONCE_COOKIE, signNonce } from "@/lib/auth/apple/nonce";
+
 export const BUNDLE_ID = "de.padelmaestro.app";
 export const SERVICES_ID = "de.padelmaestro.web";
 
@@ -13,13 +15,13 @@ export async function appleTestSetup() {
 
   async function token(
     claims: JWTPayload = {},
-    o: { aud?: string; iss?: string; exp?: string | number; key?: CryptoKey } = {},
+    o: { aud?: string; iss?: string; exp?: string | number; iat?: number; key?: CryptoKey } = {},
   ): Promise<string> {
     return new SignJWT({ email_verified: "true", ...claims })
       .setProtectedHeader({ alg: "RS256", kid: "k1" })
       .setIssuer(o.iss ?? "https://appleid.apple.com")
       .setAudience(o.aud ?? BUNDLE_ID)
-      .setIssuedAt()
+      .setIssuedAt(o.iat)
       .setExpirationTime(o.exp ?? "10m")
       .sign(o.key ?? rsa.privateKey);
   }
@@ -39,4 +41,9 @@ export function clearAppleEnv() {
   for (const k of ["APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY", "APPLE_PRIVATE_KEY_PATH", "APPLE_BUNDLE_ID", "APPLE_SERVICES_ID"]) {
     delete process.env[k];
   }
+}
+
+/** Cookie header carrying a server-signed nonce, as the nonce endpoint would set it. */
+export function nonceCookie(nonce: string): string {
+  return `${APPLE_NONCE_COOKIE}=${signNonce(nonce)}`;
 }

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { resetDb } from "../helpers/reset-db";
 import { createMember, createTestGroup } from "../helpers/group";
-import { appleTestSetup, clearAppleEnv, setAppleEnv } from "../helpers/apple";
+import { appleTestSetup, clearAppleEnv, nonceCookie, setAppleEnv } from "../helpers/apple";
 import { APPLE_NONCE_COOKIE, resetNoncesForTests } from "@/lib/auth/apple/nonce";
 import { rateLimitResetForTests } from "@/lib/rate-limit";
 
@@ -27,7 +27,7 @@ let t: Awaited<ReturnType<typeof appleTestSetup>>;
 const req = (body: unknown, nonce = "nn") =>
   new Request("http://test/api/account/apple/link", {
     method: "POST",
-    headers: { "content-type": "application/json", cookie: `${APPLE_NONCE_COOKIE}=${nonce}` },
+    headers: { "content-type": "application/json", cookie: nonceCookie(nonce) },
     body: JSON.stringify(body),
   });
 

@@ -28,8 +28,12 @@ function cleanName(given?: string | null, family?: string | null): string | null
   return full || null;
 }
 
+function hasVerifiedEmail(identity: AppleIdentity): identity is AppleIdentity & { email: string } {
+  return Boolean(identity.email) && identity.emailVerified;
+}
+
 function accountEmail(identity: AppleIdentity): string {
-  if (identity.email) return identity.email;
+  if (hasVerifiedEmail(identity)) return identity.email;
   const digest = createHash("sha256").update(identity.sub).digest("hex").slice(0, 20);
   return `apple-${digest}@anonym.invalid`;
 }
@@ -53,7 +57,7 @@ export async function resolveAppleAccount(i: {
   const known = await bySub(identity.sub);
   if (known) return { playerId: known.id, created: false, needsRefreshToken: !known.appleRefreshToken };
 
-  if (identity.email && identity.emailVerified) {
+  if (hasVerifiedEmail(identity)) {
     const sameEmail = await prisma.player.findFirst({
       where: { email: identity.email, deletedAt: null },
       select: { id: true, emailVerifiedAt: true, appleSub: true },
@@ -61,18 +65,7 @@ export async function resolveAppleAccount(i: {
     if (sameEmail) {
       if (!sameEmail.emailVerifiedAt) throw new AppleAuthError("apple_email_unverified_account");
       if (sameEmail.appleSub) throw new AppleAuthError("apple_already_linked");
-      await prisma.$transaction(async (tx) => {
-        await tx.player.update({ where: { id: sameEmail.id }, data: { appleSub: identity.sub } });
-        await tx.auditLog.create({
-          data: {
-            actorId: sameEmail.id,
-            action: "player.apple_link",
-            entityType: "Player",
-            entityId: sameEmail.id,
-            payload: { via: "email" },
-          },
-        });
-      });
+      await attachAppleSub(sameEmail.id, identity.sub, "email");
       return { playerId: sameEmail.id, created: false, needsRefreshToken: true };
     }
   }
@@ -99,7 +92,7 @@ export async function resolveAppleAccount(i: {
           email: accountEmail(identity),
           passwordHash: null,
           appleSub: identity.sub,
-          emailVerifiedAt: now,
+          emailVerifiedAt: hasVerifiedEmail(identity) ? now : null,
           termsAcceptedAt: now,
         },
         select: { id: true },
@@ -146,29 +139,22 @@ export async function storeAppleRefreshToken(
   });
 }
 
-/** Attaches an Apple ID to the signed-in account; refuses when it belongs to someone else. */
-export async function linkAppleToPlayer(i: { playerId: string; identity: AppleIdentity }): Promise<void> {
-  const owner = await prisma.player.findFirst({
-    where: { appleSub: i.identity.sub },
-    select: { id: true },
-  });
-  if (owner && owner.id !== i.playerId) throw new AppleAuthError("apple_already_linked");
-  if (owner) return;
-  const me = await prisma.player.findUnique({
-    where: { id: i.playerId },
-    select: { appleSub: true, deletedAt: true },
-  });
-  if (!me || me.deletedAt || me.appleSub) throw new AppleAuthError("apple_already_linked");
+/** Sets the Apple ID only on a live account that has none yet; otherwise `apple_already_linked`. */
+async function attachAppleSub(playerId: string, sub: string, via: "email" | "profile"): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.player.update({ where: { id: i.playerId }, data: { appleSub: i.identity.sub } });
+      const { count } = await tx.player.updateMany({
+        where: { id: playerId, appleSub: null, deletedAt: null },
+        data: { appleSub: sub },
+      });
+      if (count !== 1) throw new AppleAuthError("apple_already_linked");
       await tx.auditLog.create({
         data: {
-          actorId: i.playerId,
+          actorId: playerId,
           action: "player.apple_link",
           entityType: "Player",
-          entityId: i.playerId,
-          payload: { via: "profile" },
+          entityId: playerId,
+          payload: { via },
         },
       });
     });
@@ -178,6 +164,22 @@ export async function linkAppleToPlayer(i: { playerId: string; identity: AppleId
     }
     throw e;
   }
+}
+
+/** Attaches an Apple ID to the signed-in account; refuses when it belongs to someone else. */
+export async function linkAppleToPlayer(i: { playerId: string; identity: AppleIdentity }): Promise<void> {
+  const owner = await prisma.player.findFirst({
+    where: { appleSub: i.identity.sub, deletedAt: null },
+    select: { id: true },
+  });
+  if (owner && owner.id !== i.playerId) throw new AppleAuthError("apple_already_linked");
+  if (owner) return;
+  const me = await prisma.player.findUnique({
+    where: { id: i.playerId },
+    select: { appleSub: true, deletedAt: true },
+  });
+  if (!me || me.deletedAt || me.appleSub) throw new AppleAuthError("apple_already_linked");
+  await attachAppleSub(i.playerId, i.identity.sub, "profile");
 }
 
 export async function setOwnName(playerId: string, name: string): Promise<void> {
