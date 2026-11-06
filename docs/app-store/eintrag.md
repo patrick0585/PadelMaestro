@@ -44,7 +44,7 @@ Alles, was in App Store Connect einzutragen ist. Version 1.0.0, Sprache Deutsch,
 > FÜR ADMINS
 > • Spieler einladen, Spieltage verwalten, Wertung je Spielerzahl einstellen
 >
-> Registriere dich kostenlos und gründe deine eigene Runde oder tritt per Einladungslink einer bestehenden Gruppe bei. Gruppen sind privat: Nur eingeladene Mitglieder sehen Spieltage und Ergebnisse.
+> Melde dich in Sekunden mit Apple oder per E-Mail an, gründe deine eigene Runde oder tritt per Einladungslink einer bestehenden Gruppe bei. Gruppen sind privat: Nur eingeladene Mitglieder sehen Spieltage und Ergebnisse.
 
 **Schlüsselwörter (max. 100, kommagetrennt ohne Leerzeichen)**
 
@@ -94,18 +94,16 @@ Demo-Konto prüfen, bevor du einreichst: Login klappt, das Konto ist Admin in de
 
 > Padelmaestro is a tool for recreational padel groups in Germany, Austria and Switzerland. Groups are private: members organise game days, confirm attendance, enter match scores on court and follow a season ranking.
 >
-> Demo account: the user "frankthetank" is the admin of the demo group "Donnerstagsrunde Münster" with several finished game days. You can also create a new account from the login screen ("Neu hier? Konto erstellen") and found your own group.
->
-> Sign in with Apple: the start screen offers "Mit Apple anmelden" (native sheet in the app). New accounts can be created with Apple; signing in with Apple needs no password. Deleting the account (Profil > Konto) also revokes the Apple token.
+> Demo account: on the start screen tap "Mit E-Mail anmelden" and sign in as "frankthetank". This user is the admin of the demo group "Donnerstagsrunde Münster" with several finished game days. You can also create a new account ("Neu hier? Konto erstellen") or use "Mit Apple fortfahren" and found your own group.
 >
 > Native features beyond the website:
-> - Sign in with Apple (native, AuthenticationServices)
+> - Sign in with Apple (native sheet)
 > - Push notifications for new game days, reminders and results (APNs)
 > - Haptic feedback on the court scoreboard (Spieltag tab while a game day is running)
 > - Native share sheet to share a generated result image (Archiv > any game day > "Ergebnis teilen")
 > - Offline screen with retry when there is no connection
 >
-> Account deletion: Profil > Konto > "Konto löschen". If the account owns a group, the app first asks to transfer ownership (Verwaltung > Einstellungen) or delete the group, so the other members keep their data. Data export: Profil > Konto > "Daten exportieren".
+> Account deletion: Profil > Konto > "Konto löschen". If the account owns a group, the app first asks to transfer ownership (Verwaltung > Einstellungen) or delete the group, so the other members keep their data. Deleting an Apple account also revokes the Apple token. Data export: Profil > Konto > "Daten exportieren".
 >
 > The app is free, has no ads, no tracking and no in-app purchases.
 
@@ -113,7 +111,7 @@ Demo-Konto prüfen, bevor du einreichst: Login klappt, das Konto ist Admin in de
 
 1. Build 5 (oder neuer, enthält das native Apple-Login-Plugin) ist hochgeladen und in TestFlight getestet.
 2. App Store Connect › Meine Apps › Padelmaestro › **App Store** › Version 1.0.0.
-3. Screenshots 6,9" hochladen (Reihenfolge wie in `docs/app-store/screenshots/`).
+3. Screenshots hochladen, Reihenfolge 01 bis 06. Der Reiter „iPhone mit Dynamic Island (mittleres Display)“ nimmt nur `screenshots/6.3-zoll/` (1206×2622); die 1320×2868-Bilder sind für das große Display.
 4. Texte, URLs, Schlüsselwörter, Copyright aus diesem Dokument eintragen.
 5. Unter **Build** den getesteten Build auswählen.
 6. **App-Datenschutz** ausfüllen (Tabelle oben) und veröffentlichen.
