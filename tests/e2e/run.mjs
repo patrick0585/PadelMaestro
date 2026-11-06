@@ -454,29 +454,18 @@ async function main() {
     // 15. Logout / re-login cycle for Eva
     if (evaPage) {
       log("Logout/re-login cycle for Eva");
-      // Logout lives in the avatar dropdown ("Benutzermenü").
-      await evaPage.goto(`${BASE}/`);
+      // Logout lives in the profile's account list (the avatar links straight to /profil).
+      await evaPage.goto(`${BASE}/profil`);
       await evaPage.waitForLoadState("domcontentloaded");
-      // Two menus render in DOM (desktop + mobile); pick the visible one.
-      const userMenuBtn = evaPage
-        .locator('button[aria-label="Benutzermenü"]:visible')
-        .first();
-      if ((await userMenuBtn.count()) > 0) {
-        await userMenuBtn.click();
-        await evaPage.waitForTimeout(200);
-        const logoutBtn = evaPage.locator('button[role="menuitem"]:has-text("Abmelden")').first();
-        if ((await logoutBtn.count()) > 0) {
-          await logoutBtn.click().catch(() => null);
-          await evaPage.waitForTimeout(1500);
-        } else {
-          record("nit", "logout-menuitem-missing", { user: "eva" });
-          const ctx = userPages.eva.context;
-          await ctx.clearCookies();
-        }
+      const logoutBtn = evaPage.getByRole("button", { name: "Abmelden" }).first();
+      if ((await logoutBtn.count()) > 0) {
+        await Promise.all([
+          evaPage.waitForURL((u) => u.pathname.startsWith("/login"), { timeout: 15000 }).catch(() => null),
+          logoutBtn.click(),
+        ]);
       } else {
-        record("important", "user-menu-button-missing", { user: "eva" });
-        const ctx = userPages.eva.context;
-        await ctx.clearCookies();
+        record("important", "logout-button-missing", { user: "eva" });
+        await userPages.eva.context.clearCookies();
       }
       await evaPage.goto(`${BASE}/game-day`);
       await evaPage.waitForLoadState("domcontentloaded");
