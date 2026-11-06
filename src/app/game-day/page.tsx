@@ -19,6 +19,7 @@ import { GameDayLiveUpdates } from "./live-updates";
 import { RefreshButton } from "./refresh-button";
 import { CurrentMatch, type NextUp } from "./current-match";
 import { MatchRows, type RowMatch } from "./match-rows";
+import { toRowMatch } from "./row-match";
 import { DashboardHero } from "../dashboard-hero";
 import { computeDayLiveStandings } from "@/lib/game-day/live-standings";
 import { assignPlayersToTemplate, sortPlayersForAssignment } from "@/lib/pairings/assign";
@@ -27,6 +28,7 @@ import { buildHeroState, dateShortOf } from "@/lib/home/hero-state";
 import { computeRanking } from "@/lib/ranking/compute";
 import { getGroupRules } from "@/lib/group/rules";
 import { ruleForGameDay, type ScoringRule } from "@/lib/scoring/rule";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 export const dynamic = "force-dynamic";
 
@@ -110,18 +112,9 @@ export default async function GameDayPage() {
   const canScore = isAdmin || me?.attendance === "confirmed" || me?.attendance === "joker";
 
   const templateTotal = day.playerCount ? loadTemplate(day.playerCount).totalMatches : Number.POSITIVE_INFINITY;
-  const rows: RowMatch[] = day.matches.map((m) => ({
-    id: m.id,
-    matchNumber: m.matchNumber,
-    team1: [m.team1PlayerA.name, m.team1PlayerB.name],
-    team2: [m.team2PlayerA.name, m.team2PlayerB.name],
-    team1Score: m.team1Score,
-    team2Score: m.team2Score,
-    version: m.version,
-    scoredByName: m.scoredBy?.name ?? null,
-    scoredAt: m.scoredAt?.toISOString() ?? null,
-    removable: isAdmin && status === "in_progress" && m.matchNumber > templateTotal,
-  }));
+  const rows = day.matches.map((m) =>
+    toRowMatch(m, isAdmin && status === "in_progress" && m.matchNumber > templateTotal),
+  );
   const isScored = (m: RowMatch) => m.team1Score !== null && m.team2Score !== null;
   const rule = ruleForGameDay(day);
 
@@ -160,7 +153,7 @@ export default async function GameDayPage() {
           />
           {rows.length > 0 && (
             <details className={`${CARD} group`}>
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+              <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between px-3 py-2.5 ${FOCUS_INSET}`}>
                 <span>
                   <b className="block text-[14.5px]">Matches</b>
                   <span className="text-xs text-foreground-muted">

@@ -75,7 +75,7 @@ export function PlayersList({ players }: { players: MemberRow[] }) {
           </button>
         }
       />
-      <label className="mb-1 flex min-h-11 items-center gap-2 rounded-[10px] bg-[#141f36] px-3 focus-within:ring-2 focus-within:ring-primary">
+      <label className="mb-1 flex min-h-11 items-center gap-2 rounded-[10px] bg-surface-list px-3 focus-within:ring-2 focus-within:ring-primary">
         <Search aria-hidden className="size-4 shrink-0 text-foreground-muted" />
         <input
           type="search"

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDayMonth } from "@/lib/format-date";
 import { CalendarDays, Mail, Settings, Trophy, Users } from "lucide-react";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { GroupedList, LargeTitle, ListRow, SectionLabel } from "@/components/ui/list";
@@ -10,10 +11,6 @@ const ICON_CLASS = "size-[17px]";
 // Mirrors the 4–6 confirmed players startGameDay accepts.
 const MIN_TO_START = 4;
 const MAX_TO_START = 6;
-
-function formatSeasonStart(date: Date): string {
-  return date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
-}
 
 function Hero({ hero }: { hero: AdminOverview["hero"] }) {
   if (hero.kind === "none") {
@@ -72,7 +69,7 @@ function Hero({ hero }: { hero: AdminOverview["hero"] }) {
 }
 
 const TILE =
-  "flex flex-col items-center rounded-[14px] bg-[#141f36] px-2 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "flex flex-col items-center rounded-[14px] bg-surface-list px-2 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 function Tile({ href, value, label, accent = false }: { href: string; value: number; label: string; accent?: boolean }) {
   return (
@@ -127,7 +124,7 @@ export function AdminOverviewView({
           href="/admin/saison"
           icon={{ node: <Trophy className={ICON_CLASS} />, color: "#4338ca" }}
           title={seasonName}
-          value={`seit ${formatSeasonStart(seasonStart)}`}
+          value={`seit ${formatDayMonth(seasonStart)}`}
           chevron
         />
         <ListRow

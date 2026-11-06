@@ -34,7 +34,7 @@ function TeamHalf({
   return (
     <div
       className={`relative grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-[20px] px-3.5 py-3 ${
-        mine ? "border-[3px] border-primary bg-[#0b2230]" : "border-2 border-[#24324d] bg-[#0f1729]"
+        mine ? "border-[3px] border-primary bg-court-card-mine" : "border-2 border-court-border bg-court-card"
       }`}
     >
       {!readOnly && (
@@ -48,14 +48,14 @@ function TeamHalf({
       )}
       <div className="pointer-events-none min-w-0">
         {mine && (
-          <span className="mb-1 inline-block rounded-full bg-primary px-2 font-display text-[11px] font-bold tracking-[0.14em] text-[#04202a]">
+          <span className="mb-1 inline-block rounded-full bg-primary px-2 font-display text-[11px] font-bold tracking-[0.14em] text-on-primary">
             DU
           </span>
         )}
         <p className="truncate text-[20px] font-extrabold leading-tight text-white">{names[0]}</p>
-        <p className="truncate text-base text-[#dbe4f0]">{names[1]}</p>
+        <p className="truncate text-base text-court-name">{names[1]}</p>
         {!readOnly && (
-          <p className="mt-1 font-display text-[12.5px] font-bold uppercase tracking-[0.14em] text-[#a7b4c8]">
+          <p className="mt-1 font-display text-[12.5px] font-bold uppercase tracking-[0.14em] text-court-hint">
             {canPlus ? "Tippen = +1" : leading ? "Sieg" : "\u00a0"}
           </p>
         )}

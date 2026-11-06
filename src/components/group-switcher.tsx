@@ -4,6 +4,7 @@ import type { KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown } from "lucide-react";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 type Group = { id: string; name: string };
 
@@ -163,7 +164,7 @@ export function GroupSwitcher({
                   tabIndex={i === focusIndex ? 0 : -1}
                   title={g.name}
                   onClick={() => select(g.id)}
-                  className={`flex min-h-11 w-full items-center justify-between gap-2 px-4 text-left text-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                  className={`flex min-h-11 w-full items-center justify-between gap-2 px-4 text-left text-sm hover:bg-surface-muted ${FOCUS_INSET} ${
                     checked ? "font-semibold text-primary" : "text-foreground"
                   }`}
                 >

@@ -3,24 +3,10 @@ import { useState } from "react";
 import { CloseSeasonDialog } from "../close-season-dialog";
 import { CreateGameDayForm } from "../create-game-day-form";
 import { GroupedList, LargeTitle, ListRow, SectionFooter, SectionLabel } from "@/components/ui/list";
-import { formatGameDayDate } from "@/lib/admin/format";
 import type { OpenGameDay, RecentGameDay } from "@/lib/admin/game-days";
 import { withStartTime } from "@/lib/game-day/start-time";
-import { dateBlockOf, formatGameDayDate as formatFullDate } from "@/lib/archive/format";
-import { LABEL } from "@/components/home/styles";
-
-function DateBlock({ date }: { date: Date }) {
-  const { day, month } = dateBlockOf(date);
-  return (
-    <span className="w-10 shrink-0 text-center">
-      <span className="sr-only">{formatFullDate(date)}: </span>
-      <span aria-hidden="true">
-        <span className="block font-display text-2xl font-extrabold leading-none tabular-nums">{day}</span>
-        <span className={LABEL}>{month}</span>
-      </span>
-    </span>
-  );
-}
+import { formatGameDayDateLong } from "@/lib/format-date";
+import { DateBlock } from "@/components/date-block";
 
 function Pill({ running }: { running: boolean }) {
   const tone = running
@@ -60,7 +46,7 @@ export function GameDaysView({
                 <ListRow
                   key={d.id}
                   href={running ? "/game-day" : `/admin/spieltage/${d.id}`}
-                  title={withStartTime(formatGameDayDate(d.date), d.startTime)}
+                  title={withStartTime(formatGameDayDateLong(d.date), d.startTime)}
                   subtitle={`${d.confirmed} / ${d.total} zugesagt`}
                   trailing={<Pill running={running} />}
                   chevron
@@ -83,7 +69,7 @@ export function GameDaysView({
             <ListRow
               key={d.id}
               href={`/archive/${d.id}`}
-              leading={<DateBlock date={d.date} />}
+              leading={<DateBlock date={d.date} size="md" />}
               title={
                 d.winners.length > 0 ? (
                   <>

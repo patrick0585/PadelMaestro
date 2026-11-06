@@ -8,6 +8,13 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-surface-elevated: var(--surface-elevated);
+  --color-surface-list: var(--surface-list);
+  --color-court-card: var(--court-card);
+  --color-court-card-mine: var(--court-card-mine);
+  --color-court-border: var(--court-border);
+  --color-court-name: var(--court-name);
+  --color-court-hint: var(--court-hint);
+  --color-on-primary: var(--on-primary);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-primary: var(--primary);
@@ -30,6 +37,13 @@
   --surface: #111a2e;
   --surface-muted: #0f1a2f;
   --surface-elevated: #1a2440;
+  --surface-list: #141f36;
+  --court-card: #0f1729;
+  --court-card-mine: #0b2230;
+  --court-border: #24324d;
+  --court-name: #dbe4f0;
+  --court-hint: #a7b4c8;
+  --on-primary: #04202a;
   --border: #1e293b;
   --border-strong: #334155;
   --primary: #22d3ee;

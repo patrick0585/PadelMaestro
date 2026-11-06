@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { formatScoredBy } from "@/lib/match/scored-by";
 import { ScoreEditor, type EditableMatch } from "./score-editor";
 import type { ScoringRule } from "@/lib/scoring/rule";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 const OPEN_MATCH_EVENT = "padel:open-match";
 // Survives until the requested match appears in some list (it may only show up
@@ -157,7 +158,7 @@ export function MatchRows({
                 aria-label={`Match ${m.matchNumber}, ${m.team1.join(" & ")} gegen ${m.team2.join(" & ")}, ${
                   scored ? `${m.team1Score}:${m.team2Score}, korrigieren` : "eintragen"
                 }`}
-                className={`${rowClass} min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary`}
+                className={`${rowClass} min-h-11 ${FOCUS_INSET}`}
                 onClick={() => setOpenId(open ? null : m.id)}
               >
                 {content}

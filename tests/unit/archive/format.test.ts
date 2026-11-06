@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { dateBlockOf, formatGameDayHeading, winnerLineOf } from "@/lib/archive/format";
+import { dateBlockOf, formatGameDayHeading } from "@/lib/format-date";
+import { winnerLineOf } from "@/lib/archive/format";
 
 describe("dateBlockOf", () => {
   it("splits a date into zero-padded day and short month", () => {

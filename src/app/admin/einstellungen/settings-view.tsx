@@ -23,6 +23,7 @@ import { RuleStepper } from "./rule-stepper";
 import { DeleteGroupDialog } from "../delete-group-dialog";
 import { TransferOwnerDialog } from "../transfer-owner-dialog";
 import { TransferPicker } from "./transfer-picker";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 type Candidate = { id: string; name: string };
 
@@ -166,7 +167,7 @@ export function SettingsView({
           <button
             type="submit"
             disabled={unchanged || loading}
-            className="relative flex min-h-11 w-full items-center px-3.5 text-left text-[14.5px] text-primary before:absolute before:left-3.5 before:right-0 before:top-0 before:h-px before:bg-border before:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            className={`relative flex min-h-11 w-full items-center px-3.5 text-left text-[14.5px] text-primary before:absolute before:left-3.5 before:right-0 before:top-0 before:h-px before:bg-border before:content-[''] ${FOCUS_INSET}`}
           >
             <span
               className={`rounded-lg bg-primary-soft px-3 py-1.5 font-semibold text-primary ${unchanged || loading ? "opacity-50" : ""}`.trim()}

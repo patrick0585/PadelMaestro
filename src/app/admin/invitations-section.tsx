@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { formatDayMonth } from "@/lib/format-date";
 import { Input } from "@/components/ui/input";
 import { GroupedList, ListRow, PrimaryAction, SectionFooter, SectionLabel } from "@/components/ui/list";
 import { InlineMessage } from "@/components/ui/inline-message";
@@ -29,13 +30,9 @@ function formatDate(iso: string) {
   });
 }
 
-function formatDay(iso: string) {
-  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
-}
-
 function usageText(inv: SerializedOpenInvitation) {
   const used = inv.usedCount === 0 ? "unbenutzt" : `${inv.usedCount} Mal benutzt`;
-  return `${used} · bis ${formatDay(inv.expiresAt)}`;
+  return `${used} · bis ${formatDayMonth(new Date(inv.expiresAt), "Europe/Berlin")}`;
 }
 
 const TINTED =

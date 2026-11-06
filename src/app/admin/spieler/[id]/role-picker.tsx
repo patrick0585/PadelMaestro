@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 type PickableRole = "member" | "admin";
 
@@ -78,7 +79,7 @@ export function RolePicker({
               type="button"
               disabled={loading}
               onClick={() => choose(o.value)}
-              className="flex min-h-11 w-full items-center justify-between border-b border-border px-3 text-left text-[14.5px] last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary disabled:opacity-50"
+              className={`flex min-h-11 w-full items-center justify-between border-b border-border px-3 text-left text-[14.5px] last:border-b-0 ${FOCUS_INSET} disabled:opacity-50`}
             >
               {o.label}
               {o.value === currentRole && (

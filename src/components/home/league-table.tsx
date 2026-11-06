@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { FormBars } from "./form-bars";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 export interface LeagueRow {
   playerId: string;
@@ -52,7 +53,7 @@ export function LeagueTable({ rows, myGap = null }: { rows: LeagueRow[]; myGap?:
       </ol>
       <Link
         href="/ranking"
-        className="flex min-h-11 items-center justify-between border-t border-border px-3.5 text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+        className={`flex min-h-11 items-center justify-between border-t border-border px-3.5 text-sm font-semibold text-primary ${FOCUS_INSET}`}
       >
         Ganze Rangliste <ChevronRight aria-hidden="true" className="size-4" />
       </Link>

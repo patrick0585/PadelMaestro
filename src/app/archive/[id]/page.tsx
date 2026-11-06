@@ -7,9 +7,10 @@ import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { FinishedSummary } from "@/app/game-day/finished-summary";
 import { LABEL, TICKET_HEAD, TICKET_PILL } from "@/components/home/styles";
-import { MatchRows, type RowMatch } from "@/app/game-day/match-rows";
+import { MatchRows } from "@/app/game-day/match-rows";
+import { toRowMatch } from "@/app/game-day/row-match";
 import { describeRule, ruleForGameDay } from "@/lib/scoring/rule";
-import { formatGameDayHeading } from "@/lib/archive/format";
+import { formatGameDayHeading } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
@@ -47,18 +48,7 @@ export default async function ArchiveDetailPage({
 
   if (!day || day.status !== "finished" || day.groupId !== ctx.groupId) notFound();
 
-  const rows: RowMatch[] = day.matches.map((m) => ({
-    id: m.id,
-    matchNumber: m.matchNumber,
-    team1: [m.team1PlayerA.name, m.team1PlayerB.name],
-    team2: [m.team2PlayerA.name, m.team2PlayerB.name],
-    team1Score: m.team1Score,
-    team2Score: m.team2Score,
-    version: m.version,
-    scoredByName: m.scoredBy?.name ?? null,
-    scoredAt: m.scoredAt?.toISOString() ?? null,
-    removable: false,
-  }));
+  const rows = day.matches.map((m) => toRowMatch(m, false));
   const scoredMatchCount = rows.filter((m) => m.team1Score !== null && m.team2Score !== null).length;
   const playerIds = new Set(
     day.matches.flatMap((m) => [m.team1PlayerAId, m.team1PlayerBId, m.team2PlayerAId, m.team2PlayerBId]),

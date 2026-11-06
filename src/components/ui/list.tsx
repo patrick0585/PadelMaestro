@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 export function LargeTitle({
   title,
@@ -51,7 +52,7 @@ export function GroupedList({
   className?: string;
 }) {
   return (
-    <div className={`overflow-hidden rounded-[14px] bg-[#141f36] ${className}`.trim()}>
+    <div className={`overflow-hidden rounded-[14px] bg-surface-list ${className}`.trim()}>
       {children}
     </div>
   );
@@ -102,7 +103,7 @@ export function ListRow({
   const interactive = href || onClick;
   const className = [
     interactive
-      ? "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      ? FOCUS_INSET
       : "",
     "relative flex min-h-11 w-full items-center gap-[11px] px-3 py-2.5 text-left text-[14.5px]",
     "not-first:before:absolute not-first:before:right-0 not-first:before:top-0",

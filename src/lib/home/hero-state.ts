@@ -1,4 +1,5 @@
 import type { HeroState } from "@/app/dashboard-hero";
+import { formatDayMonth } from "@/lib/format-date";
 import { countdownLabel, daysUntil } from "./countdown";
 
 interface HeroDay {
@@ -17,8 +18,7 @@ interface HeroExtra {
 }
 
 export const weekdayOf = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "long", timeZone: "UTC" });
-export const dateShortOf = (d: Date) =>
-  d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+export const dateShortOf = (d: Date) => formatDayMonth(d);
 
 /** Ticket state for a planned game day, shared by the home and game-day pages. */
 export function buildHeroState(day: HeroDay, meId: string, extra: HeroExtra): HeroState {

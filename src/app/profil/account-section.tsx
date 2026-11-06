@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { GroupedList, ListRow, SectionFooter, SectionLabel } from "@/components/ui/list";
 import { DeleteAccountDialog } from "./delete-account-dialog";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 const EXPORT_ROW_CLASS =
-  "flex min-h-11 w-full items-center px-3 py-2.5 text-[14.5px] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary";
+  `flex min-h-11 w-full items-center px-3 py-2.5 text-[14.5px] text-primary ${FOCUS_INSET}`;
 
 export function AccountSection({ hasPassword }: { hasPassword: boolean }) {
   const [deleting, setDeleting] = useState(false);

@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { LABEL, MEDAL, TICKET_HEAD, TICKET_PILL } from "@/components/home/styles";
+import { DateBlock } from "@/components/date-block";
+import { MEDAL, TICKET_HEAD, TICKET_PILL } from "@/components/home/styles";
 import type { ArchivedGameDayRow } from "@/lib/archive/list";
-import { dateBlockOf, formatGameDayDate, winnerLineOf } from "@/lib/archive/format";
+import { winnerLineOf } from "@/lib/archive/format";
+import { dateBlockOf } from "@/lib/format-date";
 import type { RankingRow } from "@/lib/ranking/compute";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
-const FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary";
 
 export interface SeasonSectionData {
   seasonId: string;
@@ -29,21 +31,14 @@ function SelfChip({ self }: { self: ArchivedGameDayRow["self"] }) {
 }
 
 export function DayRow({ row }: { row: ArchivedGameDayRow }) {
-  const { day, month } = dateBlockOf(row.date);
   const winner = winnerLineOf(row.podium);
   return (
     <li>
       <Link
         href={`/archive/${row.id}`}
-        className={`grid min-h-14 grid-cols-[44px_1fr_auto_12px] items-center gap-3 px-3.5 py-2.5 ${FOCUS}`}
+        className={`grid min-h-14 grid-cols-[44px_1fr_auto_12px] items-center gap-3 px-3.5 py-2.5 ${FOCUS_INSET}`}
       >
-        <span className="text-center">
-          <span className="sr-only">Spieltag {formatGameDayDate(row.date)}: </span>
-          <span aria-hidden="true">
-            <span className="block font-display text-[26px] font-extrabold leading-none tabular-nums">{day}</span>
-            <span className={LABEL}>{month}</span>
-          </span>
-        </span>
+        <DateBlock date={row.date} size="lg" srPrefix="Spieltag " />
         <span className="min-w-0">
           {winner ? (
             <span className="flex min-w-0 items-baseline gap-1.5 text-[15px] font-semibold">
@@ -145,7 +140,7 @@ export function SeasonSection({ section, ranking }: { section: SeasonSectionData
       </div>
       {ranking && <ChampionTicket seasonName={section.seasonName} ranking={ranking} />}
       <details className="group overflow-hidden rounded-[18px] border border-border bg-surface">
-        <summary className={`flex min-h-12 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden justify-between gap-3 px-3.5 py-2.5 ${FOCUS}`}>
+        <summary className={`flex min-h-12 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden justify-between gap-3 px-3.5 py-2.5 ${FOCUS_INSET}`}>
           <span className="min-w-0">
             <b className="block text-[14.5px]">
               {count} {count === 1 ? "Spieltag" : "Spieltage"}

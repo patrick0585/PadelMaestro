@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDayMonth } from "@/lib/format-date";
 import { StatsLineChart, TONE_COLOR, type ChartSeries, type SeriesTone } from "@/components/charts/stats-line-chart";
 
 export interface SeasonTrendChartData {
@@ -41,9 +42,7 @@ export function SeasonTrendChart({
   const [mode, setMode] = useState<Mode>("rank");
   const [pickId, setPickId] = useState<string | null>(null);
 
-  const xLabels = data.days.map((d) =>
-    new Date(d.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" }),
-  );
+  const xLabels = data.days.map((d) => formatDayMonth(new Date(d.date), "Europe/Berlin"));
   const tone = (id: string): SeriesTone =>
     id === currentPlayerId ? "me" : id === leaderId ? "lead" : id === pickId ? "pick" : "rest";
 

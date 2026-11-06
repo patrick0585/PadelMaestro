@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { computePartnershipCounts } from "@/lib/game-day/partnerships";
 import { pairingFairness } from "@/lib/game-day/day-podium";
+import { FOCUS_INSET } from "@/components/ui/focus";
 
 // Server component: derives the roster from the players who actually
 // appeared in scored matches (not from declared attendance), so a
@@ -44,7 +45,7 @@ export async function PartnershipCounts({ gameDayId }: { gameDayId: string }) {
 
   return (
     <details aria-label="Häufigkeit der Team-Paarungen" className="group overflow-hidden rounded-[18px] border border-border bg-surface">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+      <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 ${FOCUS_INSET}`}>
         <span>
           <b className="block text-[14.5px]">Paarungen an diesem Tag</b>
           <span className="text-xs text-foreground-muted">
