@@ -16,12 +16,12 @@ const LINK =
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ next?: string | string[] }>;
-} = {}) {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
   const session = await auth();
   if (session?.user?.id) redirect("/");
   const open = publicSignupEnabled();
-  const rawNext = (await searchParams)?.next;
+  const rawNext = (await searchParams).next;
   const next = typeof rawNext === "string" ? rawNext : undefined;
 
   return (

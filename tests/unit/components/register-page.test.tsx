@@ -18,21 +18,21 @@ describe("Registrierung ohne Einladung", () => {
   it("zeigt das Formular, wenn die Registrierung offen ist", async () => {
     vi.stubEnv("PUBLIC_SIGNUP", "true");
     authMock.mockResolvedValue(null);
-    render(await RegisterPage());
+    render(await RegisterPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole("heading", { name: "Konto erstellen" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Konto anlegen" })).toBeInTheDocument();
   });
 
   it("verweist auf Einladung und Hilfe, solange sie geschlossen ist", async () => {
     authMock.mockResolvedValue(null);
-    render(await RegisterPage());
+    render(await RegisterPage({ searchParams: Promise.resolve({}) }));
     expect(screen.queryByRole("button", { name: "Konto anlegen" })).toBeNull();
     expect(screen.getByRole("link", { name: "Zur Hilfe-Seite" })).toHaveAttribute("href", "/support");
   });
 
   it("schickt Angemeldete zur Startseite", async () => {
     authMock.mockResolvedValue({ user: { id: "u1" } });
-    await expect(RegisterPage()).rejects.toThrow("REDIRECT:/");
+    await expect(RegisterPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/");
   });
 
   it("die Login-Seite zeigt den Link nur bei offener Registrierung", async () => {
