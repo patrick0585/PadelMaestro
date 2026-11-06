@@ -44,7 +44,17 @@ sleep 2
 sudo -n /bin/systemctl is-active "$SERVICE"
 
 echo "==> Checking HTTP reachability"
-curl -fsS -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:3000/login || {
+# The service sets PORT in its unit (8080 on the IP-mode VPS); HEALTH_PORT overrides, Next's default is 3000.
+if [[ -z "${HEALTH_PORT:-}" ]]; then
+  HEALTH_PORT="$(systemctl show -p Environment --value "$SERVICE" 2>/dev/null | tr ' ' '\n' | sed -n 's/^PORT=//p' | tail -n1 || true)"
+fi
+HEALTH_PORT="${HEALTH_PORT:-3000}"
+[[ "$HEALTH_PORT" =~ ^[0-9]+$ ]] || { echo "Invalid health-check port: $HEALTH_PORT" >&2; exit 1; }
+echo "    port: $HEALTH_PORT"
+# The app needs a few seconds after the restart before it listens.
+curl -fsS -o /dev/null -w "HTTP %{http_code}\n" \
+  --retry 10 --retry-delay 1 --retry-connrefused --max-time 5 \
+  "http://127.0.0.1:${HEALTH_PORT}/login" || {
   echo "Local health check failed — run: journalctl -u $SERVICE -n 50 --no-pager" >&2
   exit 1
 }

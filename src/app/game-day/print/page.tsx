@@ -76,7 +76,6 @@ export default async function GameDayPrintPage() {
   return (
     <PrintSheet
       dateText={dateText}
-      status={day.status}
       scoring={scoring}
       playing={playing}
       joker={joker}

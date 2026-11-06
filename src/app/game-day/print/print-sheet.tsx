@@ -11,7 +11,6 @@ export interface PrintMatch {
 
 export interface PrintSheetProps {
   dateText: string;
-  status: string;
   scoring: string;
   playing: string[];
   joker: string[];
@@ -21,7 +20,6 @@ export interface PrintSheetProps {
 
 export function PrintSheet({
   dateText,
-  status,
   scoring,
   playing,
   joker,
@@ -67,9 +65,7 @@ export function PrintSheet({
       </section>
 
       {matches.length === 0 ? (
-        <p className="text-sm italic">
-          Matches sind noch nicht erstellt (Status: {status}).
-        </p>
+        <p className="text-sm italic">Matches werden beim Start des Spieltags erstellt.</p>
       ) : (
         <section>
           <h2 className="mb-1.5 text-xs font-bold uppercase tracking-wider">
