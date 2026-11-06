@@ -5,9 +5,11 @@ import { EmailNoticeClient } from "./email-notice-client";
 export async function EmailNotice({
   playerId,
   showProfileLink = true,
+  compact = false,
 }: {
   playerId: string;
   showProfileLink?: boolean;
+  compact?: boolean;
 }) {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
@@ -20,6 +22,7 @@ export async function EmailNotice({
       variant={variant}
       pending={player.pendingEmail}
       showProfileLink={showProfileLink}
+      compact={compact}
     />
   );
 }

@@ -1,7 +1,7 @@
 import { Avatar } from "@/components/ui/avatar";
 import { FormBars } from "@/components/home/form-bars";
 import { MEDAL } from "@/components/home/styles";
-import type { Gap } from "@/lib/ranking/standing";
+import { gapText, type Gap } from "@/lib/ranking/standing";
 import { Movement } from "./movement";
 import { splitPodium } from "@/lib/game-day/day-podium";
 
@@ -20,13 +20,6 @@ export interface StandingRow {
   isMe: boolean;
 }
 
-
-function gapText(gap: Gap): string {
-  if (gap.kind === "lead") return `+${gap.over} Vorsprung`;
-  if (gap.kind === "tied") return `geteilter Platz ${gap.rank}`;
-  if (gap.gap === 0) return `punktgleich mit Platz ${gap.toRank}`;
-  return `−${gap.gap} auf Platz ${gap.toRank}`;
-}
 
 function medalLine(m: StandingRow["medals"]): string {
   return [

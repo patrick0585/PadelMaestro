@@ -63,7 +63,8 @@ describe("loadPlayerPass", () => {
     await finishedDay(season.id, "2026-10-08", [ids[2], ids[3], ids[0], ids[1]], [2, 1]);
 
     const pass = await loadPlayerPass(ids[0], groupId);
-    expect(pass.stats).toEqual({ rank: 1, ppg: 2, attended: 2 });
+    expect(pass.stats).toMatchObject({ rank: 1, ppg: 2, attended: 2 });
+    expect(pass.stats?.medals).toEqual({ gold: expect.any(Number), silver: expect.any(Number), bronze: expect.any(Number) });
     const passC = await loadPlayerPass(ids[2], groupId);
     expect(passC.stats).toMatchObject({ ppg: 1, attended: 2 });
   });

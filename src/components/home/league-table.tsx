@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { FormBars } from "./form-bars";
 
@@ -13,18 +14,13 @@ export interface LeagueRow {
   isMe: boolean;
 }
 
-export function LeagueTable({ rows }: { rows: LeagueRow[] }) {
+export function LeagueTable({ rows, myGap = null }: { rows: LeagueRow[]; myGap?: string | null }) {
   return (
-    <section aria-labelledby="home-table">
-      <div className="flex items-baseline justify-between px-1">
-        <h2 id="home-table" className="font-display text-[15px] font-bold uppercase tracking-[0.16em]">
-          Tabelle
-        </h2>
-        <Link href="/ranking" className="inline-flex min-h-11 items-center text-[13px] font-semibold text-primary">
-          Rangliste
-        </Link>
-      </div>
-      <ol className="overflow-hidden rounded-[18px] border border-border bg-surface">
+    <section aria-labelledby="home-table" className="overflow-hidden rounded-[18px] border border-border bg-surface">
+      <h2 id="home-table" className="px-3.5 pt-3 font-display text-[15px] font-bold uppercase tracking-[0.16em]">
+        Tabelle
+      </h2>
+      <ol>
         {rows.map((r, i) => {
           const gap = i > 0 && r.rank > rows[i - 1].rank + 1;
           return (
@@ -43,6 +39,7 @@ export function LeagueTable({ rows }: { rows: LeagueRow[] }) {
                   {r.isMe ? "Du · " : ""}
                   {r.ppg.toFixed(2)} PPG
                 </span>
+                {r.isMe && myGap && <span className="block text-[11.5px] font-semibold text-primary">{myGap}</span>}
               </span>
               <FormBars values={r.form} me={r.isMe} />
               <span className="min-w-[3ch] text-right font-display text-[24px] font-extrabold tabular-nums">
@@ -53,6 +50,12 @@ export function LeagueTable({ rows }: { rows: LeagueRow[] }) {
           );
         })}
       </ol>
+      <Link
+        href="/ranking"
+        className="flex min-h-11 items-center justify-between border-t border-border px-3.5 text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      >
+        Ganze Rangliste <ChevronRight aria-hidden="true" className="size-4" />
+      </Link>
     </section>
   );
 }

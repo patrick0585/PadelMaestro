@@ -4,7 +4,7 @@ import { computeRanking } from "@/lib/ranking/compute";
 export interface PlayerPass {
   memberSince: Date | null;
   seasonName: string | null;
-  stats: { rank: number; ppg: number; attended: number } | null;
+  stats: { rank: number; ppg: number; attended: number; medals: { gold: number; silver: number; bronze: number } } | null;
 }
 
 // Memberships were backfilled when groups were introduced, so joinedAt can be
@@ -52,7 +52,7 @@ export async function loadPlayerPass(playerId: string, groupId: string): Promise
     }),
   ]);
   const mine = ranking.find((r) => r.playerId === playerId);
-  const stats = mine && mine.games > 0 ? { rank: mine.rank, ppg: mine.pointsPerGame, attended } : null;
+  const stats = mine && mine.games > 0 ? { rank: mine.rank, ppg: mine.pointsPerGame, attended, medals: mine.medals } : null;
   return { memberSince, seasonName: season.name, stats };
 }
 

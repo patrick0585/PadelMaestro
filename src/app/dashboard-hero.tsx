@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Clock, Star, X } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { TICKET_HEAD, TICKET_PILL } from "@/components/home/styles";
@@ -41,12 +41,11 @@ export type HeroState =
       ppgSnapshot: number | null;
     } & HeroBase);
 
-const STATUS: Record<"pending" | "confirmed" | "declined" | "joker", { label: string; cls: string }> = {
-  pending: { label: "noch offen", cls: "border-amber-400/40 bg-amber-400/15 text-amber-200" },
-  confirmed: { label: "zugesagt", cls: "border-lime/60 bg-black/35 text-lime" },
-  declined: { label: "abgesagt", cls: "border-white/25 bg-black/20 text-[#d9f6fb]" },
-  joker: { label: "Joker gesetzt", cls: "border-amber-400/40 bg-amber-400/15 text-amber-200" },
-};
+const ANSWERED = {
+  confirmed: { label: "Du bist dabei", Icon: Check, cls: "border-lime/60 bg-black/35 text-lime" },
+  declined: { label: "Du hast abgesagt", Icon: X, cls: "border-white/25 bg-black/20 text-[#d9f6fb]" },
+  joker: { label: "Joker gesetzt", Icon: Star, cls: "border-amber-400/40 bg-amber-400/15 text-amber-200" },
+} as const;
 
 const MAX_PIPS = 8;
 const ACT =
@@ -72,6 +71,13 @@ export function DashboardHero({ state }: { state: HeroState }) {
   const [busy, setBusy] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Answered days show only the status; "ändern" brings the three choices back.
+  const [editing, setEditing] = useState(false);
+  const firstChoice = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (editing) firstChoice.current?.focus();
+  }, [editing]);
+  const showAnswered = state.kind === "member" && state.attendance !== "pending" && !editing;
 
   async function join() {
     if (state.kind !== "not-member") return;
@@ -151,9 +157,14 @@ export function DashboardHero({ state }: { state: HeroState }) {
 
   async function handleChoose(next: "confirmed" | "declined") {
     if (state.kind !== "member") return;
+    if (next === state.attendance) {
+      setEditing(false);
+      return;
+    }
     setBusy(true);
     setError(null);
-    if (state.attendance === "joker") {
+    const hadJoker = state.attendance === "joker";
+    if (hadJoker) {
       const cleared = await deleteJoker();
       if (!cleared) {
         setBusy(false);
@@ -162,7 +173,9 @@ export function DashboardHero({ state }: { state: HeroState }) {
     }
     const ok = await postAttendance(next);
     setBusy(false);
-    if (ok) router.refresh();
+    if (ok) setEditing(false);
+    // The joker is already gone even if the new answer failed, so reload the real state.
+    if (ok || hadJoker) router.refresh();
   }
 
   async function handleConfirmJoker() {
@@ -172,7 +185,10 @@ export function DashboardHero({ state }: { state: HeroState }) {
     const ok = await postJoker();
     setBusy(false);
     setDialogOpen(false);
-    if (ok) router.refresh();
+    if (ok) {
+      setEditing(false);
+      router.refresh();
+    }
   }
 
   const shownPips = state.pips.slice(0, MAX_PIPS);
@@ -246,44 +262,51 @@ export function DashboardHero({ state }: { state: HeroState }) {
         </button>
       ) : (
         <>
-          <p className="mt-3 flex items-center gap-2 text-[13.5px] text-[#d9f6fb]">
-            Dein Status
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-[12.5px] font-semibold ${STATUS[state.attendance].cls}`}
-            >
-              {STATUS[state.attendance].label}
-            </span>
-          </p>
-          <div className="mt-3 grid grid-cols-[1.3fr_1fr_1fr] gap-2">
+          {showAnswered && state.attendance !== "pending" ? (
+            <AnsweredStatus attendance={state.attendance} onChange={() => setEditing(true)} />
+          ) : (
+            <div className="mt-3 grid grid-cols-[1.3fr_1fr_1fr] gap-2">
+              <button
+                ref={firstChoice}
+                type="button"
+                aria-pressed={state.attendance === "confirmed"}
+                disabled={busy}
+                onClick={() => handleChoose("confirmed")}
+                className={`${ACT} ${state.attendance === "confirmed" ? PRESSED_GO : IDLE}`}
+              >
+                <Check aria-hidden="true" className="size-4" /> Zusagen
+              </button>
+              <button
+                type="button"
+                aria-pressed={state.attendance === "declined"}
+                disabled={busy}
+                onClick={() => handleChoose("declined")}
+                className={`${ACT} ${state.attendance === "declined" ? "border-white bg-white/90 text-background" : IDLE}`}
+              >
+                <X aria-hidden="true" className="size-4" /> Absagen
+              </button>
+              <button
+                type="button"
+                aria-pressed={state.attendance === "joker"}
+                disabled={busy || state.jokersRemaining === 0 || state.attendance === "joker"}
+                onClick={() => setDialogOpen(true)}
+                className={`${ACT} ${state.attendance === "joker" ? "border-amber-300 bg-amber-300 text-background ring-2 ring-white/70 disabled:opacity-100" : `${IDLE} text-amber-200`}`}
+              >
+                <Star aria-hidden="true" className="size-4" /> Joker
+              </button>
+            </div>
+          )}
+          {editing && (
             <button
               type="button"
-              aria-pressed={state.attendance === "confirmed"}
               disabled={busy}
-              onClick={() => handleChoose("confirmed")}
-              className={`${ACT} ${state.attendance === "pending" ? GO : state.attendance === "confirmed" ? PRESSED_GO : IDLE}`}
+              onClick={() => setEditing(false)}
+              className="mt-1 inline-flex min-h-11 items-center px-1 text-[13.5px] text-[#d9f6fb] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <Check aria-hidden="true" className="size-4" /> Zusagen
+              Abbrechen
             </button>
-            <button
-              type="button"
-              aria-pressed={state.attendance === "declined"}
-              disabled={busy}
-              onClick={() => handleChoose("declined")}
-              className={`${ACT} ${state.attendance === "declined" ? "border-white bg-white/90 text-background" : IDLE}`}
-            >
-              <X aria-hidden="true" className="size-4" /> Absagen
-            </button>
-            <button
-              type="button"
-              aria-pressed={state.attendance === "joker"}
-              disabled={busy || state.jokersRemaining === 0 || state.attendance === "joker"}
-              onClick={() => setDialogOpen(true)}
-              className={`${ACT} ${state.attendance === "joker" ? "border-amber-300 bg-amber-300 text-background ring-2 ring-white/70 disabled:opacity-100" : `${IDLE} text-amber-200`}`}
-            >
-              <Star aria-hidden="true" className="size-4" /> Joker
-            </button>
-          </div>
-          {state.jokersRemaining === 0 && (
+          )}
+          {!showAnswered && state.jokersRemaining === 0 && (
             <p className="mt-2 text-xs text-[#d9f6fb]">Keine Joker mehr in dieser Saison</p>
           )}
           {error && (
@@ -304,5 +327,29 @@ export function DashboardHero({ state }: { state: HeroState }) {
         </>
       )}
     </section>
+  );
+}
+
+function AnsweredStatus({
+  attendance,
+  onChange,
+}: {
+  attendance: keyof typeof ANSWERED;
+  onChange: () => void;
+}) {
+  const { label, Icon, cls } = ANSWERED[attendance];
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3">
+      <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[14px] font-bold ${cls}`}>
+        <Icon aria-hidden="true" className="size-4" /> {label}
+      </span>
+      <button
+        type="button"
+        onClick={onChange}
+        className="inline-flex min-h-11 items-center px-1 text-[14px] text-[#d9f6fb] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      >
+        ändern
+      </button>
+    </div>
   );
 }

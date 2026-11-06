@@ -14,14 +14,13 @@ import { LiveTicket } from "@/components/home/live-ticket";
 import { RecapTicket } from "@/components/home/recap-ticket";
 import { SeasonCard, SeasonCardEmpty } from "@/components/home/season-card";
 import { LeagueTable, type LeagueRow } from "@/components/home/league-table";
-import { TrophyShelf } from "@/components/home/trophy-shelf";
-import { DuoCards } from "@/components/home/duo-cards";
 import { canFoundGroup } from "@/lib/group/create";
 import { getGroupRules } from "@/lib/group/rules";
 import { buildHeroState, dateShortOf } from "@/lib/home/hero-state";
 import { deriveLiveTicket } from "@/lib/home/live-ticket";
 import { recentFormByPlayer } from "@/lib/home/recent-form";
 import { pickTableRows } from "@/lib/home/table-rows";
+import { gapText, gapToAbove } from "@/lib/ranking/standing";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +138,7 @@ export default async function DashboardPage() {
   }
 
   const form = await formPromise;
+  const myGap = gapToAbove(ranking, meId);
   const tableRows: LeagueRow[] = tableSource.map((r) => ({
     playerId: r.playerId,
     name: r.playerName,
@@ -159,7 +159,7 @@ export default async function DashboardPage() {
         </h1>
       </header>
 
-      <EmailNotice playerId={meId} />
+      <EmailNotice playerId={meId} compact />
 
       {liveTicket}
       {plannedTicket}
@@ -172,11 +172,10 @@ export default async function DashboardPage() {
           ppg={myRow.pointsPerGame}
           wins={stats.winRate.wins}
           matches={stats.winRate.matches}
-          rank={myRow.rank}
-          rankedCount={ranking.length}
           attended={stats.attendance.attended}
           totalDays={stats.attendance.total}
           jokersUsed={stats.jokers.used}
+          jokersTotal={stats.jokers.total}
           form={[...stats.recentDays].reverse().map((d) => d.ppg)}
           muted={recapTicket !== null}
         />
@@ -184,11 +183,7 @@ export default async function DashboardPage() {
         <SeasonCardEmpty seasonName={season.name} jokersRemaining={stats.jokers.remaining} />
       )}
 
-      {tableRows.length > 0 && <LeagueTable rows={tableRows} />}
-
-      {hasPlayed && <TrophyShelf medals={stats.medals} />}
-
-      {stats.bestPartner && <DuoCards best={stats.bestPartner} worst={stats.worstPartner} />}
+      {tableRows.length > 0 && <LeagueTable rows={tableRows} myGap={myGap ? gapText(myGap) : null} />}
     </div>
   );
 }

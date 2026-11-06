@@ -5,7 +5,6 @@ import { RecapTicket } from "@/components/home/recap-ticket";
 import { SeasonCard, SeasonCardEmpty } from "@/components/home/season-card";
 import { LeagueTable, type LeagueRow } from "@/components/home/league-table";
 import { TrophyShelf } from "@/components/home/trophy-shelf";
-import { DuoCards } from "@/components/home/duo-cards";
 
 describe("LiveTicket", () => {
   it("zeigt Fortschritt, letztes Ergebnis und aktuelles Match", () => {
@@ -75,28 +74,40 @@ describe("RecapTicket", () => {
 });
 
 describe("SeasonCard", () => {
-  it("PPG, Gewinnquote, Rang, Dabei und Form", () => {
-    render(
-      <SeasonCard
-        seasonName="Saison 2026"
-        groupName="Donnerstagsrunde"
-        ppg={5.333}
-        wins={14}
-        matches={21}
-        rank={1}
-        rankedCount={6}
-        attended={7}
-        totalDays={8}
-        jokersUsed={1}
-        form={[4.8, 5.6, 6.1, 4.2, 5.9]}
-      />,
-    );
+  const props = {
+    seasonName: "Saison 2026",
+    groupName: "Donnerstagsrunde",
+    ppg: 5.333,
+    wins: 14,
+    matches: 21,
+    attended: 7,
+    totalDays: 8,
+    jokersUsed: 1,
+    jokersTotal: 2,
+    form: [4.8, 5.6, 6.1, 4.2, 5.9],
+  };
+
+  it("PPG groß, drei Kreise für Siege, Dabei und Joker, dazu die Form", () => {
+    render(<SeasonCard {...props} />);
     expect(screen.getByText("5.33")).toBeInTheDocument();
     expect(screen.getByText("67%")).toBeInTheDocument();
-    expect(screen.getByText("14 von 21")).toBeInTheDocument();
-    expect(screen.getByText("#1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /14 von 21/ })).toHaveTextContent("14 von 21gewonnen");
     expect(screen.getByText("7/8")).toBeInTheDocument();
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.queryByText("#1")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Form der letzten 5 Spieltage: 4.8, 5.6, 6.1, 4.2, 5.9/ })).toBeInTheDocument();
+  });
+
+  it("die Kreise führen zu Duos, Archiv und Spieltag", () => {
+    render(<SeasonCard {...props} />);
+    expect(screen.getByRole("link", { name: /14 von 21 Partien gewonnen/ })).toHaveAttribute("href", "/ranking?ansicht=duos");
+    expect(screen.getByRole("link", { name: /7 von 8 Spieltagen dabei/ })).toHaveAttribute("href", "/archive");
+    expect(screen.getByRole("link", { name: /1 von 2 Jokern gesetzt/ })).toHaveAttribute("href", "/game-day");
+  });
+
+  it("ohne Joker in der Gruppe kein Joker-Kreis", () => {
+    render(<SeasonCard {...props} jokersUsed={0} jokersTotal={0} />);
+    expect(screen.queryByRole("link", { name: /Jokern gesetzt/ })).not.toBeInTheDocument();
   });
 
   it("Leerzustand", () => {
@@ -140,47 +151,23 @@ describe("LeagueTable", () => {
     expect(items).toHaveLength(4);
     expect(items[3]).toHaveAttribute("aria-current", "true");
     expect(items[3]).toHaveTextContent("Du ·");
-    expect(screen.getByRole("link", { name: "Rangliste" })).toHaveAttribute("href", "/ranking");
+    expect(screen.getByRole("link", { name: /Ganze Rangliste/ })).toHaveAttribute("href", "/ranking");
+  });
+
+  it("zeigt unter der eigenen Zeile den Abstand nach oben", () => {
+    render(
+      <LeagueTable
+        rows={[row({ playerId: "a", rank: 1 }), row({ playerId: "me", name: "Patrick", rank: 2, isMe: true })]}
+        myGap="−2 auf Platz 1"
+      />,
+    );
+    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("−2 auf Platz 1");
   });
 });
 
-describe("TrophyShelf und DuoCards", () => {
+describe("TrophyShelf", () => {
   it("zählt Medaillen", () => {
     render(<TrophyShelf medals={{ gold: 3, silver: 2, bronze: 1 }} />);
     expect(screen.getByText("6 Medaillen")).toBeInTheDocument();
   });
-
-  it("zeigt beide Duos als Zeilen einer Karte mit vollem Namen", () => {
-    render(
-      <DuoCards
-        best={{ playerId: "f", name: "Christian Hoffmann", avatarVersion: 0, pointsTogether: 31, matches: 12, wins: 0 }}
-        worst={{ playerId: "m", name: "Maximilian Schulte", avatarVersion: 0, pointsTogether: 9, matches: 1, wins: 0 }}
-      />,
-    );
-    const card = screen.getByRole("region", { name: "Deine Duos" });
-    const rows = screen.getAllByRole("listitem");
-    expect(card).toContainElement(rows[0]);
-    expect(rows[0]).toHaveTextContent("Bestes Duo");
-    expect(rows[0]).toHaveTextContent("Christian Hoffmann");
-    expect(rows[0]).toHaveTextContent("2.6");
-    expect(rows[0]).toHaveTextContent("12 Matches · 31 Pkt");
-    expect(rows[1]).toHaveTextContent("Weniger Glück");
-    expect(rows[1]).toHaveTextContent("1 Match");
-  });
-
-  it("verlinkt auf die Übersicht aller Duos", () => {
-    render(
-      <DuoCards best={{ playerId: "f", name: "Finn", avatarVersion: 0, pointsTogether: 6, matches: 3, wins: 2 }} worst={null} />,
-    );
-    expect(screen.getByRole("link", { name: /Alle Duos/ })).toHaveAttribute("href", "/ranking?ansicht=duos");
-  });
-
-  it("Platzhalter ohne schlechtestes Duo", () => {
-    render(
-      <DuoCards best={{ playerId: "f", name: "Finn Overbeck", avatarVersion: 0, pointsTogether: 31, matches: 5, wins: 0 }} worst={null} />,
-    );
-    expect(screen.getByText("Finn Overbeck")).toBeInTheDocument();
-    expect(screen.getByText(/zu wenig Partner-Daten/)).toBeInTheDocument();
-  });
-
 });

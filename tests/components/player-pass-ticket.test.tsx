@@ -10,7 +10,7 @@ const base: PlayerPassTicketProps = {
   roleLabel: "Besitzer",
   memberSince: new Date("2025-04-10T00:00:00Z"),
   seasonName: "Saison 2026",
-  stats: { rank: 3, ppg: 1.8412, attended: 14 },
+  stats: { rank: 3, ppg: 1.8412, attended: 14, medals: { gold: 1, silver: 0, bronze: 2 } },
 };
 
 describe("<PlayerPassTicket>", () => {
