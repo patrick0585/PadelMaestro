@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gapToAbove, movementByPlayer, sharedRanks } from "@/lib/ranking/standing";
+import { gapText, gapToAbove, movementByPlayer, sharedRanks } from "@/lib/ranking/standing";
 
 describe("movementByPlayer", () => {
   it("Plätze seit dem vorletzten Spieltag (positiv = hoch)", () => {
@@ -72,5 +72,18 @@ describe("sharedRanks", () => {
   it("ohne Spiele", () => {
     expect(sharedRanks([row(0, 0), row(0, 0)])).toEqual([1, 1]);
     expect(sharedRanks([])).toEqual([]);
+  });
+});
+
+describe("gapText", () => {
+  it("Singular und Plural", () => {
+    expect(gapText({ kind: "lead", over: 1 })).toBe("1 Punkt Vorsprung");
+    expect(gapText({ kind: "behind", gap: 1, toRank: 2 })).toBe("1 Punkt hinter Platz 2");
+    expect(gapText({ kind: "behind", gap: 3, toRank: 2 })).toBe("3 Punkte hinter Platz 2");
+  });
+
+  it("punktgleich und geteilter Platz", () => {
+    expect(gapText({ kind: "behind", gap: 0, toRank: 2 })).toBe("punktgleich mit Platz 2");
+    expect(gapText({ kind: "tied", rank: 1 })).toBe("geteilter Platz 1");
   });
 });

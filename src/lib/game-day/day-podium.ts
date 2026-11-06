@@ -12,5 +12,5 @@ export function splitPodium<T extends { rank: number }>(rows: T[]): { steps: { r
 export function pairingFairness(counts: number[]): { fair: boolean; text: string } {
   const min = Math.min(...counts);
   const max = Math.max(...counts);
-  return min === max ? { fair: true, text: `jede Paarung ${max}×` } : { fair: false, text: `${min}× bis ${max}× je Paarung` };
+  return min === max ? { fair: true, text: `jede Paarung ${max} Mal` } : { fair: false, text: `${min} bis ${max} Mal je Paarung` };
 }

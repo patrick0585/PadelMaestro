@@ -158,10 +158,10 @@ describe("LeagueTable", () => {
     render(
       <LeagueTable
         rows={[row({ playerId: "a", rank: 1 }), row({ playerId: "me", name: "Patrick", rank: 2, isMe: true })]}
-        myGap="−2 auf Platz 1"
+        myGap="2 Punkte hinter Platz 1"
       />,
     );
-    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("−2 auf Platz 1");
+    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("2 Punkte hinter Platz 1");
   });
 });
 

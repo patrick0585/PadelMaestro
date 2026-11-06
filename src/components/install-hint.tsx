@@ -115,7 +115,7 @@ export function InstallHint() {
             className="rounded-full p-1 text-foreground-muted hover:text-foreground"
             aria-label="Hinweis schließen"
           >
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         </div>
         {androidEvent && (

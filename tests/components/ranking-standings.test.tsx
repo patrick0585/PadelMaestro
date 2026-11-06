@@ -50,12 +50,12 @@ describe("Standings", () => {
     const me = screen.getAllByRole("listitem").find((li) => li.getAttribute("aria-current") === "true")!;
     expect(me).toHaveTextContent("Patrick");
     expect(me).toHaveTextContent("239");
-    expect(me).toHaveTextContent("−7 auf Platz 3");
+    expect(me).toHaveTextContent("7 Punkte hinter Platz 3");
   });
 
   it("auf dem Treppchen steht der eigene Abstand darunter", () => {
     render(<Standings rows={[row(1, "A"), row(2, "Patrick", { isMe: true })]} myGap={{ kind: "behind", gap: 6, toRank: 1 }} />);
-    expect(screen.getByText("Du: −6 auf Platz 1")).toBeInTheDocument();
+    expect(screen.getByText("Du: 6 Punkte hinter Platz 1")).toBeInTheDocument();
   });
 
   it("geteilte Plätze stehen gemeinsam auf einer Stufe", () => {
@@ -77,7 +77,7 @@ describe("Standings", () => {
 
   it("Spitzenreiter sieht den Vorsprung auf dem Treppchen", () => {
     render(<Standings rows={[row(1, "Patrick", { isMe: true }), row(2, "B")]} myGap={{ kind: "lead", over: 8 }} />);
-    expect(screen.getByText("Du: +8 Vorsprung")).toBeInTheDocument();
+    expect(screen.getByText("Du: 8 Punkte Vorsprung")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Weitere Plätze" })).not.toBeInTheDocument();
   });
 

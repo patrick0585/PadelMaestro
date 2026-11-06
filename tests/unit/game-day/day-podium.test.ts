@@ -26,12 +26,12 @@ describe("splitPodium", () => {
 
 describe("pairingFairness", () => {
   it("alle gleich oft: fair", () => {
-    expect(pairingFairness([2, 2, 2])).toEqual({ fair: true, text: "jede Paarung 2×" });
+    expect(pairingFairness([2, 2, 2])).toEqual({ fair: true, text: "jede Paarung 2 Mal" });
   });
   it("Unterschiede: Spanne", () => {
-    expect(pairingFairness([1, 3, 2])).toEqual({ fair: false, text: "1× bis 3× je Paarung" });
+    expect(pairingFairness([1, 3, 2])).toEqual({ fair: false, text: "1 bis 3 Mal je Paarung" });
   });
   it("nicht gespielte Paarungen zählen mit", () => {
-    expect(pairingFairness([0, 1, 1])).toEqual({ fair: false, text: "0× bis 1× je Paarung" });
+    expect(pairingFairness([0, 1, 1])).toEqual({ fair: false, text: "0 bis 1 Mal je Paarung" });
   });
 });
