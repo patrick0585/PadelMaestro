@@ -93,7 +93,7 @@ async function main() {
   const passwordHash = await hashPassword(SCREENSHOT_PASSWORD);
   const now = new Date();
   const group = await prisma.group.create({ data: { name: "Donnerstagsrunde Münster", slug: SLUG } });
-  const players = [];
+  const players: Awaited<ReturnType<typeof prisma.player.create>>[] = [];
   for (const r of ROSTER) {
     const p = await prisma.player.create({
       data: {
