@@ -11,6 +11,7 @@ import { PushSettings } from "./push-settings";
 import { EmailNotice } from "@/components/email-notice";
 import { AccountSection } from "./account-section";
 import { PlayerPassTicket } from "./player-pass-ticket";
+import { TrophyShelf } from "@/components/home/trophy-shelf";
 import { LegalFooter } from "@/components/legal-footer";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,7 @@ export default async function ProfilePage() {
           seasonName={pass?.seasonName ?? null}
           stats={pass?.stats ?? null}
         />
+        {pass?.stats && <TrophyShelf medals={pass.stats.medals} />}
       </div>
 
       {ctx && (

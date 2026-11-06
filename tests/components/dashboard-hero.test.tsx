@@ -40,32 +40,51 @@ describe("<DashboardHero> (member)", () => {
     expect(screen.getByRole("button", { name: "Joker" })).toBeInTheDocument();
   });
 
-  it("marks the active choice with aria-pressed=true", () => {
-    render(<DashboardHero state={member({ attendance: "confirmed" })} />);
-    expect(screen.getByRole("button", { name: "Zusagen" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Absagen" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Joker" })).toHaveAttribute("aria-pressed", "false");
+  it.each([
+    ["confirmed", "Du bist dabei"],
+    ["declined", "Du hast abgesagt"],
+    ["joker", "Joker gesetzt"],
+  ] as const)("nach einer Antwort (%s) nur Status und „ändern“", (attendance, label) => {
+    render(<DashboardHero state={member({ attendance })} />);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Zusagen" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ändern" })).toBeInTheDocument();
   });
 
-  it("marks no button active when attendance is pending", () => {
-    render(<DashboardHero state={member({ attendance: "pending" })} />);
-    expect(screen.getByRole("button", { name: "Zusagen" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Absagen" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Joker" })).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("marks Absagen active when attendance is declined", () => {
+  it("„ändern“ klappt die Knöpfe mit der aktuellen Wahl auf", async () => {
     render(<DashboardHero state={member({ attendance: "declined" })} />);
+    await userEvent.click(screen.getByRole("button", { name: "ändern" }));
     expect(screen.getByRole("button", { name: "Zusagen" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: "Absagen" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Joker" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("marks Joker active when attendance is joker", () => {
-    render(<DashboardHero state={member({ attendance: "joker" })} />);
-    expect(screen.getByRole("button", { name: "Zusagen" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Absagen" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Joker" })).toHaveAttribute("aria-pressed", "true");
+  it("„ändern“ setzt den Fokus auf die erste Wahl, „Abbrechen“ klappt wieder zu", async () => {
+    render(<DashboardHero state={member({ attendance: "confirmed" })} />);
+    await userEvent.click(screen.getByRole("button", { name: "ändern" }));
+    expect(screen.getByRole("button", { name: "Zusagen" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(screen.getByText("Du bist dabei")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Zusagen" })).not.toBeInTheDocument();
+  });
+
+  it("erneutes Tippen auf die aktuelle Antwort schickt nichts und klappt zu", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    render(<DashboardHero state={member({ attendance: "confirmed" })} />);
+    await userEvent.click(screen.getByRole("button", { name: "ändern" }));
+    await userEvent.click(screen.getByRole("button", { name: "Zusagen" }));
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(screen.getByText("Du bist dabei")).toBeInTheDocument();
+  });
+
+  it("offen: keine Vorauswahl, kein Knopf hervorgehoben", () => {
+    render(<DashboardHero state={member({ attendance: "pending" })} />);
+    for (const name of ["Zusagen", "Absagen", "Joker"]) {
+      const b = screen.getByRole("button", { name });
+      expect(b).toHaveAttribute("aria-pressed", "false");
+      expect(b.className).not.toContain("bg-lime");
+    }
   });
 
   it("disables Joker when no jokers are remaining and shows helper text", () => {
@@ -102,6 +121,7 @@ describe("<DashboardHero> (member)", () => {
       .mockResolvedValueOnce({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchSpy);
     render(<DashboardHero state={member({ attendance: "joker" })} />);
+    await userEvent.click(screen.getByRole("button", { name: "ändern" }));
     await userEvent.click(screen.getByRole("button", { name: "Zusagen" }));
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
     expect(fetchSpy.mock.calls[0][0]).toBe("/api/jokers");
@@ -131,12 +151,11 @@ describe("<DashboardHero> (member)", () => {
     expect(container.querySelectorAll(".border-dashed")).toHaveLength(1);
   });
 
-  it("zeigt Zusagen als Avatare, offene Plätze als Platzhalter und den eigenen Status", () => {
+  it("zeigt Zusagen als Avatare und offene Plätze als Platzhalter", () => {
     const pips = ["a", "b", "c"].map((id) => ({ playerId: id, name: id.toUpperCase(), avatarVersion: 0 }));
     const { container } = render(<DashboardHero state={member({ pips })} />);
     expect(screen.getByText(/zugesagt · 3 offen/)).toBeInTheDocument();
     expect(container.querySelectorAll(".border-dashed")).toHaveLength(3);
-    expect(screen.getByText("noch offen")).toBeInTheDocument();
   });
 
   it("shows ATTENDANCE_LOCKED message when the server returns 409 with that code", async () => {

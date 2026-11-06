@@ -1,14 +1,25 @@
+import Link from "next/link";
 import { sparkline } from "@/lib/home/sparkline";
 import { LABEL } from "./styles";
 const R = 38;
 const STROKE = 8;
 const C = 2 * Math.PI * R;
 
-function Ring({ pct, children }: { pct: number; children: React.ReactNode }) {
-  const size = 2 * (R + STROKE);
+function Ring({
+  pct,
+  stroke = "stroke-lime",
+  size = "size-[92px]",
+  children,
+}: {
+  pct: number;
+  stroke?: string;
+  size?: string;
+  children: React.ReactNode;
+}) {
+  const box = 2 * (R + STROKE);
   return (
-    <div className="relative grid size-[92px] shrink-0 place-items-center">
-      <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 -rotate-90" aria-hidden="true">
+    <div className={`relative grid ${size} shrink-0 place-items-center`}>
+      <svg viewBox={`0 0 ${box} ${box}`} className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx={R + STROKE} cy={R + STROKE} r={R} fill="none" strokeWidth={STROKE} className="stroke-slate-400/20" />
         {pct > 0 && (
           <circle
@@ -18,15 +29,48 @@ function Ring({ pct, children }: { pct: number; children: React.ReactNode }) {
             fill="none"
             strokeWidth={STROKE}
             strokeLinecap="round"
-            className="anim-ring stroke-lime"
+            className={`anim-ring ${stroke}`}
             strokeDasharray={C}
-            strokeDashoffset={C * (1 - pct)}
+            strokeDashoffset={C * (1 - Math.min(1, pct))}
             style={{ "--ring-c": C } as React.CSSProperties}
           />
         )}
       </svg>
       <div className="relative text-center font-display text-[28px] font-extrabold leading-none tabular-nums">{children}</div>
     </div>
+  );
+}
+
+const ratio = (a: number, b: number) => (b > 0 ? a / b : 0);
+
+function StatRing({
+  href,
+  label,
+  pct,
+  stroke,
+  value,
+  caption,
+}: {
+  href: string;
+  label: string;
+  pct: number;
+  stroke: string;
+  value: string;
+  caption: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="flex min-h-11 flex-col items-center gap-1.5 rounded-[14px] bg-background/55 px-1 pb-2 pt-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <Ring pct={pct} stroke={stroke} size="size-[64px]">
+        <span className="text-[16px]">{value}</span>
+      </Ring>
+      <span aria-hidden="true" className="text-center text-[11.5px] leading-tight text-foreground-muted">
+        {caption} <span className="text-primary">›</span>
+      </span>
+    </Link>
   );
 }
 
@@ -82,52 +126,71 @@ export interface SeasonCardProps {
   ppg: number;
   wins: number;
   matches: number;
-  rank: number;
-  rankedCount: number;
   attended: number;
   totalDays: number;
   jokersUsed: number;
+  jokersTotal: number;
   form: number[];
   muted?: boolean;
 }
 
 export function SeasonCard(p: SeasonCardProps) {
-  const pct = p.matches > 0 ? p.wins / p.matches : 0;
+  const winPct = ratio(p.wins, p.matches);
   return (
     <section aria-label={p.seasonName} className={`${CARD} ${p.muted ? "" : GLOW}`}>
       <h2 className={`flex items-baseline justify-between gap-3 ${LABEL} text-[12px] tracking-[0.16em]`}>
         <span className="text-primary">{p.seasonName}</span>
         <span className="truncate">{p.groupName}</span>
       </h2>
-      <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-3">
-        <div>
-          <p className="font-display text-[76px] font-extrabold leading-[0.85] tabular-nums text-white">{p.ppg.toFixed(2)}</p>
-          <p className="mt-1.5 text-sm font-semibold text-slate-300">Punkte pro Spiel</p>
-        </div>
-        <Ring pct={pct}>
-          {Math.round(pct * 100)}%
-          <small className="mt-0.5 block font-sans text-[11px] font-medium text-foreground-muted">
-            {p.wins} von {p.matches}
-          </small>
-        </Ring>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 tabular-nums">
-        <div className="rounded-xl bg-background/55 px-2.5 pb-2 pt-1.5">
-          <p className={LABEL}>Rang</p>
-          <p className="font-display text-[22px] font-extrabold leading-tight">
-            #{p.rank}
-            <span className="ml-1 font-sans text-[13px] font-medium text-foreground-muted">von {p.rankedCount}</span>
-          </p>
-        </div>
-        <div className="rounded-xl bg-background/55 px-2.5 pb-2 pt-1.5">
-          <p className={LABEL}>Dabei</p>
-          <p className="font-display text-[22px] font-extrabold leading-tight">
-            {p.attended}/{p.totalDays}
-            <span className="ml-1 font-sans text-[13px] font-medium text-foreground-muted">
-              · {p.jokersUsed} Joker
-            </span>
-          </p>
-        </div>
+      <p className="mt-2 flex items-baseline gap-2.5">
+        <span className="font-display text-[64px] font-extrabold leading-[0.85] tabular-nums text-white">{p.ppg.toFixed(2)}</span>
+        <span className={LABEL}>Punkte pro Match</span>
+      </p>
+      <div className={`mt-3 grid gap-2 ${p.jokersTotal > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+        <StatRing
+          href="/ranking?ansicht=duos"
+          label={`${Math.round(winPct * 100)} Prozent: ${p.wins} von ${p.matches} Partien gewonnen, zu deinen Duos`}
+          pct={winPct}
+          stroke="stroke-lime"
+          value={`${Math.round(winPct * 100)}%`}
+          caption={
+            <>
+              <b className="text-foreground">{p.wins}</b> von {p.matches}
+              <br />
+              gewonnen
+            </>
+          }
+        />
+        <StatRing
+          href="/archive"
+          label={`${p.attended} von ${p.totalDays} Spieltagen dabei, zum Archiv`}
+          pct={ratio(p.attended, p.totalDays)}
+          stroke="stroke-primary"
+          value={`${p.attended}/${p.totalDays}`}
+          caption={
+            <>
+              Spieltage
+              <br />
+              dabei
+            </>
+          }
+        />
+        {p.jokersTotal > 0 && (
+          <StatRing
+            href="/game-day"
+            label={`${p.jokersUsed} von ${p.jokersTotal} Jokern gesetzt, zum Spieltag`}
+            pct={ratio(p.jokersUsed, p.jokersTotal)}
+            stroke="stroke-amber-400"
+            value={`${p.jokersUsed}/${p.jokersTotal}`}
+            caption={
+              <>
+                Joker
+                <br />
+                gesetzt
+              </>
+            }
+          />
+        )}
       </div>
       {p.form.length > 0 && (
         <>
