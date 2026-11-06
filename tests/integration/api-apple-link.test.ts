@@ -102,3 +102,57 @@ describe("GET /api/auth/apple/nonce", () => {
     expect(cookie).toContain("Max-Age=600");
   });
 });
+
+describe("POST /api/account/apple/link: Randfälle", () => {
+  it("503, wenn Apple nicht eingerichtet ist", async () => {
+    clearAppleEnv();
+    const g = await createTestGroup();
+    const a = await createMember(g.id, { name: "A", email: "a@example.com" });
+    authMock.mockResolvedValue({ user: { id: a.id } });
+    const res = await POST(req({ identityToken: await t.token({ sub: "s", nonce: "nn" }) }));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe("apple_unavailable");
+  });
+
+  it("409, wenn das Konto schon eine andere Apple-ID hat", async () => {
+    const g = await createTestGroup();
+    const a = await createMember(g.id, { name: "A", email: "a@example.com" });
+    await prisma.player.update({ where: { id: a.id }, data: { appleSub: "001.first" } });
+    authMock.mockResolvedValue({ user: { id: a.id } });
+    const res = await POST(req({ identityToken: await t.token({ sub: "001.second", nonce: "nn" }) }));
+    expect(res.status).toBe(409);
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: a.id } })).appleSub).toBe("001.first");
+  });
+
+  it("verknüpft auch, wenn der Code-Tausch scheitert", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 400 })));
+    const g = await createTestGroup();
+    const a = await createMember(g.id, { name: "A", email: "a@example.com" });
+    authMock.mockResolvedValue({ user: { id: a.id } });
+    const res = await POST(req({ identityToken: await t.token({ sub: "001.ok", nonce: "nn" }), authorizationCode: "c" }));
+    expect(res.status).toBe(204);
+    expect(await prisma.player.findUniqueOrThrow({ where: { id: a.id } })).toMatchObject({
+      appleSub: "001.ok",
+      appleRefreshToken: null,
+    });
+  });
+
+  it("400 bei wiederverwendeter Nonce, Verknüpfung bleibt aus", async () => {
+    const g = await createTestGroup();
+    const a = await createMember(g.id, { name: "A", email: "a@example.com" });
+    authMock.mockResolvedValue({ user: { id: a.id } });
+    const token = await t.token({ sub: "001.re", nonce: "nn" });
+    expect((await POST(req({ identityToken: token }))).status).toBe(204);
+    await prisma.player.update({ where: { id: a.id }, data: { appleSub: null } });
+    expect((await POST(req({ identityToken: token }))).status).toBe(400);
+    expect((await prisma.player.findUniqueOrThrow({ where: { id: a.id } })).appleSub).toBeNull();
+  });
+
+  it("429 nach fünf Versuchen pro Minute", async () => {
+    const g = await createTestGroup();
+    const a = await createMember(g.id, { name: "A", email: "a@example.com" });
+    authMock.mockResolvedValue({ user: { id: a.id } });
+    for (let i = 0; i < 5; i++) await POST(req({ identityToken: "bad" }));
+    expect((await POST(req({ identityToken: "bad" }))).status).toBe(429);
+  });
+});
