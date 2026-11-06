@@ -34,7 +34,7 @@ function formatDay(iso: string) {
 }
 
 function usageText(inv: SerializedOpenInvitation) {
-  const used = inv.usedCount === 0 ? "unbenutzt" : `${inv.usedCount}× benutzt`;
+  const used = inv.usedCount === 0 ? "unbenutzt" : `${inv.usedCount} Mal benutzt`;
   return `${used} · bis ${formatDay(inv.expiresAt)}`;
 }
 

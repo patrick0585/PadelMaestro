@@ -16,11 +16,13 @@ export type Gap =
   | { kind: "behind"; gap: number; toRank: number }
   | { kind: "tied"; rank: number };
 
+const punkte = (n: number) => `${n} ${n === 1 ? "Punkt" : "Punkte"}`;
+
 export function gapText(gap: Gap): string {
-  if (gap.kind === "lead") return `+${gap.over} Vorsprung`;
+  if (gap.kind === "lead") return `${punkte(gap.over)} Vorsprung`;
   if (gap.kind === "tied") return `geteilter Platz ${gap.rank}`;
   if (gap.gap === 0) return `punktgleich mit Platz ${gap.toRank}`;
-  return `−${gap.gap} auf Platz ${gap.toRank}`;
+  return `${punkte(gap.gap)} hinter Platz ${gap.toRank}`;
 }
 
 /** Gap in displayed (rounded) points to the row above, or the lead over the runner-up. */

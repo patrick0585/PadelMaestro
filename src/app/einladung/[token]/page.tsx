@@ -114,6 +114,9 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
   if (!session) {
     return (
       <Shell title={title}>
+        <p className="mb-4 text-center text-sm text-foreground-muted">
+          Lege ein Konto an oder melde dich an, um beizutreten.
+        </p>
         <SignupForm token={token} kind={preview.kind} appleEnabled={appleConfigured()} />
       </Shell>
     );

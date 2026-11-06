@@ -78,7 +78,7 @@ describe("<InvitationsSection>", () => {
     const fn = stubFetchSequence({ status: 204 }, { status: 200, body: [] });
     render(<InvitationsSection initial={[invitation]} />);
     expect(screen.getByText("Dienstagsrunde")).toBeInTheDocument();
-    expect(screen.getByText("2× benutzt · bis 17.11.")).toBeInTheDocument();
+    expect(screen.getByText("2 Mal benutzt · bis 17.11.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Link Dienstagsrunde widerrufen" }));
     expect(screen.getByText("Wirklich widerrufen?")).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe("<InvitationsSection>", () => {
   it("lists open links with note, usage and a Widerrufen action", () => {
     render(<InvitationsSection initial={[invitation, { ...invitation, id: "inv2", note: null, usedCount: 0, uses: [] }]} />);
     expect(screen.getByText("Offene Links")).toBeInTheDocument();
-    expect(screen.getByText("2× benutzt · bis 17.11.")).toBeInTheDocument();
+    expect(screen.getByText("2 Mal benutzt · bis 17.11.")).toBeInTheDocument();
     expect(screen.getByText("unbenutzt · bis 17.11.")).toBeInTheDocument();
     expect(screen.getAllByText("Widerrufen")).toHaveLength(2);
   });

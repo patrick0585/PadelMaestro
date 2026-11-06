@@ -65,7 +65,7 @@ export function EmailNoticeClient({
       onClick={dismiss}
       className={`-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg leading-none text-foreground-muted hover:text-foreground ${ring}`}
     >
-      ×
+      <span aria-hidden="true">×</span>
     </button>
   );
 
