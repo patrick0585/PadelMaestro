@@ -13,7 +13,6 @@ describe("<PrintSheet>", () => {
     render(
       <PrintSheet
         dateText="Dienstag, 28. April 2026"
-        status="in_progress"
         scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
@@ -31,7 +30,6 @@ describe("<PrintSheet>", () => {
     render(
       <PrintSheet
         dateText="Dienstag"
-        status="in_progress"
         scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
@@ -56,7 +54,6 @@ describe("<PrintSheet>", () => {
     const { rerender } = render(
       <PrintSheet
         dateText="Dienstag"
-        status="in_progress"
         scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
@@ -69,7 +66,6 @@ describe("<PrintSheet>", () => {
     rerender(
       <PrintSheet
         dateText="Dienstag"
-        status="in_progress"
         scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={["Werner"]}
@@ -85,7 +81,6 @@ describe("<PrintSheet>", () => {
     render(
       <PrintSheet
         dateText="Dienstag"
-        status="in_progress"
         scoring="Satz bis 6, höchstens 7"
         playing={["Anna", "Ben", "Carl", "Dora"]}
         joker={[]}
@@ -102,7 +97,6 @@ describe("<PrintSheet>", () => {
     render(
       <PrintSheet
         dateText="Dienstag"
-        status="planned"
         scoring="Satz bis 6, höchstens 7"
         playing={["Anna"]}
         joker={[]}
@@ -110,9 +104,8 @@ describe("<PrintSheet>", () => {
         jokerGamesCredited={JOKER_GAMES_CREDITED}
       />,
     );
-    expect(
-      screen.getByText(/Matches sind noch nicht erstellt/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Matches werden beim Start des Spieltags erstellt.")).toBeInTheDocument();
+    expect(screen.queryByText(/planned/)).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 });
