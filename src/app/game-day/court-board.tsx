@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import { canIncrement, hintFor, invalidReason, isSettledScore, type ScoringRule } from "@/lib/scoring/rule";
+import { hapticError, hapticSuccess, hapticTap } from "@/lib/haptics";
 import { useScoreDraft, type EditableMatch } from "./score-editor";
 
 export const AUTO_SAVE_MS = 2000;
@@ -99,7 +100,10 @@ export function CourtBoard({
   onSaved?: (score: [number, number]) => void;
 }) {
   const hintId = useId();
-  const { t1, t2, setT1, setT2, dirty, busy, error, save } = useScoreDraft(match, onSaved);
+  const { t1, t2, setT1, setT2, dirty, busy, error, save } = useScoreDraft(match, (score) => {
+    hapticSuccess();
+    onSaved?.(score);
+  });
   // Set when the player stops the countdown; any further edit re-arms it.
   const [held, setHeld] = useState(false);
 
@@ -117,7 +121,12 @@ export function CourtBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counting, t1, t2]);
 
+  useEffect(() => {
+    if (error) hapticError();
+  }, [error]);
+
   const change = (setter: (n: number) => void) => (n: number) => {
+    hapticTap();
     setHeld(false);
     setter(n);
   };
