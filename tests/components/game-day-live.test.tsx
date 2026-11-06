@@ -9,6 +9,9 @@ const SET67: ScoringRule = { mode: "set", target: 6, max: 7 };
 import { CurrentMatch, type NextUp } from "@/app/game-day/current-match";
 import { AUTO_SAVE_MS, CourtBoard } from "@/app/game-day/court-board";
 import { MatchRows, requestOpenMatch, type RowMatch } from "@/app/game-day/match-rows";
+import { hapticError, hapticSuccess, hapticTap } from "@/lib/haptics";
+
+vi.mock("@/lib/haptics", () => ({ hapticTap: vi.fn(), hapticSuccess: vi.fn(), hapticError: vi.fn() }));
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -33,6 +36,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   refresh.mockClear();
+  vi.mocked(hapticTap).mockClear();
+  vi.mocked(hapticSuccess).mockClear();
+  vi.mocked(hapticError).mockClear();
 });
 
 async function score(a: number, b: number) {
@@ -244,6 +250,35 @@ describe("CourtBoard", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByTestId("court-save")).toHaveTextContent("Speichern · 3:0");
     expect(screen.getByRole("button", { name: "Punkt für Ben & Anna entfernen" })).toBeEnabled();
+  });
+
+  it("Haptik: Tipp bei +1 und −, Erfolg nach dem Speichern", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    stubFetch(Response.json({}));
+    render(<CourtBoard match={match} rule={SUM3} myName={null} />);
+    fireEvent.click(plus("Ben & Anna"));
+    fireEvent.click(screen.getByRole("button", { name: "Punkt für Ben & Anna entfernen" }));
+    expect(hapticTap).toHaveBeenCalledTimes(2);
+    fireEvent.click(plus("Ben & Anna"));
+    fireEvent.click(plus("Ben & Anna"));
+    fireEvent.click(plus("Patrick & Eva"));
+    expect(hapticSuccess).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(AUTO_SAVE_MS);
+    });
+    expect(hapticSuccess).toHaveBeenCalledTimes(1);
+    expect(hapticError).not.toHaveBeenCalled();
+  });
+
+  it("Haptik: Fehler, wenn das Speichern scheitert", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    stubFetch(Response.json({}, { status: 500 }));
+    render(<CourtBoard match={match} rule={SET67} myName={null} />);
+    for (let i = 0; i < 6; i++) fireEvent.click(plus("Ben & Anna"));
+    fireEvent.click(screen.getByTestId("court-save"));
+    await act(async () => {});
+    expect(hapticError).toHaveBeenCalledTimes(1);
+    expect(hapticSuccess).not.toHaveBeenCalled();
   });
 
   it("speichert bei Satz-Regeln nur auf Tipp", async () => {
