@@ -7,7 +7,6 @@ import { dateBlockOf } from "@/lib/format-date";
 import type { RankingRow } from "@/lib/ranking/compute";
 import { FOCUS_INSET } from "@/components/ui/focus";
 
-
 export interface SeasonSectionData {
   seasonId: string;
   seasonName: string;

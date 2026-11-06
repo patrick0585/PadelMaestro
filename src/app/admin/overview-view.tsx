@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { formatDayMonth } from "@/lib/format-date";
 import { CalendarDays, Mail, Settings, Trophy, Users } from "lucide-react";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { GroupedList, LargeTitle, ListRow, SectionLabel } from "@/components/ui/list";
 import type { AdminOverview } from "@/lib/admin/overview";
+import { formatDayMonth } from "@/lib/format-date";
 import { AdminTicket, AttendanceBar, TicketLink, attendanceCaption, countdownPill } from "./admin-ticket";
 import { TicketStartButton } from "./ticket-start-button";
 

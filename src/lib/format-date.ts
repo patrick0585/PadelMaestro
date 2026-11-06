@@ -1,6 +1,6 @@
-// All German date output lives here. Game-day dates are stored at UTC midnight and formatted
-// in UTC; instants (invitation expiry, chart ticks) use Europe/Berlin. Keep both explicit:
-// the output must match between server and browser to avoid hydration mismatches.
+// Shared German date formats for game days and the date block. Game-day dates are stored at
+// UTC midnight and formatted in UTC; instants (invitation expiry, chart ticks) use Europe/Berlin.
+// Keep the zone explicit: output must match between server and browser to avoid hydration mismatches.
 
 type Zone = "UTC" | "Europe/Berlin";
 

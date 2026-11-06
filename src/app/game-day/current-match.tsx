@@ -35,11 +35,11 @@ function NextCard({ next }: { next: NextUp }) {
     <div
       data-testid="next-match"
       data-match-number={next.matchNumber}
-      className={`mt-3 rounded-2xl bg-[#0f1729] px-3.5 py-2.5 ${next.you === "plays" ? "border-2 border-primary" : "border border-border"}`}
+      className={`mt-3 rounded-2xl bg-court-card px-3.5 py-2.5 ${next.you === "plays" ? "border-2 border-primary" : "border border-border"}`}
     >
-      <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-[#a7b4c8]">{label}</p>
+      <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-court-hint">{label}</p>
       <p className="mt-0.5 text-base font-semibold text-white">
-        {pair(next.team1)} <span className="font-normal text-[#a7b4c8]">gegen</span> {pair(next.team2)}
+        {pair(next.team1)} <span className="font-normal text-court-hint">gegen</span> {pair(next.team2)}
       </p>
     </div>
   );
@@ -113,7 +113,7 @@ export function CurrentMatch({
             />
           </div>
         ) : (
-          <p className="mt-3 rounded-2xl border border-border bg-[#0f1729] p-4 text-[15px] text-white">Alle Ergebnisse sind eingetragen.</p>
+          <p className="mt-3 rounded-2xl border border-border bg-court-card p-4 text-[15px] text-white">Alle Ergebnisse sind eingetragen.</p>
         )}
         {next && <NextCard next={next} />}
       </section>
