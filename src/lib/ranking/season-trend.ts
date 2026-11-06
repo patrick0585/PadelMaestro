@@ -17,6 +17,11 @@ export interface SeasonTrendPlayer {
   // ranking criterion (no matches and no joker uses) up to and
   // including that day — render this as a gap in the line.
   values: (number | null)[];
+  // Cumulative season points at the end of each day (joker credits
+  // included); `null` under the same rule as `values`.
+  points: (number | null)[];
+  // True on days the player was credited a joker instead of playing.
+  jokerDays: boolean[];
 }
 
 export interface SeasonTrend {
@@ -160,7 +165,13 @@ export async function buildSeasonTrend(seasonId: string): Promise<SeasonTrend> {
   // Walk days oldest→newest, accumulate, rank, record each player's rank.
   const cumulative = new Map<string, PlayerTotals>();
   const valuesByPlayer = new Map<string, (number | null)[]>();
-  for (const id of validIds) valuesByPlayer.set(id, []);
+  const pointsByPlayer = new Map<string, (number | null)[]>();
+  const jokerDaysByPlayer = new Map<string, boolean[]>();
+  for (const id of validIds) {
+    valuesByPlayer.set(id, []);
+    pointsByPlayer.set(id, []);
+    jokerDaysByPlayer.set(id, []);
+  }
 
   for (const day of finishedDays) {
     for (const [pid, t] of matchTotalsByDay.get(day.id)!) {
@@ -183,9 +194,12 @@ export async function buildSeasonTrend(seasonId: string): Promise<SeasonTrend> {
     const ranks = sharedRanks(ranked);
     ranked.forEach((r, idx) => rankByPlayer.set(r.playerId, ranks[idx]));
 
+    const jokerToday = jokerTotalsByDay.get(day.id)!;
     for (const id of validIds) {
       const r = rankByPlayer.get(id);
       valuesByPlayer.get(id)!.push(r ?? null);
+      pointsByPlayer.get(id)!.push(cumulative.get(id)?.points ?? null);
+      jokerDaysByPlayer.get(id)!.push(jokerToday.has(id));
     }
   }
 
@@ -193,6 +207,8 @@ export async function buildSeasonTrend(seasonId: string): Promise<SeasonTrend> {
     playerId: id,
     name: nameById.get(id) ?? "Unbekannt",
     values: valuesByPlayer.get(id)!,
+    points: pointsByPlayer.get(id)!,
+    jokerDays: jokerDaysByPlayer.get(id)!,
   }));
 
   return {

@@ -50,7 +50,7 @@ const groupless = {
 };
 
 describe.each([
-  ["RankingPage", RankingPage],
+  ["RankingPage", () => RankingPage({ searchParams: Promise.resolve({}) })],
   ["GameDayPage", GameDayPage],
   ["ArchivePage", ArchivePage],
   ["DashboardPage", DashboardPage],

@@ -172,7 +172,7 @@ describe("TrophyShelf und DuoCards", () => {
     render(
       <DuoCards best={{ playerId: "f", name: "Finn", avatarVersion: 0, pointsTogether: 6, matches: 3, wins: 2 }} worst={null} />,
     );
-    expect(screen.getByRole("link", { name: /Alle Duos/ })).toHaveAttribute("href", "/duos");
+    expect(screen.getByRole("link", { name: /Alle Duos/ })).toHaveAttribute("href", "/ranking?ansicht=duos");
   });
 
   it("Platzhalter ohne schlechtestes Duo", () => {

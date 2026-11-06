@@ -26,7 +26,7 @@ export function BottomTabs({ isAdmin }: { isAdmin: boolean }) {
     >
       {tabs.map((t) => {
         const active =
-          t.href === "/" ? pathname === "/" || pathname === "/duos" : pathname.startsWith(t.href);
+          t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
         const Icon = t.icon;
         return (
           <Link

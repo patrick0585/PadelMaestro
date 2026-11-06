@@ -55,7 +55,7 @@ export function DuoCards({ best, worst }: { best: PartnerStat; worst: PartnerSta
         )}
       </ul>
       <Link
-        href="/duos"
+        href="/ranking?ansicht=duos"
         className="flex min-h-11 items-center justify-between border-t border-border px-3.5 text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       >
         Alle Duos <ChevronRight aria-hidden="true" className="size-4" />

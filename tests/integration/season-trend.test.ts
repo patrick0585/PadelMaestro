@@ -185,6 +185,48 @@ describe("buildSeasonTrend", () => {
     expect(byName.Eva).toEqual([3]);
   });
 
+  it("reports cumulative points and flags joker days per player", async () => {
+    const season = await makeSeason();
+    const [anna, ben, clara, dirk, eva] = await Promise.all([
+      makeUser(season, "Anna"),
+      makeUser(season, "Ben"),
+      makeUser(season, "Clara"),
+      makeUser(season, "Dirk"),
+      makeUser(season, "Eva"),
+    ]);
+    const dayA = await makeFinishedDay(season, new Date("2026-04-01"));
+    await makeMatch(dayA.id, 1, [anna.id, ben.id], [clara.id, dirk.id], 2, 1);
+    await makeMatch(dayA.id, 2, [anna.id, eva.id], [ben.id, clara.id], 3, 0);
+    const dayB = await makeFinishedDay(season, new Date("2026-04-08"));
+    await makeMatch(dayB.id, 1, [anna.id, ben.id], [clara.id, dirk.id], 0, 3);
+    await prisma.jokerUse.create({
+      data: { playerId: eva.id, seasonId: season.id, gameDayId: dayB.id, ppgAtUse: 3, gamesCredited: 1, pointsCredited: 2.5 },
+    });
+
+    const trend = await buildSeasonTrend(season.id);
+    const byName = Object.fromEntries(trend.players.map((p) => [p.name, p]));
+    expect(byName.Anna.points).toEqual([5, 5]);
+    expect(byName.Ben.points).toEqual([2, 2]);
+    expect(byName.Dirk.points).toEqual([1, 4]);
+    expect(byName.Eva.points).toEqual([3, 5.5]);
+    expect(byName.Eva.jokerDays).toEqual([false, true]);
+    expect(byName.Anna.jokerDays).toEqual([false, false]);
+  });
+
+  it("keeps points null until a player first appears", async () => {
+    const season = await makeSeason();
+    const [a, b, c, d, e] = await Promise.all(["A1", "B1", "C1", "D1", "E1"].map((n) => makeUser(season, n)));
+    const dayA = await makeFinishedDay(season, new Date("2026-04-01"));
+    await makeMatch(dayA.id, 1, [a.id, b.id], [c.id, d.id], 2, 1);
+    const dayB = await makeFinishedDay(season, new Date("2026-04-08"));
+    await makeMatch(dayB.id, 1, [a.id, e.id], [c.id, d.id], 3, 0);
+
+    const trend = await buildSeasonTrend(season.id);
+    const e1 = trend.players.find((p) => p.name === "E1")!;
+    expect(e1.points).toEqual([null, 3]);
+    expect(e1.jokerDays).toEqual([false, false]);
+  });
+
   it("ignores planned/in-progress days and only reports finished ones", async () => {
     const season = await makeSeason();
     const [paul, patrick, michi, thomas] = await Promise.all([
