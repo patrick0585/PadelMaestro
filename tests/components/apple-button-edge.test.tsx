@@ -30,7 +30,9 @@ describe("<AppleButton>: Randfälle", () => {
     render(<AppleButton label={NAME} />);
     click();
     const busy = await screen.findByRole("button", { name: "Einen Moment …" });
-    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute("aria-disabled", "true");
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    expect(busy).not.toBeDisabled();
     fireEvent.click(busy);
     finish({ error: undefined });
     await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));

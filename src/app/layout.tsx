@@ -3,6 +3,7 @@ import { Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { NativeSplashHide } from "@/components/native-splash-hide";
+import { NO_APPLE_SCRIPT } from "@/lib/native/early-script";
 
 const display = Barlow_Condensed({
   subsets: ["latin"],
@@ -32,7 +33,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={display.variable}>
+    <html lang="de" className={display.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: NO_APPLE_SCRIPT }} />
+      </head>
       <body className="antialiased">
         <NativeSplashHide />
         <AppShell>{children}</AppShell>

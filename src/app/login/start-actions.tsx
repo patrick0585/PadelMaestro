@@ -23,7 +23,11 @@ export function StartActions({ appleConfigured, signupOpen, next }: StartActions
   return (
     <div className="relative mt-7 flex flex-col gap-2.5">
       {appleShown && <AppleButton label="Mit Apple fortfahren" next={next} />}
-      <Link href={withNext("/login/email", next)} className={appleShown ? MAIL_OUTLINE : MAIL_PRIMARY}>
+      <Link
+        href={withNext("/login/email", next)}
+        data-mail-link
+        className={appleShown ? MAIL_OUTLINE : MAIL_PRIMARY}
+      >
         <Mail aria-hidden="true" className={`size-[17px] ${appleShown ? "text-foreground-muted" : ""}`} />
         Mit E-Mail anmelden
       </Link>
@@ -38,7 +42,7 @@ export function StartActions({ appleConfigured, signupOpen, next }: StartActions
         </Link>
       )}
       <p className="mt-2 text-center text-[11px] leading-relaxed text-foreground-muted">
-        {appleShown ? "Mit Apple fortfahren akzeptierst du" : "Mit dem Fortfahren akzeptierst du"} die{" "}
+        Mit dem Fortfahren akzeptierst du die{" "}
         <Link href="/nutzungsbedingungen" className={TEXT_LINK}>
           Nutzungsbedingungen
         </Link>{" "}

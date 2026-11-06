@@ -20,7 +20,7 @@ export function CourtBackdrop() {
       </svg>
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(180deg, rgba(11,18,32,0) 20%, var(--background) 95%)" }}
+        style={{ background: "linear-gradient(180deg, rgba(11,18,32,0) 20%, var(--background) 70%)" }}
       />
     </div>
   );

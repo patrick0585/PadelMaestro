@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Input, Label } from "@/components/ui/input";
@@ -11,6 +11,7 @@ export function LoginForm({ next }: { next?: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const errorId = useId();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +43,11 @@ export function LoginForm({ next }: { next?: string }) {
           onChange={(e) => setIdentifier(e.target.value)}
           required
           autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
       </div>
       <div className="space-y-1.5">
@@ -54,6 +60,8 @@ export function LoginForm({ next }: { next?: string }) {
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
         <div className="flex justify-end">
           <Link
@@ -65,7 +73,7 @@ export function LoginForm({ next }: { next?: string }) {
         </div>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}

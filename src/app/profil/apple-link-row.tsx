@@ -4,16 +4,14 @@ import { useRouter } from "next/navigation";
 import { AppleLogo, useAppleAvailable } from "@/components/apple-button";
 import { ListRow } from "@/components/ui/list";
 import { isAppleCancel, signInWithApple } from "@/lib/native/apple-sign-in";
-import { APPLE_ERROR_MESSAGES } from "@/lib/auth/apple/errors";
+import { APPLE_ERROR_MESSAGES, appleErrorMessage } from "@/lib/auth/apple/errors";
 
 const ICON = { node: <AppleLogo className="h-[15px] w-3" />, color: "#000000" };
 
-function failureText(status: number, body: { message?: string }): string {
-  if (status === 409) return body.message ?? APPLE_ERROR_MESSAGES.apple_already_linked;
-  if (status === 400) return body.message ?? APPLE_ERROR_MESSAGES.apple_invalid_token;
+function failureText(status: number, body: { error?: string; message?: string }): string {
   if (status === 429) return APPLE_ERROR_MESSAGES.rate_limited;
   if (status === 503) return APPLE_ERROR_MESSAGES.apple_unavailable;
-  return APPLE_ERROR_MESSAGES.apple_invalid_token;
+  return body.message ?? appleErrorMessage(status === 409 ? "apple_already_linked" : body.error);
 }
 
 /** Profile row: shows the linked state or offers to attach an Apple ID. */
@@ -56,7 +54,7 @@ export function AppleLinkRow({ linked, configured }: { linked: boolean; configur
         router.refresh();
         return;
       }
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       setError(failureText(res.status, body));
     } catch (e) {
       if (!isAppleCancel(e)) setError(APPLE_ERROR_MESSAGES.apple_unavailable);
@@ -65,12 +63,14 @@ export function AppleLinkRow({ linked, configured }: { linked: boolean; configur
   }
 
   return (
-    <ListRow
-      onClick={link}
-      icon={ICON}
-      title={busy ? "Apple wird verbunden …" : "Mit Apple verbinden"}
-      subtitle={error ? <span role="alert" className="text-destructive">{error}</span> : undefined}
-      chevron
-    />
+    <div data-apple aria-live="polite" aria-busy={busy || undefined}>
+      <ListRow
+        onClick={link}
+        icon={ICON}
+        title={busy ? "Apple wird verbunden …" : "Mit Apple verbinden"}
+        subtitle={error ? <span className="text-destructive">{error}</span> : undefined}
+        chevron
+      />
+    </div>
   );
 }

@@ -33,7 +33,7 @@ describe("Login-Startseite", () => {
     expect(appleButton()).toBeInTheDocument();
     expect(mailLink()).toHaveAttribute("href", "/login/email");
     expect(mailLink().className).toContain("border");
-    expect(screen.getByText(/Mit Apple fortfahren akzeptierst du/)).toBeInTheDocument();
+    expect(screen.getByText(/Mit dem Fortfahren akzeptierst du/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Nutzungsbedingungen" })).toHaveAttribute("href", "/nutzungsbedingungen");
     expect(screen.getByRole("link", { name: "Datenschutzerklärung" })).toHaveAttribute("href", "/datenschutz");
   });

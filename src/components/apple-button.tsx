@@ -2,7 +2,7 @@
 import { useId, useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { isAppleCancel, isNativeAppleAvailable, signInWithApple } from "@/lib/native/apple-sign-in";
-import { APPLE_ERROR_MESSAGES, type AppleErrorCode } from "@/lib/auth/apple/errors";
+import { APPLE_ERROR_MESSAGES, appleErrorMessage } from "@/lib/auth/apple/errors";
 import { withNext } from "@/lib/auth/next-path";
 
 const NOOP_SUBSCRIBE = () => () => {};
@@ -21,14 +21,6 @@ export function AppleLogo({ className }: { className?: string }) {
       />
     </svg>
   );
-}
-
-const FALLBACK = APPLE_ERROR_MESSAGES.apple_invalid_token;
-
-function messageFor(code: unknown): string {
-  return typeof code === "string" && code in APPLE_ERROR_MESSAGES
-    ? APPLE_ERROR_MESSAGES[code as AppleErrorCode]
-    : FALLBACK;
 }
 
 interface AppleButtonProps {
@@ -62,7 +54,7 @@ export function AppleButton({ label, invitationToken, next, onError }: AppleButt
       });
       if (!result || result.error) {
         setLoading(false);
-        setError(messageFor(result?.code));
+        setError(appleErrorMessage(result?.code));
         return;
       }
       window.location.assign(withNext("/willkommen/name", next));
@@ -76,13 +68,14 @@ export function AppleButton({ label, invitationToken, next, onError }: AppleButt
   if (!available) return null;
 
   return (
-    <div>
+    <div data-apple>
       <button
         type="button"
         onClick={onClick}
-        disabled={loading}
+        aria-disabled={loading || undefined}
+        aria-busy={loading || undefined}
         aria-describedby={error ? errorId : undefined}
-        className="flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] bg-white text-[15.5px] font-semibold tracking-[-0.01em] text-black transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+        className="flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] bg-white text-[15.5px] font-semibold tracking-[-0.01em] text-black transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-disabled:cursor-not-allowed aria-disabled:opacity-60 motion-reduce:transition-none"
       >
         <AppleLogo className="-mt-0.5 h-[18px] w-[15px]" />
         <span>{loading ? "Einen Moment …" : label}</span>

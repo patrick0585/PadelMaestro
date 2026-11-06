@@ -27,10 +27,13 @@ export function SignupForm({
   token,
   kind,
   appleEnabled = false,
+  flat = false,
 }: {
   token?: string;
   kind: "founder" | "member" | "open";
   appleEnabled?: boolean;
+  /** No card around the form, for pages that already provide the surface. */
+  flat?: boolean;
 }) {
   const appleAvailable = useAppleAvailable() && appleEnabled;
   const [name, setName] = useState("");
@@ -79,9 +82,9 @@ export function SignupForm({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+    <div className={flat ? "space-y-3" : "rounded-2xl border border-border bg-surface p-5 space-y-3"}>
       {appleAvailable && (
-        <div className="space-y-3">
+        <div data-apple className="space-y-3">
           <AppleButton
             label={kind === "open" ? "Mit Apple fortfahren" : "Mit Apple beitreten"}
             invitationToken={token}

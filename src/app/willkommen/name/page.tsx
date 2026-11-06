@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { needsName } from "@/lib/account/apple";
+import { AuthScreen } from "@/components/auth-screen";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { NameForm } from "./name-form";
 
@@ -19,13 +20,13 @@ export default async function WelcomeNamePage({
   if (!(await needsName(session.user.id))) redirect(target);
 
   return (
-    <div className="mx-auto w-full max-w-[400px] pt-6">
-      <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-primary">Fast fertig</p>
-      <h1 className="mt-2 text-2xl font-extrabold text-foreground">Wie sollen dich deine Mitspieler sehen?</h1>
-      <p className="mb-5 mt-1.5 text-sm text-foreground-muted">
-        Dieser Name erscheint in Gruppen, Ergebnissen und der Rangliste. Du kannst ihn später ändern.
-      </p>
+    <AuthScreen
+      embedded
+      kicker="Fast fertig"
+      title={<span className="text-[28px] normal-case leading-[1.05]">Wie sollen dich deine Mitspieler sehen?</span>}
+      subtitle="Dieser Name erscheint in Gruppen, Ergebnissen und der Rangliste. Du kannst ihn später ändern."
+    >
       <NameForm next={target} />
-    </div>
+    </AuthScreen>
   );
 }

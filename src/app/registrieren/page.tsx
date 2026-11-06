@@ -36,7 +36,7 @@ export default async function RegisterPage({
       subtitle={open ? "Kostenlos. Für deine Padel-Runde." : "Registrierung im Moment nur mit Einladung."}
     >
       {open ? (
-        <SignupForm kind="open" appleEnabled={appleConfigured()} />
+        <SignupForm kind="open" appleEnabled={appleConfigured()} flat />
       ) : (
         <div className="space-y-3 rounded-2xl border border-border bg-surface p-5 text-sm text-foreground-muted">
           <p>Öffne den Einladungslink, den du von deiner Gruppe bekommen hast. Du willst eine eigene Runde starten? Schreib uns über die Hilfe-Seite.</p>
