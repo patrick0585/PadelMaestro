@@ -12,6 +12,10 @@ export const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The share image reads its fonts from disk at runtime.
+  outputFileTracingIncludes: {
+    "/api/game-days/[id]/share-image": ["./assets/fonts/*.ttf"],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "1mb",
