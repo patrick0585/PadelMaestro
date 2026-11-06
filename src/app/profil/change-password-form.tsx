@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +10,8 @@ type Status =
   | { kind: "success" }
   | { kind: "error"; message: string };
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ hasPassword = true }: { hasPassword?: boolean }) {
+  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,13 +27,14 @@ export function ChangePasswordForm() {
     const res = await fetch("/api/profile/password", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify(hasPassword ? { currentPassword, newPassword } : { newPassword }),
     });
     if (res.status === 204) {
       setStatus({ kind: "success" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      if (!hasPassword) router.refresh();
       return;
     }
     if (res.status === 401) {
@@ -54,17 +57,19 @@ export function ChangePasswordForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <div>
-        <Label htmlFor="current-password">Aktuelles Passwort</Label>
-        <Input
-          id="current-password"
-          type="password"
-          autoComplete="current-password"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          required
-        />
-      </div>
+      {hasPassword && (
+        <div>
+          <Label htmlFor="current-password">Aktuelles Passwort</Label>
+          <Input
+            id="current-password"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
+          />
+        </div>
+      )}
       <div>
         <Label htmlFor="new-password">Neues Passwort (min. 8 Zeichen)</Label>
         <Input
@@ -101,7 +106,7 @@ export function ChangePasswordForm() {
           role="status"
           className="rounded-xl bg-success-soft/40 px-3 py-2 text-sm text-success"
         >
-          Passwort erfolgreich geändert.
+          {hasPassword ? "Passwort erfolgreich geändert." : "Passwort festgelegt. Du kannst dich jetzt auch mit E-Mail anmelden."}
         </p>
       )}
       <div className="flex justify-end">

@@ -24,7 +24,15 @@ function errorText(status: number, body: ErrorBody): string {
   return FALLBACK;
 }
 
-export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function DeleteAccountDialog({
+  open,
+  onClose,
+  hasPassword = true,
+}: {
+  open: boolean;
+  onClose: () => void;
+  hasPassword?: boolean;
+}) {
   const passwordId = useId();
   const errorId = useId();
   const [password, setPassword] = useState("");
@@ -43,7 +51,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length === 0 || loading) return;
+    if ((hasPassword && password.length === 0) || loading) return;
     setLoading(true);
     setError(null);
     let res: Response;
@@ -51,7 +59,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
       res = await fetch("/api/profile", {
         method: "DELETE",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(hasPassword ? { password } : {}),
       });
     } catch {
       setLoading(false);
@@ -84,21 +92,23 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
           deinen Namen erhalten. Dein Profil und dein Login werden gelöscht. Exportiere vorher deine
           Daten, wenn du sie behalten willst.
         </p>
-        <div className="space-y-1">
-          <Label htmlFor={passwordId}>Dein Passwort</Label>
-          <Input
-            id={passwordId}
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setPasswordInvalid(false);
-            }}
-            autoComplete="current-password"
-            aria-invalid={passwordInvalid || undefined}
-            aria-describedby={error ? errorId : undefined}
-          />
-        </div>
+        {hasPassword && (
+          <div className="space-y-1">
+            <Label htmlFor={passwordId}>Dein Passwort</Label>
+            <Input
+              id={passwordId}
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordInvalid(false);
+              }}
+              autoComplete="current-password"
+              aria-invalid={passwordInvalid || undefined}
+              aria-describedby={error ? errorId : undefined}
+            />
+          </div>
+        )}
         {error && <InlineMessage kind="error" id={errorId}>{error}</InlineMessage>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading} autoFocus>
@@ -108,7 +118,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
             type="submit"
             variant="destructive"
             loading={loading}
-            disabled={password.length === 0}
+            disabled={hasPassword && password.length === 0}
           >
             Endgültig löschen
           </Button>

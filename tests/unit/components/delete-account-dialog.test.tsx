@@ -148,6 +148,15 @@ describe("DeleteAccountDialog", () => {
     expect(order).toEqual(["unregister", "signOut"]);
   });
 
+  it("sendet ohne Passwort-Konto einen leeren Body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ status: 204, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<DeleteAccountDialog open onClose={vi.fn()} hasPassword={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({});
+  });
+
   it("meldet das Gerät bei falschem Passwort nicht ab", async () => {
     vi.stubGlobal(
       "fetch",

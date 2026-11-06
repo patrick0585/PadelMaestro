@@ -10,6 +10,7 @@ vi.mock("@/lib/db", () => ({
         email: "p@example.com",
         emailVerifiedAt: new Date(),
         pendingEmail: null,
+        passwordHash: "hash",
       }),
     },
     group: { findUnique: vi.fn() },
