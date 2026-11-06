@@ -49,7 +49,7 @@ export function attachDiagnostics(key, page) {
     }
   });
   page.on("pageerror", (err) => {
-    consoleErrors.get(key).push(`[pageerror] ${err.message}`);
+    consoleErrors.get(key).push(`[pageerror] ${page.url()} ${err.message}`);
   });
   page.on("response", (resp) => {
     const url = resp.url();
@@ -235,7 +235,23 @@ export async function getMatches(page) {
       hasScore: !!m,
     });
   }
-  return out;
+  // The running and the next match sit in their own cards above the lists, not in li rows.
+  for (const sel of ['[data-testid="current-match"][data-match-number]', '[data-testid="next-match"][data-match-number]']) {
+    const card = page.locator(sel);
+    if (!(await card.count())) continue;
+    const n = parseInt((await card.first().getAttribute("data-match-number")) ?? "0", 10);
+    if (n && !out.some((m) => m.matchNumber === n)) {
+      out.push({ matchNumber: n, teamA: "", teamB: "", scoreA: "–", scoreB: "–", hasScore: false });
+    }
+  }
+  return out.sort((a, b) => a.matchNumber - b.matchNumber);
+}
+
+/** Number of the running match shown in the court card, or null when every match is scored. */
+export async function currentMatchNumber(page) {
+  const current = page.locator('[data-testid="current-match"][data-match-number]');
+  if (!(await current.count())) return null;
+  return parseInt((await current.first().getAttribute("data-match-number")) ?? "0", 10) || null;
 }
 
 async function scoreEditorFor(page, matchNumber) {

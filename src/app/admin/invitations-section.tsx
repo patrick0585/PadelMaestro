@@ -25,11 +25,12 @@ function formatDate(iso: string) {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: "Europe/Berlin",
   });
 }
 
 function formatDay(iso: string) {
-  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
 }
 
 function usageText(inv: SerializedOpenInvitation) {

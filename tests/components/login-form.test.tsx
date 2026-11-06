@@ -42,6 +42,19 @@ describe("<LoginForm>", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
+  it("meldet eine Anmeldesperre verständlich statt 'Falsche Anmeldedaten'", async () => {
+    signIn.mockResolvedValue({ error: "CredentialsSignin", code: "rate_limited" });
+    login();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Zu viele Anmeldeversuche");
+    expect(screen.queryByText("Falsche Anmeldedaten")).toBeNull();
+  });
+
+  it("die Fehlermeldung wird vorgelesen", async () => {
+    signIn.mockResolvedValue({ error: "CredentialsSignin" });
+    login();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Falsche Anmeldedaten");
+  });
+
   it("navigates to next after login when next is a safe path, otherwise to /", async () => {
     signIn.mockResolvedValue({ error: undefined });
     const first = login("/einladung/abc");

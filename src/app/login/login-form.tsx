@@ -19,7 +19,7 @@ export function LoginForm({ next }: { next?: string }) {
     const res = await signIn("credentials", { identifier, password, redirect: false });
     if (res?.error) {
       setLoading(false);
-      setError("Falsche Anmeldedaten");
+      setError(res.code === "rate_limited" ? "Zu viele Anmeldeversuche. Bitte warte eine Minute." : "Falsche Anmeldedaten");
       return;
     }
     try {
@@ -54,7 +54,11 @@ export function LoginForm({ next }: { next?: string }) {
           autoComplete="current-password"
         />
       </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <Button type="submit" loading={loading} className="w-full">
         Anmelden
       </Button>

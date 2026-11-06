@@ -42,7 +42,7 @@ export function SeasonTrendChart({
   const [pickId, setPickId] = useState<string | null>(null);
 
   const xLabels = data.days.map((d) =>
-    new Date(d.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
+    new Date(d.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" }),
   );
   const tone = (id: string): SeriesTone =>
     id === currentPlayerId ? "me" : id === leaderId ? "lead" : id === pickId ? "pick" : "rest";

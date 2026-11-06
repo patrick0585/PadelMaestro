@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // authorizeForTests function is a plain export that doesn't use NextAuth.
 vi.mock("next-auth", () => ({
   default: () => ({ handlers: {}, auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }),
+  CredentialsSignin: class extends Error {},
 }));
 vi.mock("next-auth/providers/credentials", () => ({
   default: vi.fn(() => ({ id: "credentials" })),

@@ -32,7 +32,11 @@ function NextCard({ next }: { next: NextUp }) {
       </>
     );
   return (
-    <div className={`mt-3 rounded-2xl bg-[#0f1729] px-3.5 py-2.5 ${next.you === "plays" ? "border-2 border-primary" : "border border-border"}`}>
+    <div
+      data-testid="next-match"
+      data-match-number={next.matchNumber}
+      className={`mt-3 rounded-2xl bg-[#0f1729] px-3.5 py-2.5 ${next.you === "plays" ? "border-2 border-primary" : "border border-border"}`}
+    >
       <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-[#a7b4c8]">{label}</p>
       <p className="mt-0.5 text-base font-semibold text-white">
         {pair(next.team1)} <span className="font-normal text-[#a7b4c8]">gegen</span> {pair(next.team2)}
