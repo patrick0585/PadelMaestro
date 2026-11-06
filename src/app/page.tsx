@@ -7,13 +7,10 @@ import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeStandings } from "@/lib/ranking/compute";
 import { computeHomeSeasonStats } from "@/lib/player/season-stats";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
-import { DashboardHero } from "./dashboard-hero";
-import { EmailNotice } from "@/components/email-notice";
+import { loadEmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
-import { LiveTicket } from "@/components/home/live-ticket";
-import { RecapTicket } from "@/components/home/recap-ticket";
-import { SeasonCard, SeasonCardEmpty } from "@/components/home/season-card";
-import { LeagueTable, type LeagueRow } from "@/components/home/league-table";
+import { HomeView, type HomeSeason, type HomeViewProps } from "@/components/home/home-view";
+import type { LeagueRow } from "@/components/home/league-table";
 import { canFoundGroup } from "@/lib/group/create";
 import { getGroupRules } from "@/lib/group/rules";
 import { buildHeroState, dateShortOf } from "@/lib/home/hero-state";
@@ -37,7 +34,7 @@ export default async function DashboardPage() {
 
   const season = await getOrCreateActiveSeason(ctx.groupId);
   const dayScope = { seasonId: season.id, groupId: ctx.groupId };
-  const [group, ranking, liveDay, plannedDay, stats, rules] = await Promise.all([
+  const [group, ranking, liveDay, plannedDay, stats, rules, emailNotice] = await Promise.all([
     prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } }),
     computeStandings(season.id),
     prisma.gameDay.findFirst({
@@ -72,6 +69,7 @@ export default async function DashboardPage() {
     }),
     computeHomeSeasonStats(meId, season.id),
     getGroupRules(ctx.groupId),
+    loadEmailNotice(meId),
   ]);
 
   const firstName = session.user.name?.split(" ")[0] ?? "";
@@ -84,9 +82,9 @@ export default async function DashboardPage() {
     tableSource.map((r) => r.playerId),
   );
 
-  let liveTicket: React.ReactNode = null;
-  let plannedTicket: React.ReactNode = null;
-  let recapTicket: React.ReactNode = null;
+  let live: HomeViewProps["live"] = null;
+  let hero: HomeViewProps["hero"] = null;
+  let recap: HomeViewProps["recap"] = null;
   if (liveDay) {
     const ids = [
       ...new Set(
@@ -95,7 +93,7 @@ export default async function DashboardPage() {
     ];
     const players = await prisma.player.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
     const nameById = Object.fromEntries(players.map((p) => [p.id, p.name.split(" ")[0]]));
-    const data = deriveLiveTicket(
+    live = deriveLiveTicket(
       liveDay.matches.map((m) => ({
         matchNumber: m.matchNumber,
         team1: [m.team1PlayerAId, m.team1PlayerBId],
@@ -105,17 +103,15 @@ export default async function DashboardPage() {
       })),
       nameById,
     );
-    liveTicket = <LiveTicket data={data} />;
   }
   if (plannedDay) {
-    const heroState = buildHeroState(plannedDay, meId, {
+    hero = buildHeroState(plannedDay, meId, {
       jokersRemaining: stats.jokers.remaining,
       jokersTotal: stats.jokers.total,
       jokerGamesCredited: rules.jokerGamesCredited,
       ppgSnapshot: hasPlayed ? myRow.pointsPerGame : null,
       now: new Date(),
     });
-    plannedTicket = <DashboardHero state={heroState} />;
   }
   if (!liveDay && !plannedDay) {
     const lastDay = await prisma.gameDay.findFirst({
@@ -124,17 +120,15 @@ export default async function DashboardPage() {
       select: { id: true },
     });
     const summary = lastDay ? await computeGameDaySummary(lastDay.id) : null;
-    recapTicket = (
-      <RecapTicket
-        dateLabel={summary ? dateShortOf(summary.date) : null}
-        podium={(summary?.podium ?? []).map((r) => ({
-          playerId: r.playerId,
-          name: r.playerName.split(" ")[0],
-          rank: r.rank,
-          ppg: r.matches > 0 ? r.points / r.matches : 0,
-        }))}
-      />
-    );
+    recap = {
+      dateLabel: summary ? dateShortOf(summary.date) : null,
+      podium: (summary?.podium ?? []).map((r) => ({
+        playerId: r.playerId,
+        name: r.playerName.split(" ")[0],
+        rank: r.rank,
+        ppg: r.matches > 0 ? r.points / r.matches : 0,
+      })),
+    };
   }
 
   const form = await formPromise;
@@ -150,39 +144,33 @@ export default async function DashboardPage() {
     isMe: r.playerId === meId,
   }));
 
+  const seasonCard: HomeSeason = hasPlayed
+    ? {
+        kind: "played",
+        card: {
+          seasonName: season.name,
+          groupName: group?.name ?? "",
+          ppg: myRow.pointsPerGame,
+          wins: stats.winRate.wins,
+          matches: stats.winRate.matches,
+          attended: stats.attendance.attended,
+          totalDays: stats.attendance.total,
+          jokersUsed: stats.jokers.used,
+          jokersTotal: stats.jokers.total,
+          form: [...stats.recentPpg].reverse(),
+        },
+      }
+    : { kind: "empty", seasonName: season.name, jokersRemaining: stats.jokers.remaining };
+
   return (
-    <div className="space-y-3.5">
-      <header>
-        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-[0.01em]">
-          Hi{firstName ? `, ${firstName}` : ""}
-        </h1>
-      </header>
-
-      <EmailNotice playerId={meId} compact />
-
-      {liveTicket}
-      {plannedTicket}
-      {recapTicket}
-
-      {hasPlayed ? (
-        <SeasonCard
-          seasonName={season.name}
-          groupName={group?.name ?? ""}
-          ppg={myRow.pointsPerGame}
-          wins={stats.winRate.wins}
-          matches={stats.winRate.matches}
-          attended={stats.attendance.attended}
-          totalDays={stats.attendance.total}
-          jokersUsed={stats.jokers.used}
-          jokersTotal={stats.jokers.total}
-          form={[...stats.recentPpg].reverse()}
-          muted={recapTicket !== null}
-        />
-      ) : (
-        <SeasonCardEmpty seasonName={season.name} jokersRemaining={stats.jokers.remaining} />
-      )}
-
-      {tableRows.length > 0 && <LeagueTable rows={tableRows} myGap={myGap ? gapText(myGap) : null} />}
-    </div>
+    <HomeView
+      firstName={firstName}
+      emailNotice={emailNotice}
+      live={live}
+      hero={hero}
+      recap={recap}
+      season={seasonCard}
+      table={{ rows: tableRows, myGap: myGap ? gapText(myGap) : null }}
+    />
   );
 }
