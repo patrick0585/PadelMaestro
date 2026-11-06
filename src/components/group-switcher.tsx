@@ -7,7 +7,8 @@ import { InlineMessage } from "@/components/ui/inline-message";
 
 type Group = { id: string; name: string };
 
-const NAME_WIDTH = "max-w-[10rem] truncate lg:max-w-[12rem]";
+const NAME_WIDTH = "block min-w-0 max-w-[9rem] truncate min-[380px]:max-w-[11rem] lg:max-w-[12rem]";
+const NAME_TEXT = "font-display text-[17px] font-extrabold uppercase tracking-[0.05em] text-foreground";
 
 export function GroupSwitcher({
   groups,
@@ -58,7 +59,7 @@ export function GroupSwitcher({
   if (groups.length === 1) {
     const { name } = groups[0];
     return (
-      <span className={`${NAME_WIDTH} text-sm font-medium text-foreground`} title={name}>
+      <span className={`${NAME_WIDTH} ${NAME_TEXT}`} title={name}>
         {name}
       </span>
     );
@@ -132,13 +133,13 @@ export function GroupSwitcher({
         aria-busy={pending}
         disabled={pending}
         onClick={() => (open ? closeMenu(true) : openMenu())}
-        className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
+        className="flex min-h-11 min-w-0 items-center gap-1 rounded-xl px-1.5 text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
       >
         <span className="sr-only">Gruppe wechseln:</span>{" "}
-        <span className={NAME_WIDTH} title={active.name}>
+        <span className={`${NAME_WIDTH} ${NAME_TEXT}`} title={active.name}>
           {active.name}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+        <ChevronDown className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
       </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-2 flex w-64 max-w-[calc(100vw-2rem)] flex-col gap-2">

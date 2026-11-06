@@ -6,7 +6,6 @@ import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
 import { computePlayerSeasonStats } from "@/lib/player/season-stats";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
-import { Avatar } from "@/components/ui/avatar";
 import { DashboardHero } from "./dashboard-hero";
 import { EmailNotice } from "@/components/email-notice";
 import { NoGroupNotice } from "@/components/no-group-notice";
@@ -36,8 +35,7 @@ export default async function DashboardPage() {
 
   const season = await getOrCreateActiveSeason(ctx.groupId);
   const dayScope = { seasonId: season.id, groupId: ctx.groupId };
-  const [me, group, ranking, liveDay, plannedDay, stats, rules] = await Promise.all([
-    prisma.player.findUnique({ where: { id: meId }, select: { avatarVersion: true } }),
+  const [group, ranking, liveDay, plannedDay, stats, rules] = await Promise.all([
     prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } }),
     computeRanking(season.id),
     prisma.gameDay.findFirst({
@@ -152,8 +150,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-3.5">
-      <header className="flex items-center gap-3">
-        <Avatar playerId={meId} name={session.user.name ?? ""} avatarVersion={me?.avatarVersion ?? 0} size={48} />
+      <header>
         <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-[0.01em]">
           Hi{firstName ? `, ${firstName}` : ""}
         </h1>

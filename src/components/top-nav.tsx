@@ -3,6 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "./user-menu";
 import { PadelLogo } from "./padel-logo";
+import { LiveStrip } from "./live-strip";
+import type { LiveStripData } from "@/lib/game-day/live-strip";
 import { GroupSwitcher } from "./group-switcher";
 
 type Item = { href: string; label: string };
@@ -23,6 +25,7 @@ export function TopNav({
   avatarVersion,
   groups,
   activeGroupId,
+  live = null,
 }: {
   isAdmin: boolean;
   name: string;
@@ -30,6 +33,7 @@ export function TopNav({
   avatarVersion: number;
   groups: { id: string; name: string }[];
   activeGroupId: string | null;
+  live?: LiveStripData | null;
 }) {
   const pathname = usePathname();
   const items = isAdmin ? [...USER_ITEMS, ADMIN_ITEM] : USER_ITEMS;
@@ -67,6 +71,7 @@ export function TopNav({
           <UserMenu playerId={playerId} name={name} avatarVersion={avatarVersion} />
         </nav>
       </div>
+      <LiveStrip live={live} />
     </header>
   );
 }
