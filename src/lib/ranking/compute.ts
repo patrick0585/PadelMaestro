@@ -16,21 +16,20 @@ export interface RankingRow {
   medals: { gold: number; silver: number; bronze: number };
 }
 
+/** A ranking row without the medal counts (those cost one summary per finished day). */
+export type StandingRow = Omit<RankingRow, "medals">;
+
 type MedalCounts = { gold: number; silver: number; bronze: number };
 
 // Reuses computeGameDaySummary so medal counts always match the per-player
 // season stats path — both read the same ranks off the podium
 // (tied players share a medal).
-async function computeMedalsBySeason(
-  seasonId: string,
-): Promise<Map<string, MedalCounts>> {
+async function computeMedalsBySeason(seasonId: string): Promise<Map<string, MedalCounts>> {
   const finishedDays = await prisma.gameDay.findMany({
     where: { seasonId, status: "finished" },
     select: { id: true },
   });
-  const summaries = await Promise.all(
-    finishedDays.map((d) => computeGameDaySummary(d.id)),
-  );
+  const summaries = await Promise.all(finishedDays.map((d) => computeGameDaySummary(d.id)));
   const medalsByPlayer = new Map<string, MedalCounts>();
   const bump = (playerId: string, kind: MedalKind) => {
     const cur = medalsByPlayer.get(playerId) ?? { gold: 0, silver: 0, bronze: 0 };
@@ -47,19 +46,18 @@ async function computeMedalsBySeason(
   return medalsByPlayer;
 }
 
-export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
+export async function computeStandings(seasonId: string): Promise<StandingRow[]> {
   const groupId = await getSeasonGroupId(seasonId);
-  const [rows, medalsByPlayer] = await Promise.all([
-    prisma.$queryRaw<
-      Array<{
-        player_id: string;
-        player_name: string;
-        avatar_version: number;
-        games: bigint;
-        points: number;
-        jokers_used: bigint;
-      }>
-    >`
+  const rows = await prisma.$queryRaw<
+    Array<{
+      player_id: string;
+      player_name: string;
+      avatar_version: number;
+      games: bigint;
+      points: number;
+      jokers_used: bigint;
+    }>
+  >`
     WITH played AS (
       SELECT p.id AS player_id, p.name AS player_name,
         CASE
@@ -109,11 +107,11 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
         )
     ) DESC NULLS LAST,
     p.id COLLATE "C" ASC
-  `,
-    computeMedalsBySeason(seasonId),
-  ]);
+  `;
 
-  const ranks = sharedRanks(rows.map((r) => ({ points: Number(r.points), games: Number(r.games) })));
+  const ranks = sharedRanks(
+    rows.map((r) => ({ points: Number(r.points), games: Number(r.games) })),
+  );
   return rows.map((r, i) => {
     const games = Number(r.games);
     const points = Number(r.points);
@@ -126,7 +124,17 @@ export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
       points,
       pointsPerGame: games === 0 ? 0 : points / games,
       jokersUsed: Number(r.jokers_used),
-      medals: medalsByPlayer.get(r.player_id) ?? { gold: 0, silver: 0, bronze: 0 },
     };
   });
+}
+
+export async function computeRanking(seasonId: string): Promise<RankingRow[]> {
+  const [standings, medalsByPlayer] = await Promise.all([
+    computeStandings(seasonId),
+    computeMedalsBySeason(seasonId),
+  ]);
+  return standings.map((r) => ({
+    ...r,
+    medals: medalsByPlayer.get(r.playerId) ?? { gold: 0, silver: 0, bronze: 0 },
+  }));
 }

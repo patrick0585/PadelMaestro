@@ -84,10 +84,15 @@ function myPoints(row: MatchRow, playerId: string): number {
   return playerTeam(row, playerId) === 1 ? row.team1Score : row.team2Score;
 }
 
-export async function computePlayerSeasonStats(
-  playerId: string,
-  seasonId: string,
-): Promise<PlayerSeasonStats> {
+interface SeasonBasics {
+  rows: MatchRow[];
+  jokerCount: number;
+  finishedDayCount: number;
+  jokersTotal: number;
+}
+
+/** The player's scored matches in finished days (newest first) plus joker and day counts. */
+async function loadSeasonBasics(playerId: string, seasonId: string): Promise<SeasonBasics> {
   const [myMatches, jokerCount, finishedDayCount, seasonGroup] = await Promise.all([
     prisma.match.findMany({
       where: {
@@ -136,6 +141,67 @@ export async function computePlayerSeasonStats(
     team2Score: m.team2Score as number,
   }));
 
+  return { rows, jokerCount, finishedDayCount, jokersTotal };
+}
+
+function tallyWinRate(rows: MatchRow[], playerId: string) {
+  const winRate = { wins: 0, losses: 0, draws: 0, matches: rows.length };
+  for (const r of rows) {
+    const o = outcomeFor(r, playerId);
+    if (o === "W") winRate.wins += 1;
+    else if (o === "L") winRate.losses += 1;
+    else winRate.draws += 1;
+  }
+  return winRate;
+}
+
+// Rows are sorted newest-first (gameDay.date DESC, matchNumber DESC).
+// Day ordering is deterministic because GameDay has @@unique([seasonId, date])
+// (see prisma/schema.prisma), so two attended days can't share a date.
+// Map insertion order therefore gives us days newest-first too.
+function ppgPerDay(rows: MatchRow[], playerId: string) {
+  const perDay = new Map<string, { points: number; matches: number }>();
+  for (const r of rows) {
+    const cur = perDay.get(r.gameDayId) ?? { points: 0, matches: 0 };
+    cur.points += myPoints(r, playerId);
+    cur.matches += 1;
+    perDay.set(r.gameDayId, cur);
+  }
+  return [...perDay.entries()].map(([gameDayId, v]) => ({
+    gameDayId,
+    ppg: v.points / v.matches,
+    points: v.points,
+    matches: v.matches,
+  }));
+}
+
+const jokerSummary = (used: number, total: number) => ({ used, remaining: Math.max(0, total - used), total });
+
+export type HomeSeasonStats = Pick<PlayerSeasonStats, "attendance" | "jokers"> & {
+  winRate: { wins: number; matches: number };
+  /** PPG of the last attended days, newest first. */
+  recentPpg: number[];
+};
+
+/** What the home season card shows; skips medals, partners and the per-day summaries. */
+export async function computeHomeSeasonStats(playerId: string, seasonId: string): Promise<HomeSeasonStats> {
+  const { rows, jokerCount, finishedDayCount, jokersTotal } = await loadSeasonBasics(playerId, seasonId);
+  const { wins, matches } = tallyWinRate(rows, playerId);
+  const days = ppgPerDay(rows, playerId);
+  return {
+    attendance: { attended: days.length, total: finishedDayCount },
+    winRate: { wins, matches },
+    recentPpg: days.slice(0, RECENT_DAYS_COUNT).map((d) => d.ppg),
+    jokers: jokerSummary(jokerCount, jokersTotal),
+  };
+}
+
+export async function computePlayerSeasonStats(
+  playerId: string,
+  seasonId: string,
+): Promise<PlayerSeasonStats> {
+  const { rows, jokerCount, finishedDayCount, jokersTotal } = await loadSeasonBasics(playerId, seasonId);
+
   const attendedDays = new Set<string>();
   for (const r of rows) attendedDays.add(r.gameDayId);
 
@@ -152,31 +218,8 @@ export async function computePlayerSeasonStats(
     if (kind) medals[kind] += 1;
   }
 
-  const winRate = { wins: 0, losses: 0, draws: 0, matches: rows.length };
-  for (const r of rows) {
-    const o = outcomeFor(r, playerId);
-    if (o === "W") winRate.wins += 1;
-    else if (o === "L") winRate.losses += 1;
-    else winRate.draws += 1;
-  }
-
-  // Rows are sorted newest-first (gameDay.date DESC, matchNumber DESC).
-  // Day ordering is deterministic because GameDay has @@unique([seasonId, date])
-  // (see prisma/schema.prisma), so two attended days can't share a date.
-  // Map insertion order therefore gives us days newest-first too.
-  const perDay = new Map<string, { points: number; matches: number }>();
-  for (const r of rows) {
-    const cur = perDay.get(r.gameDayId) ?? { points: 0, matches: 0 };
-    cur.points += myPoints(r, playerId);
-    cur.matches += 1;
-    perDay.set(r.gameDayId, cur);
-  }
-  const dayPpgList = [...perDay.entries()].map(([gameDayId, v]) => ({
-    gameDayId,
-    ppg: v.points / v.matches,
-    points: v.points,
-    matches: v.matches,
-  }));
+  const winRate = tallyWinRate(rows, playerId);
+  const dayPpgList = ppgPerDay(rows, playerId);
   // Compare deltas at display precision (1 decimal) so two days that render
   // the same PPG on the chip are treated as "flat" rather than up/down due to
   // floating-point jitter in the integer-division quotient.
@@ -256,10 +299,6 @@ export async function computePlayerSeasonStats(
     bestPartner,
     worstPartner,
     partners: ranked.sorted.map(stripId),
-    jokers: {
-      used: jokerCount,
-      remaining: Math.max(0, jokersTotal - jokerCount),
-      total: jokersTotal,
-    },
+    jokers: jokerSummary(jokerCount, jokersTotal),
   };
 }

@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db";
 import { needsName } from "@/lib/account/apple";
 import { contextFromSession } from "@/lib/auth/group-context";
 import { getOrCreateActiveSeason } from "@/lib/season";
-import { computeRanking } from "@/lib/ranking/compute";
-import { computePlayerSeasonStats } from "@/lib/player/season-stats";
+import { computeStandings } from "@/lib/ranking/compute";
+import { computeHomeSeasonStats } from "@/lib/player/season-stats";
 import { computeGameDaySummary } from "@/lib/game-day/summary";
 import { DashboardHero } from "./dashboard-hero";
 import { EmailNotice } from "@/components/email-notice";
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   const dayScope = { seasonId: season.id, groupId: ctx.groupId };
   const [group, ranking, liveDay, plannedDay, stats, rules] = await Promise.all([
     prisma.group.findUnique({ where: { id: ctx.groupId }, select: { name: true } }),
-    computeRanking(season.id),
+    computeStandings(season.id),
     prisma.gameDay.findFirst({
       where: { ...dayScope, status: "in_progress" },
       orderBy: { date: "asc" },
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
         },
       },
     }),
-    computePlayerSeasonStats(meId, season.id),
+    computeHomeSeasonStats(meId, season.id),
     getGroupRules(ctx.groupId),
   ]);
 
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
           totalDays={stats.attendance.total}
           jokersUsed={stats.jokers.used}
           jokersTotal={stats.jokers.total}
-          form={[...stats.recentDays].reverse().map((d) => d.ppg)}
+          form={[...stats.recentPpg].reverse()}
           muted={recapTicket !== null}
         />
       ) : (
