@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { needsName } from "@/lib/account/apple";
 import { contextFromSession } from "@/lib/auth/group-context";
 import { getOrCreateActiveSeason } from "@/lib/season";
 import { computeRanking } from "@/lib/ranking/compute";
@@ -26,6 +27,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  if (await needsName(session.user.id)) redirect("/willkommen/name");
   const ctx = contextFromSession(session);
   if (!ctx) {
     const canFound = await canFoundGroup(session.user.id);

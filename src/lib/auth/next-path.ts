@@ -5,3 +5,9 @@ export function safeNextPath(raw: string | null | undefined): string {
   if (raw.includes("\\") || /[\u0000-\u001f\u007f]/.test(raw)) return "/";
   return raw;
 }
+
+/** Appends a validated `next` to an internal link; unsafe or missing values are dropped. */
+export function withNext(path: string, next: string | null | undefined): string {
+  const safe = safeNextPath(next);
+  return safe === "/" ? path : `${path}?next=${encodeURIComponent(safe)}`;
+}
