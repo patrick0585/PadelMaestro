@@ -32,9 +32,9 @@ export async function transferOwnership(i: {
     }
     const target = await tx.player.findUnique({
       where: { id: newOwnerId },
-      select: { passwordHash: true, deletedAt: true },
+      select: { passwordHash: true, appleSub: true, deletedAt: true },
     });
-    if (!target?.passwordHash || target.deletedAt) throw new TargetCannotLoginError();
+    if (!target || (!target.passwordHash && !target.appleSub) || target.deletedAt) throw new TargetCannotLoginError();
 
     // Conditional updates: a concurrent removal or transfer makes count 0 and rolls back.
     const promoted = await tx.membership.updateMany({
@@ -42,7 +42,7 @@ export async function transferOwnership(i: {
         groupId,
         playerId: newOwnerId,
         removedAt: null,
-        player: { passwordHash: { not: null }, deletedAt: null },
+        player: { OR: [{ passwordHash: { not: null } }, { appleSub: { not: null } }], deletedAt: null },
       },
       data: { role: "owner" },
     });

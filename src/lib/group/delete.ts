@@ -17,7 +17,7 @@ export async function deleteGroup(i: {
   groupId: string;
   actorId: string;
   name: string;
-  password: string;
+  password?: string;
 }): Promise<void> {
   const { groupId, actorId } = i;
   const actor = await findGroupMembership(prisma, groupId, actorId);
@@ -29,9 +29,11 @@ export async function deleteGroup(i: {
   if (i.name !== group.name) throw new NameMismatchError();
   const player = await prisma.player.findUniqueOrThrow({
     where: { id: actorId },
-    select: { passwordHash: true },
+    select: { passwordHash: true, appleSub: true },
   });
-  if (!player.passwordHash || !(await verifyPassword(i.password, player.passwordHash))) {
+  if (player.passwordHash) {
+    if (!i.password || !(await verifyPassword(i.password, player.passwordHash))) throw new WrongPasswordError();
+  } else if (!player.appleSub) {
     throw new WrongPasswordError();
   }
 

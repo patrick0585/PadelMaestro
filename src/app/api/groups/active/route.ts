@@ -13,7 +13,7 @@ const RenameBody = z.object({ groupId: z.string().uuid(), name: groupNameField }
 const DeleteBody = z.object({
   groupId: z.string().uuid(),
   name: z.string(),
-  password: z.string().min(1),
+  password: z.string().min(1).optional(),
 });
 
 const forbidden = () => NextResponse.json({ error: "forbidden" }, { status: 403 });

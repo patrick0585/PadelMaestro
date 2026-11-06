@@ -11,7 +11,7 @@ import {
 import { WrongPasswordError } from "@/lib/account/errors";
 import { PlayerNotFoundError } from "@/lib/players/errors";
 
-const Schema = z.object({ password: z.string().min(1) });
+const Schema = z.object({ password: z.string().min(1).optional() });
 
 export async function DELETE(req: Request) {
   const session = await auth();

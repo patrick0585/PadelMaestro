@@ -28,6 +28,32 @@ async function consumeUse(
   if (claimed.count !== 1) throw new InvitationInvalidError("exhausted");
 }
 
+/** Joins the group (or marks the founder link used) for a just-created player and audits the signup. */
+export async function redeemForNewPlayer(
+  tx: Prisma.TransactionClient,
+  token: string,
+  playerId: string,
+  now: Date,
+  via?: string,
+): Promise<{ kind: InvitationKind; groupId: string | null }> {
+  const inv = await findRedeemableInvitation(tx, token, now);
+  if (inv.kind === "member" && inv.groupId) {
+    await joinGroup(tx, { groupId: inv.groupId, playerId, now });
+  }
+  await consumeUse(tx, inv.id, playerId, now);
+  await tx.auditLog.create({
+    data: {
+      actorId: playerId,
+      groupId: inv.kind === "member" ? inv.groupId : null,
+      action: "player.signup",
+      entityType: "Player",
+      entityId: playerId,
+      payload: { invitationId: inv.id, kind: inv.kind, ...(via ? { via } : {}) },
+    },
+  });
+  return { kind: inv.kind, groupId: inv.groupId };
+}
+
 export async function signupWithInvitation(i: {
   token: string;
   name: string;
@@ -38,24 +64,9 @@ export async function signupWithInvitation(i: {
   const now = i.now ?? new Date();
   // Check the link before touching accounts, so a bad link never reveals whether an e-mail is taken.
   await findRedeemableInvitation(prisma, i.token, now);
-  const { playerId, result } = await createSignedUpPlayer({ ...i, now }, async (tx, id) => {
-    const inv = await findRedeemableInvitation(tx, i.token, now);
-    if (inv.kind === "member" && inv.groupId) {
-      await joinGroup(tx, { groupId: inv.groupId, playerId: id, now });
-    }
-    await consumeUse(tx, inv.id, id, now);
-    await tx.auditLog.create({
-      data: {
-        actorId: id,
-        groupId: inv.kind === "member" ? inv.groupId : null,
-        action: "player.signup",
-        entityType: "Player",
-        entityId: id,
-        payload: { invitationId: inv.id, kind: inv.kind },
-      },
-    });
-    return { kind: inv.kind, groupId: inv.groupId };
-  });
+  const { playerId, result } = await createSignedUpPlayer({ ...i, now }, (tx, id) =>
+    redeemForNewPlayer(tx, i.token, id, now),
+  );
   return { playerId, ...result };
 }
 

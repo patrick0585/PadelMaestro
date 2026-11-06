@@ -12,7 +12,8 @@ export class WrongCurrentPasswordError extends Error {
 
 export interface ChangeOwnPasswordInput {
   playerId: string;
-  currentPassword: string;
+  /** Omitted only for accounts without a password (Apple sign-up) that set their first one. */
+  currentPassword?: string;
   newPassword: string;
 }
 
@@ -21,12 +22,14 @@ export async function changeOwnPassword(input: ChangeOwnPasswordInput): Promise<
     where: { id: input.playerId },
     select: { id: true, deletedAt: true, passwordHash: true },
   });
-  if (!existing || existing.deletedAt || !existing.passwordHash) {
-    throw new PlayerNotFoundError(input.playerId);
-  }
+  if (!existing || existing.deletedAt) throw new PlayerNotFoundError(input.playerId);
 
-  const ok = await verifyPassword(input.currentPassword, existing.passwordHash);
-  if (!ok) throw new WrongCurrentPasswordError();
+  if (existing.passwordHash) {
+    const ok = input.currentPassword
+      ? await verifyPassword(input.currentPassword, existing.passwordHash)
+      : false;
+    if (!ok) throw new WrongCurrentPasswordError();
+  }
 
   const passwordHash = await hashPassword(input.newPassword);
   await prisma.$transaction(async (tx) => {

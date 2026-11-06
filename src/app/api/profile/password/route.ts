@@ -11,7 +11,7 @@ import {
 const Schema = z.object({
   // Cap at 72 bytes — bcrypt silently truncates longer inputs, which would let
   // an attacker who knows the first 72 bytes authenticate with any suffix.
-  currentPassword: z.string().min(1).max(72),
+  currentPassword: z.string().min(1).max(72).optional(),
   newPassword: z.string().min(8).max(72),
 });
 

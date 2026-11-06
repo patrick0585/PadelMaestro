@@ -2,6 +2,8 @@ import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { authorizeCredentials, LoginRateLimited } from "@/lib/auth/authorize";
+import { authorizeApple } from "@/lib/auth/apple/authorize";
+import { AppleAuthError } from "@/lib/auth/apple/errors";
 import { findPlayerForRefresh } from "@/lib/auth/refresh-lookup";
 import { refreshTokenFromPlayer } from "@/lib/auth/refresh-token";
 import { prisma } from "@/lib/db";
@@ -32,6 +34,14 @@ class RateLimitedSignin extends CredentialsSignin {
   code = "rate_limited";
 }
 
+// Carries the Apple failure code to the client as `code` on the signIn result.
+class AppleSignin extends CredentialsSignin {
+  constructor(readonly appleCode: string) {
+    super();
+    this.code = appleCode;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -45,6 +55,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return await authorizeCredentials(credentials, request);
         } catch (err) {
           if (err instanceof LoginRateLimited) throw new RateLimitedSignin();
+          throw err;
+        }
+      },
+    }),
+    Credentials({
+      id: "apple",
+      name: "Apple",
+      credentials: {
+        identityToken: {},
+        authorizationCode: {},
+        givenName: {},
+        familyName: {},
+        invitationToken: {},
+      },
+      authorize: async (credentials, request) => {
+        try {
+          return await authorizeApple(credentials, request);
+        } catch (err) {
+          if (err instanceof AppleAuthError) throw new AppleSignin(err.code);
           throw err;
         }
       },

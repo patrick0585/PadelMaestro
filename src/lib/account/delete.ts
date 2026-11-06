@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/hash";
+import { appleConfig } from "@/lib/auth/apple/config";
+import { revokeRefreshToken } from "@/lib/auth/apple/api";
 import { PlayerNotFoundError, WrongPasswordError } from "./errors";
 
 export class OwnerOfGroupError extends Error {
@@ -19,17 +21,29 @@ export class AnonymisationCollisionError extends Error {
 
 export async function deleteOwnAccount(i: {
   playerId: string;
-  password: string;
+  /** Required for accounts with a password; Apple-only accounts have none. */
+  password?: string;
   now?: Date;
 }): Promise<void> {
   const { playerId, password } = i;
   const now = i.now ?? new Date();
   const player = await prisma.player.findUnique({
     where: { id: playerId },
-    select: { id: true, passwordHash: true, deletedAt: true },
+    select: {
+      id: true,
+      passwordHash: true,
+      deletedAt: true,
+      appleSub: true,
+      appleRefreshToken: true,
+      appleClientId: true,
+    },
   });
   if (!player || player.deletedAt) throw new PlayerNotFoundError(playerId);
-  if (!player.passwordHash || !(await verifyPassword(password, player.passwordHash))) {
+  if (player.passwordHash) {
+    if (!password || !(await verifyPassword(password, player.passwordHash))) {
+      throw new WrongPasswordError();
+    }
+  } else if (!player.appleSub) {
     throw new WrongPasswordError();
   }
   const owned = await prisma.membership.findMany({
@@ -41,6 +55,7 @@ export async function deleteOwnAccount(i: {
 
   try {
     await anonymise(playerId, now);
+    await revokeAppleBestEffort(player);
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       const target = (e.meta?.target ?? []) as string[];
@@ -48,6 +63,16 @@ export async function deleteOwnAccount(i: {
     }
     throw e;
   }
+}
+
+// Runs after the account is gone locally; an unreachable Apple must not undo or fail the deletion.
+async function revokeAppleBestEffort(player: {
+  appleRefreshToken: string | null;
+  appleClientId: string | null;
+}): Promise<void> {
+  const cfg = appleConfig();
+  if (!cfg || !player.appleRefreshToken) return;
+  await revokeRefreshToken(cfg, player.appleRefreshToken, player.appleClientId ?? cfg.bundleId);
 }
 
 async function anonymise(playerId: string, now: Date): Promise<void> {
@@ -84,6 +109,10 @@ async function anonymise(playerId: string, now: Date): Promise<void> {
         email: `geloescht-${playerId}@anonym.invalid`,
         username: null,
         passwordHash: null,
+        appleSub: null,
+        appleRefreshToken: null,
+        appleClientId: null,
+        needsName: false,
         pendingEmail: null,
         emailVerifiedAt: null,
         avatarData: null,
