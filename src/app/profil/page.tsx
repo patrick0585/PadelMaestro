@@ -10,6 +10,7 @@ import { LeaveGroupButton } from "./leave-group-button";
 import { PushSettings } from "./push-settings";
 import { EmailNotice } from "@/components/email-notice";
 import { AccountSection } from "./account-section";
+import { SignOutButton } from "./sign-out-button";
 import { PlayerPassTicket } from "./player-pass-ticket";
 import { TrophyShelf } from "@/components/home/trophy-shelf";
 import { LegalFooter } from "@/components/legal-footer";
@@ -92,6 +93,7 @@ export default async function ProfilePage() {
             title="Passwort ändern"
             chevron
           />
+          <SignOutButton />
         </GroupedList>
       </section>
 

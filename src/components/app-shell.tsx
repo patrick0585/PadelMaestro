@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { listMyGroups } from "@/lib/group/active-group";
+import { loadLiveStrip } from "@/lib/game-day/live-strip";
 import { TopNav } from "./top-nav";
 import { MobileTopBar } from "./mobile-top-bar";
 import { BottomTabs } from "./bottom-tabs";
@@ -24,6 +25,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     name: groupName,
   }));
   const activeGroupId = session.user.groupId;
+  const live = await loadLiveStrip(activeGroupId);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -35,6 +37,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         avatarVersion={avatarVersion}
         groups={groups}
         activeGroupId={activeGroupId}
+        live={live}
       />
       <MobileTopBar
         name={name}
@@ -42,6 +45,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         avatarVersion={avatarVersion}
         groups={groups}
         activeGroupId={activeGroupId}
+        live={live}
       />
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 md:px-6">{children}</main>
       {/* Single sticky stack so banner + tab-bar share one stacking

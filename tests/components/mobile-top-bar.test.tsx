@@ -9,9 +9,26 @@ vi.mock("next/navigation", () => ({
 vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
 
 describe("<MobileTopBar>", () => {
-  it("renders the user menu trigger with the player's initials", () => {
+  it("der Avatar führt direkt ins Profil", () => {
     render(<MobileTopBar name="Patrick Koch" playerId="player-1" avatarVersion={0} groups={[]} activeGroupId={null} />);
-    expect(screen.getByRole("button", { name: /benutzermenü/i })).toHaveTextContent("PK");
+    const link = screen.getByRole("link", { name: "Profil" });
+    expect(link).toHaveAttribute("href", "/profil");
+    expect(link).toHaveTextContent("PK");
+    expect(screen.queryByRole("button", { name: /benutzermenü/i })).toBeNull();
+  });
+
+  it("zeigt die Live-Leiste, solange ein Spieltag läuft", () => {
+    render(
+      <MobileTopBar name="A B" playerId="p" avatarVersion={0} groups={[]} activeGroupId={null} live={{ current: 6, total: 15 }} />,
+    );
+    const strip = screen.getByRole("link", { name: /Spieltag läuft/ });
+    expect(strip).toHaveAttribute("href", "/game-day");
+    expect(strip).toHaveTextContent("Match 6 von 15");
+  });
+
+  it("ohne laufenden Spieltag keine Live-Leiste", () => {
+    render(<MobileTopBar name="A B" playerId="p" avatarVersion={0} groups={[]} activeGroupId={null} live={null} />);
+    expect(screen.queryByRole("link", { name: /Spieltag läuft/ })).toBeNull();
   });
 
   it("is hidden on md and up, visible below", () => {
@@ -51,6 +68,6 @@ describe("<MobileTopBar>", () => {
       />,
     );
     expect(screen.getByRole("button", { name: /Gruppe wechseln/ })).toHaveTextContent("Dienstagsrunde");
-    expect(screen.getByRole("button", { name: /benutzermenü/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Profil" })).toBeInTheDocument();
   });
 });
