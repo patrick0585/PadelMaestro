@@ -31,6 +31,15 @@ export default function SupportPage() {
         eine Stunde gültig ist. Dafür muss im Profil eine bestätigte E-Mail-Adresse hinterlegt sein.
       </p>
 
+      <h2>Anmelden mit Apple</h2>
+      <p>
+        Du kannst dich auch mit „Mit Apple anmelden“ registrieren und anmelden, ganz ohne Passwort. Hast du schon ein
+        Konto mit derselben E-Mail-Adresse, wird es verbunden, sobald die Adresse bestätigt ist. Sonst melde dich einmal
+        mit Passwort an und verbinde Apple im Profil. Wenn du Apples „E-Mail-Adresse verbergen“ nutzt, kommen unsere
+        Mails über die Weiterleitung von Apple bei dir an. Beim Löschen des Kontos wird die Verbindung zu Apple
+        ebenfalls beendet.
+      </p>
+
       <h2>Wie trage ich Ergebnisse ein?</h2>
       <p>
         Während ein Spieltag läuft, zeigt die Seite „Spieltag“ das aktuelle Match als Anzeigetafel. Tippe auf die

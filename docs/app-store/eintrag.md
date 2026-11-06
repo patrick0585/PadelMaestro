@@ -68,8 +68,8 @@ padel,spieltag,rangliste,liga,tabelle,ergebnis,doppel,verein,gruppe,saison,punkt
 | Kategorie | Datentyp | Wofür |
 |---|---|---|
 | Kontaktinformationen | Name | Anzeige in Gruppe und Rangliste |
-| Kontaktinformationen | E-Mail-Adresse | Anmeldung, Passwort zurücksetzen |
-| Kennungen | Benutzer-ID | Konto |
+| Kontaktinformationen | E-Mail-Adresse | Anmeldung (auch Apple-Weiterleitungsadresse), Passwort zurücksetzen |
+| Kennungen | Benutzer-ID | Konto (inkl. Apple-Benutzerkennung bei „Mit Apple anmelden“) |
 | Nutzerinhalte | Fotos oder Videos | Profilbild (freiwillig) |
 | Nutzerinhalte | Andere Nutzerinhalte | Spielergebnisse, Zusagen |
 
@@ -96,7 +96,10 @@ Demo-Konto prüfen, bevor du einreichst: Login klappt, das Konto ist Admin in de
 >
 > Demo account: the user "frankthetank" is the admin of the demo group "Donnerstagsrunde Münster" with several finished game days. You can also create a new account from the login screen ("Neu hier? Konto erstellen") and found your own group.
 >
+> Sign in with Apple: the start screen offers "Mit Apple anmelden" (native sheet in the app). New accounts can be created with Apple; signing in with Apple needs no password. Deleting the account (Profil > Konto) also revokes the Apple token.
+>
 > Native features beyond the website:
+> - Sign in with Apple (native, AuthenticationServices)
 > - Push notifications for new game days, reminders and results (APNs)
 > - Haptic feedback on the court scoreboard (Spieltag tab while a game day is running)
 > - Native share sheet to share a generated result image (Archiv > any game day > "Ergebnis teilen")
@@ -108,7 +111,7 @@ Demo-Konto prüfen, bevor du einreichst: Login klappt, das Konto ist Admin in de
 
 ## Einreichen, Schritt für Schritt
 
-1. Build 4 (oder neuer) ist hochgeladen und in TestFlight getestet.
+1. Build 5 (oder neuer, enthält das native Apple-Login-Plugin) ist hochgeladen und in TestFlight getestet.
 2. App Store Connect › Meine Apps › Padelmaestro › **App Store** › Version 1.0.0.
 3. Screenshots 6,9" hochladen (Reihenfolge wie in `docs/app-store/screenshots/`).
 4. Texte, URLs, Schlüsselwörter, Copyright aus diesem Dokument eintragen.

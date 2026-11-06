@@ -1,6 +1,6 @@
 // Echte Texte: nur h2/h3/p/ul/ol/a/strong verwenden, keine Farbklassen; PLACEHOLDER auf false setzen und updatedAt aktualisieren.
 export const title = "Datenschutzerklärung";
-export const updatedAt = "2026-11-03";
+export const updatedAt = "2026-11-10";
 export const PLACEHOLDER: boolean = false;
 
 export default function Content() {
@@ -42,13 +42,14 @@ export default function Content() {
 
       <h2>3. Konto und Nutzung der App</h2>
       <p>
-        Ein Konto kann nur über den Einladungslink einer Gruppe angelegt werden. Für Konto und Nutzung werden
+        Ein Konto wird per Einladungslink, per Registrierung mit E-Mail-Adresse oder mit „Mit Apple anmelden“ angelegt. Für Konto und Nutzung werden
         verarbeitet:
       </p>
       <ul>
         <li>Name und E-Mail-Adresse</li>
         <li>optional ein Benutzername und ein Profilbild</li>
-        <li>das Passwort, gespeichert ausschließlich als Hash (bcrypt)</li>
+        <li>das Passwort, gespeichert ausschließlich als Hash (bcrypt), sofern du eines festgelegt hast</li>
+        <li>bei Anmeldung mit Apple: die Apple-Benutzerkennung und ein Widerrufs-Token</li>
         <li>der Zeitpunkt der Zustimmung zu den Nutzungsbedingungen</li>
         <li>Mitgliedschaften und Rollen in Gruppen</li>
         <li>Teilnahme an Spieltagen, Spielergebnisse und Joker-Nutzung</li>
@@ -57,6 +58,17 @@ export default function Content() {
       <p>
         Diese Daten sind nötig, um das Konto, die Gruppen und die Ergebnisse bereitzustellen. Rechtsgrundlage ist die
         Erfüllung des Nutzungsverhältnisses (Art. 6 Abs. 1 lit. b DSGVO).
+      </p>
+      <h3>Anmeldung mit Apple</h3>
+      <p>
+        Statt mit E-Mail-Adresse und Passwort kannst du dich mit „Mit Apple anmelden“ registrieren und anmelden. Dabei
+        erhalten wir von Apple deinen Namen (nur bei der ersten Anmeldung und nur, wenn du ihn freigibst), deine
+        E-Mail-Adresse oder die von Apple erzeugte Weiterleitungsadresse („E-Mail-Adresse verbergen“) und eine
+        Apple-Benutzerkennung, die nur für Padelmaestro gilt. Zusätzlich speichern wir ein Token, mit dem wir die
+        Verbindung zu Apple bei der Kontolöschung beenden können. Es wird nicht in den Datenexport aufgenommen. Ein
+        Passwort ist dann nicht nötig; du kannst später eines im Profil festlegen. Mit der Anmeldung verarbeitet Apple
+        Daten nach eigener Datenschutzerklärung. Wenn du dein Konto löschst, widerrufen wir die Verbindung bei Apple
+        und löschen die Apple-Kennung bei uns. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
       </p>
       <h3>Audit-Protokoll</h3>
       <p>
@@ -97,14 +109,19 @@ export default function Content() {
         Abs. 2 Nr. 2 TDDDG).
       </p>
       <p>
-        Es werden keine Analyse-, Tracking- oder Werbetools eingesetzt und keine Inhalte Dritter eingebettet. Schriften
-        werden vom eigenen Server ausgeliefert.
+        Bei „Mit Apple anmelden“ wird für wenige Minuten ein weiteres, technisch notwendiges Cookie gesetzt, das die
+        Anmeldung absichert. Es wird nach dem Vorgang nicht mehr gebraucht.
+      </p>
+      <p>
+        Es werden keine Analyse-, Tracking- oder Werbetools eingesetzt. Nur im Browser (nicht in der App) wird beim Tippen
+        auf „Mit Apple anmelden“ ein Skript von Apple (appleid.cdn-apple.com) nachgeladen. Schriften werden vom
+        eigenen Server ausgeliefert.
       </p>
 
       <h2>7. Empfänger</h2>
       <p>
         Außerhalb der eigenen Gruppen (siehe Abschnitt 4) werden Daten nur an die genannten Dienstleister IONOS und
-        Resend weitergegeben. Ein Verkauf findet nicht statt. Automatisierte Entscheidungen im Einzelfall finden nicht statt.
+        Resend sowie, wenn du dich mit Apple anmeldest, an Apple weitergegeben. Ein Verkauf findet nicht statt. Automatisierte Entscheidungen im Einzelfall finden nicht statt.
       </p>
 
       <h2>8. Speicherdauer</h2>
@@ -134,7 +151,7 @@ export default function Content() {
         </li>
         <li>
           <strong>Löschung</strong> (Art. 17 DSGVO): über „Konto löschen“ im Profil. Name und Kontodaten werden
-          gelöscht; Spielergebnisse bleiben ohne Personenbezug erhalten. Solange jemand Besitzer einer Gruppe ist, ist das Löschen gesperrt; vorher muss
+          gelöscht, die Verbindung zu Apple wird widerrufen; Spielergebnisse bleiben ohne Personenbezug erhalten. Solange jemand Besitzer einer Gruppe ist, ist das Löschen gesperrt; vorher muss
           der Besitz übertragen oder die Gruppe gelöscht werden.
         </li>
         <li>

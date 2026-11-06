@@ -29,6 +29,8 @@ export async function changeOwnPassword(input: ChangeOwnPasswordInput): Promise<
       ? await verifyPassword(input.currentPassword, existing.passwordHash)
       : false;
     if (!ok) throw new WrongCurrentPasswordError();
+  } else if (input.currentPassword) {
+    throw new PlayerNotFoundError(input.playerId);
   }
 
   const passwordHash = await hashPassword(input.newPassword);
